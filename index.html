@@ -347,6 +347,18 @@ svg.flow .fh{font-size:10.5px;letter-spacing:.06em;fill:var(--muted)}
 svg.flow .fc{font-size:22px;font-weight:700;fill:#fff}
 svg.flow .fcs{font-size:11px;fill:#fff}
 
+/* month register of attendance */
+table.mreg{border-collapse:collapse;font-size:12.5px;min-width:100%}
+table.mreg th,table.mreg td{border:1px solid var(--line);padding:3px 4px;text-align:center;min-width:20px}
+table.mreg th:first-child,table.mreg td:first-child{text-align:left;white-space:nowrap;position:sticky;left:0;background:#fff;min-width:150px;z-index:1}
+table.mreg .we{background:#F7F6F3}
+table.mreg th.td{box-shadow:inset 0 -3px 0 var(--pri)}
+table.mreg td.mP{color:var(--green);font-weight:700}
+table.mreg td.mA{color:var(--red);font-weight:700;background:var(--redsoft)}
+table.mreg td.mS{color:#7A5C00;font-weight:700;background:#FBF3DB}
+table.mreg td.mE{color:#5B3F8C;font-weight:700;background:#F1ECF7}
+table.mreg td.mH{color:var(--pri2);font-weight:700;background:var(--prisoft)}
+
 </style>
 </head>
 <body>
@@ -359,7 +371,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 1.6';
+const VERSION = 'alpha 1.7';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -1206,7 +1218,7 @@ function filteredChildren(q) {
   const sec = q.get('section'), st = q.get('status') || 'open', res = q.get('res'), sx = q.get('sex'), issue = q.get('issue'), who = q.get('who'), grp = q.get('grp');
   const term = (UI.q || '').trim().toLowerCase();
   return S.children.filter(c => {
-    if (sec && c.section !== sec) return false;
+    if (sec && c.section !== sec && !(sec === 'Minsundu' && SECTIONS[c.section].centre === 'Minsundu')) return false;
     if (st === 'open' && c.status === 'Closed') return false;
     if (st === 'current' && !isCurrent(c)) return false;
     if (STATUSES.includes(st) && c.status !== st) return false;
@@ -1228,10 +1240,10 @@ function childRows(list) {
 function vChildren(r) {
   const q = r.q; const list = filteredChildren(q);
   const sel = (name, options, val, label) => `<label class="f">${label}<select class="in" data-filter="${name}">${options}</select></label>`;
-  return `<div class="top"><div><h1>Children</h1><p class="lead">${childrenLead(list)}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${q.get('grp') === 'ABA' ? `<button class="btn" data-mact="abasheet" data-y="${today().slice(0, 4)}">Excel: scheda ABA ${today().slice(0, 4)} (italiano)</button>` : ''}<a class="btn" href="#/paths${q.get('section') ? '?ps=' + esc(q.get('section')) : ''}">Admissions, transfers and discharges</a><button class="btn" data-act="exportlist">Excel: this list</button><a class="btn pri" href="#/child/new">Add a child</a></div></div>
+  return `<div class="top"><div><h1>Children</h1><p class="lead">${childrenLead(list)}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${q.get('grp') === 'ABA' ? `<button class="btn" data-mact="abasheet" data-y="${today().slice(0, 4)}">Export in Excel: scheda ABA ${today().slice(0, 4)} (italiano)</button>` : ''}<a class="btn" href="#/paths${SECTION_KEYS.includes(q.get('section')) ? '?ps=' + esc(q.get('section')) : q.get('section') === 'Minsundu' ? '?ps=UCC' : ''}">Admissions, transfers and discharges</a><button class="btn" data-act="exportlist">Export in Excel</button><a class="btn pri" href="#/child/new">Add a child</a></div></div>
   <div class="card filters fold${UI.fopen ? ' open' : ''}">
     <label class="f">Search<input class="in" id="search" placeholder="Name, nickname, ID or compound" value="${esc(UI.q)}"></label>${filtBtn()}
-    ${sel('section', opt(SECTION_KEYS.map(k => ({ v: k, l: SECTIONS[k].label })), q.get('section'), 'All sections'), '', 'Section')}
+    ${sel('section', opt(SECTION_KEYS.map(k => ({ v: k, l: SECTIONS[k].label })).concat([{ v: 'Minsundu', l: 'Minsundu: UCC and Youth together' }]), q.get('section'), 'All sections'), '', 'Section')}
     ${sel('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All, including closed' }]), q.get('status') || 'open'), '', 'Status')}
     ${sel('res', opt(['Resident', 'Non-resident'], q.get('res'), 'All'), '', 'Residence')}
     ${sel('sex', opt([{ v: 'M', l: 'Boys' }, { v: 'F', l: 'Girls' }], q.get('sex'), 'All'), '', 'Sex')}
@@ -1437,7 +1449,7 @@ function vVisits(r) {
     const vs = filteredVisits(q);
     const sel = (name, options, label) => `<label class="f">${label}<select class="in" data-filter="${name}">${options}</select></label>`;
     const who = (team === 'all' ? '' : ' · ' + teamLabel(team)) + (centre === 'all' ? '' : ' · children of ' + CENTRE_LABEL[centre]);
-    body = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">Visits done${esc(who)} · ${esc(fmtMonth(m))} · ${vs.length}</h2><button class="btn sm" data-act="xl" data-k="visits">Excel: this list</button></div>
+    body = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">Visits done${esc(who)} · ${esc(fmtMonth(m))} · ${vs.length}</h2><button class="btn sm" data-act="xl" data-k="visits">Export in Excel</button></div>
   <div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:repeat(4,minmax(0,1fr))">${filtBtn()}
     ${sel('p', opt(VISIT_PURPOSES, q.get('p'), 'All purposes'), 'Purpose')}
     ${sel('by', opt(S.staff.map(s => ({ v: s.id, l: s.name })), q.get('by'), 'Anyone'), 'Visited by')}
@@ -1475,7 +1487,7 @@ function attTable(q) {
 function vAttendance(r) {
   const q = r.q, centre = q.get('c') || defCentre();
   if (centre === 'Luigi') return vLuigiAtt(r);
-  const d = q.get('d') || today(), grp = attGrp(q, centre);
+  const d = q.get('d') || today(), grp = attGrp(q, centre), month = q.get('av') === 'month';
   const all = S.children.filter(c => isCurrent(c) && attIn(c, centre, grp));
   const day = S.attendance[d] || {};
   const cnt = k => all.filter(c => day[c.id] === k).length;
@@ -1486,7 +1498,8 @@ function vAttendance(r) {
   return `<div class="top"><div><h1>Attendance · ${centre} · ${grp === 'Resident' ? 'residents' : 'non-residents'}</h1><p class="lead">${esc(new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">${centreSeg(centre)}<div class="seg" role="group" aria-label="Residents or non-residents">${[['Resident', 'Residents'], ['Non-resident', 'Non-residents']].map(([k, l]) => `<a href="#" data-q="g=${k}" class="${grp === k ? 'on' : ''}">${l} · ${S.children.filter(c => isCurrent(c) && attIn(c, centre, k)).length}</a>`).join('')}</div>
     <div class="seg dayseg"><a href="#" data-q="d=${addDays(d, -1)}" aria-label="Previous day">‹</a><a href="#" data-q="d=${today()}" class="${d === today() ? 'on' : ''}">Today</a><a href="#" data-q="d=${addDays(d, 1)}" aria-label="Next day">›</a></div>
-    <input class="in" type="date" value="${d}" data-filter="d" style="width:auto"></div></div>
+    <input class="in" type="date" value="${d}" data-filter="d" style="width:auto">
+    <div class="seg" role="group" aria-label="Day or month"><a href="#" data-q="av=" class="${month ? '' : 'on'}">Day</a><a href="#" data-q="av=month" class="${month ? 'on' : ''}">Month register</a></div></div></div>
   ${attCheckTop(centre, grp, d)}
   <div class="grid g4">
     ${tile('P', cnt('P'), 'Present')}${grp === 'Resident' ? tile('H', cnt('H'), 'Home leave') : ''}${tile('A', cnt('A'), 'Absent')}${tile('S', cnt('S') + cnt('E'), grp === 'Resident' ? 'Sick' : 'Sick or with permission')}${tile('unmarked', notDone, 'Not marked yet')}
@@ -1497,8 +1510,8 @@ function vAttendance(r) {
     <label class="f">Show<select class="in" data-filter="only">${opt([{ v: 'unmarked', l: 'Not marked yet' }, { v: 'P', l: 'Present' }, { v: 'H', l: 'Home leave' }, { v: 'A', l: 'Absent' }, { v: 'S', l: 'Sick' }, { v: 'E', l: 'Permission' }], only, 'Everyone')}</select></label>
   </div>
   <div class="card" style="padding:6px 8px">
-    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px"><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="xl" data-k="attday">Excel: this day</button><button class="btn sm" data-act="xl" data-k="attmonth">Excel: whole month (register)</button></div><button class="btn sm" data-act="allpresent" data-d="${d}" data-g="${grp}" data-c="${centre}">Mark everyone not marked as present</button></div>
-    <div id="attTable">${attTable(q)}</div>
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px"><button class="btn sm" data-act="xl" data-k="${month ? 'attmonth' : 'attday'}">Export in Excel</button>${month ? `<span class="sub" style="align-self:center">${esc(fmtMonth(d.slice(0, 7)))} · to change a mark, go back to Day</span>` : `<button class="btn sm" data-act="allpresent" data-d="${d}" data-g="${grp}" data-c="${centre}">Mark everyone not marked as present</button>`}</div>
+    <div id="attTable">${month ? attMonthTable(q) : attTable(q)}</div>
   </div>
   ${attCheckList(centre)}
   <p class="sub" style="margin:0">Someone listed here who no longer comes: open the profile and close the file.</p>`;
@@ -1508,7 +1521,7 @@ function vOutreach(r) {
   const m = r.q.get('m') || thisMonth(); const { a, b } = monthCtx(m);
   const ss = S.outreach.filter(s => inRange(s.date, a, b)).sort((x, y) => y.date.localeCompare(x.date));
   const luigi = S.children.filter(c => c.section === 'Luigi' && c.status !== 'Closed').sort((x, y) => fullName(x).localeCompare(fullName(y)));
-  return `<div class="top"><div><h1>Street outreach and drop-in · Luigi</h1><p class="lead">${ss.length} sessions in ${esc(fmtMonth(m))}.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(m)}<button class="btn" data-act="xl" data-k="outreach">Excel: this month</button></div></div>
+  return `<div class="top"><div><h1>Street outreach and drop-in · Luigi</h1><p class="lead">${ss.length} sessions in ${esc(fmtMonth(m))}.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(m)}<button class="btn" data-act="xl" data-k="outreach">Export in Excel</button></div></div>
   <div class="grid g2" style="align-items:start">
     <form class="card" data-form="outreach" style="display:flex;flex-direction:column;gap:12px"><h2>Record a session</h2>
       <div class="fs two">${field('Date', 'date', today(), 'date', { req: true })}${field('Session', 'type', '', 'select', { options: opt(OUTREACH_TYPES) })}${field('Staff', 'staff', USER.name, 'text', { wide: true })}</div>
@@ -1525,7 +1538,7 @@ function vCounseling(r) {
   const m = r.q.get('m') || thisMonth(); const { a, b } = monthCtx(m);
   const ss = S.sessions.filter(s => inRange(s.date, a, b)).sort((x, y) => y.date.localeCompare(x.date));
   const opts = S.children.filter(x => x.status !== 'Closed').sort((p, q) => fullName(p).localeCompare(fullName(q))).map(x => ({ v: x.id, l: fullName(x) + ' · ' + x.id }));
-  return `<div class="top"><div><h1>Counseling</h1><p class="lead">${ss.length} sessions in ${esc(fmtMonth(m))}.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(m)}<button class="btn" data-act="xl" data-k="sessions">Excel: this month</button></div></div>
+  return `<div class="top"><div><h1>Counseling</h1><p class="lead">${ss.length} sessions in ${esc(fmtMonth(m))}.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(m)}<button class="btn" data-act="xl" data-k="sessions">Export in Excel</button></div></div>
   ${counselActions()}
   <div class="grid g2" style="align-items:start">
     <form class="card" data-form="session" style="display:flex;flex-direction:column;gap:12px"><h2>Record a session</h2>
@@ -1568,7 +1581,7 @@ function vReports(r) {
   <section class="card">
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
       <div><h2>${esc(def.label)}${aba ? ' · ABA children only' : ''} · ${esc(def.quarterly ? quarterOf(m).label : rg.label)}</h2>${canAba ? `<div class="seg" role="group" aria-label="All children or ABA" style="margin:8px 0 2px"><a href="#" data-q="aba=" class="${aba ? '' : 'on'}">All children</a><a href="#" data-q="aba=1" class="${aba ? 'on' : ''}">ABA only (distance adoption) · ${S.children.filter(c => isAba(c) && c.status !== 'Closed').length}</a></div>` : ''}<p class="sub" style="margin:4px 0 0">${def.note ? esc(def.note) + ' ' : ''}Counted from today's records: a child counts in the section where he or she is now.</p></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="copytable">Copy table</button>${k === 'Luigi' ? '<button class="btn sm" data-lact="xlreport">Excel: all tables and names</button>' : `<button class="btn sm" data-act="csvtable" data-name="${esc(k + (aba ? '-ABA' : '') + '-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)))}">Excel</button>`}${canAba ? `<button class="btn sm" data-mact="abasheet" data-y="${m.slice(0, 4)}">Excel: scheda ABA ${m.slice(0, 4)} (italiano)</button>` : ''}<button class="btn sm" data-act="print">Print</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="copytable">Copy table</button>${k === 'Luigi' ? '<button class="btn sm" data-lact="xlreport">Export in Excel: all tables and names</button>' : `<button class="btn sm" data-act="csvtable" data-name="${esc(k + (aba ? '-ABA' : '') + '-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)))}">Export in Excel</button>`}${canAba ? `<button class="btn sm" data-mact="abasheet" data-y="${m.slice(0, 4)}">Export in Excel: scheda ABA ${m.slice(0, 4)} (italiano)</button>` : ''}<button class="btn sm" data-act="print">Print</button></div>
     </div>
     <div style="margin-top:12px">${body}</div>
   </section>
@@ -1585,7 +1598,7 @@ function vHistory(r) {
   const secs = REPORT_KEYS.filter(k => historyFor(k).length);
   const tabs = `<div class="seg" style="align-self:flex-start">${REPORT_KEYS.map(x => `<a href="#" data-q="s=${x}">${esc(REPORTS[x].short || REPORTS[x].label)}</a>`).join('')}<a href="#" class="on">2026 from the reports</a></div>`;
   if (!S.history.length) return `<div class="top"><div><h1>Reports</h1></div></div>${tabs}<div class="card"><h2>No report figures loaded</h2><p>Load the starter pack (Staff, then Data) to see the figures of the 2026 section reports month by month.</p></div>`;
-  return `<div class="top"><div><h1>2026 from the section reports</h1><p class="lead">Figures copied from the Word reports of each section, as written, before this app was used. They are not counted from the records.</p></div><button class="btn" data-act="xl" data-k="history">Excel: all report figures</button></div>
+  return `<div class="top"><div><h1>2026 from the section reports</h1><p class="lead">Figures copied from the Word reports of each section, as written, before this app was used. They are not counted from the records.</p></div><button class="btn" data-act="xl" data-k="history">Export in Excel: all report figures</button></div>
   ${tabs}
   <div class="seg" style="align-self:flex-start">${secs.map(x => `<a href="#" data-q="h=${x}" class="${x === sec ? 'on' : ''}">${esc(REPORTS[x].short || REPORTS[x].label)}</a>`).join('')}</div>
   ${M ? `<section class="card"><h2>${esc(REPORTS[sec].label)}</h2><p class="sub" style="margin:4px 0 10px">Each cell shows the last column of the section's table (total${sec === 'Table6' ? '; for Table 6.0: remaining at the end of the quarter' : ''}). Point at a number to see the full breakdown. Empty: the indicator is not in that report.</p>
@@ -1626,7 +1639,7 @@ function vData() {
       <input type="file" accept=".xlsx" id="luigifile" class="in" style="margin-top:10px"><div id="luigimsg" style="margin-top:10px"></div></section>
     <section class="card"><h2>Backup</h2><p class="sub">Download a full copy of the data. Keep it on a USB key or Google Drive (not shared publicly: it contains children's personal data). ${S.meta.lastBackup ? 'Last backup: ' + esc(fmtDate(S.meta.lastBackup)) + '.' : 'No backup made yet.'}</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn pri" data-act="backup">Download backup</button><label class="btn">Restore a backup<input type="file" accept=".json,application/json" id="restorefile" class="hide"></label></div></section>
-    <section class="card"><h2>Export to Excel</h2><p class="sub">Everything in one Excel file (one sheet per table), or one table at a time. Every list in the app also has its own Excel button, with the filters you chose.</p>
+    <section class="card"><h2>Export in Excel</h2><p class="sub">Everything in one Excel file (one sheet per table), or one table at a time. Every list in the app has its own "Export in Excel" button: it exports what is on the screen, with the filters you chose.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn pri" data-act="export" data-k="all">Everything</button>${['children', 'visits', 'events', 'moves', 'sessions', 'outreach', 'attendance'].map(k => `<button class="btn" data-act="export" data-k="${k}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('')}</div></section>
     <section class="card"><h2>Start again</h2><p class="sub">Deletes all data on this computer. Make a backup first.</p><button class="btn danger" style="margin-top:10px" data-act="wipe">Delete all data on this computer</button></section>
   </div>`;
@@ -1698,7 +1711,7 @@ function vReview() {
   const list = S.children.map(c => ({ c, s: reviewSignals(c) })).filter(x => x.s.score > 0).sort((a, b) => b.s.score - a.s.score || (a.c.entryDate || '').localeCompare(b.c.entryDate || ''));
   const actR = S.children.filter(c => isCurrent(c) && (c.section === 'UCC' || c.section === 'Youth') && c.residence === 'Resident').length;
   const actN = S.children.filter(c => isCurrent(c) && (c.section === 'UCC' || c.section === 'Youth') && c.residence !== 'Resident').length;
-  return `<div class="top"><div><h1>Files to review</h1><p class="lead">Open files of children and youth who probably left, but whose file was never closed. The Minsundu tool had no way to close a file.</p></div><button class="btn" data-act="xl" data-k="review">Excel: this list</button></div>
+  return `<div class="top"><div><h1>Files to review</h1><p class="lead">Open files of children and youth who probably left, but whose file was never closed. The Minsundu tool had no way to close a file.</p></div><button class="btn" data-act="xl" data-k="review">Export in Excel</button></div>
   <div class="note">Minsundu, open files now: <b>${actR} residents and ${actN} non-residents</b>. The Q3 2026 report counted 46 residents and 56 non-residents. The difference is mostly files that should be closed.</div>
   ${list.length ? `<form class="card" data-form="bulkclose" style="padding:6px 8px">
     <div class="tw"><table><thead><tr><th><input type="checkbox" data-act="checkall" aria-label="Select all"></th><th>Child</th><th>Section</th><th>Residence</th><th>Why it is listed</th><th></th></tr></thead><tbody>
@@ -2280,7 +2293,7 @@ function vLuigiAtt(r) {
     when = `<div class="seg dayseg"><a href="#" data-q="ld=${addDays(d, -1)}" aria-label="Previous day">‹</a><a href="#" data-q="ld=${today()}" class="${d === today() ? 'on' : ''}">Today</a><a href="#" data-q="ld=${addDays(d, 1)}" aria-label="Next day">›</a></div><input class="in" type="date" value="${d}" data-filter="ld" style="width:auto">`;
     filters = `<p class="sec" style="margin:0">Three sheets for the day. Choose the one you did</p><div class="grid g3" id="lsheets">${L_SHEETS.map(tile).join('')}</div>`;
     body = `<div class="card" style="border-top:4px solid ${sh.color}">
-      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><h2>${esc(sh.label)} · ${esc(fmtDate(d))}</h2><button class="btn sm" data-lact="xlday" data-d="${d}">Excel: daily report, the three sheets</button></div>
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><h2>${esc(sh.label)} · ${esc(fmtDate(d))}</h2><button class="btn sm" data-lact="xlday" data-d="${d}">Export in Excel</button></div>
       ${luigiStaffHtml(d, sh)}
       <div class="filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:2fr 1fr 1fr;margin:12px 0 6px;display:grid;gap:10px">${search}${filtBtn()}${catSel}<label class="f">Show<select class="in" data-filter="lonly">${opt([{ v: 'on', l: 'Only: ' + sh.mark.toLowerCase() }, { v: 'off', l: 'Only children not marked' }], only, 'Everyone')}</select></label></div>
       <div id="lattBody">${luigiDayList(d, sh.k)}</div></div>
@@ -2293,7 +2306,7 @@ function vLuigiAtt(r) {
     when = monthPicker(m, 'lm');
     filters = `<div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:2fr 1fr 1fr">${search}${filtBtn()}${catSel}<label class="f">Show<select class="in" data-filter="lseen">${opt([{ v: '1', l: 'Only children marked this month' }], q.get('lseen'), 'All children in town')}</select></label></div>`;
     body = `<div class="card" style="padding:6px 8px">
-      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px;align-items:center"><span class="sub">${night ? 'Click a cell: <b class="lc S" style="padding:1px 6px">S</b> slept on the street, click again to clear.' : 'Click a cell: <b class="lc C" style="padding:1px 6px">C</b> came to the centre, <b class="lc S" style="padding:1px 6px">S</b> met on the street, then empty.'} ${seen.length} of ${kids.length} children marked this month (${sexText(seen)}; A ${seen.filter(c => c.streetCat === 'A').length} · B ${seen.filter(c => c.streetCat === 'B').length}).</span><button class="btn sm" data-lact="xlmonth">Excel: this sheet</button></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px;align-items:center"><span class="sub">${night ? 'Click a cell: <b class="lc S" style="padding:1px 6px">S</b> slept on the street, click again to clear.' : 'Click a cell: <b class="lc C" style="padding:1px 6px">C</b> came to the centre, <b class="lc S" style="padding:1px 6px">S</b> met on the street, then empty.'} ${seen.length} of ${kids.length} children marked this month (${sexText(seen)}; A ${seen.filter(c => c.streetCat === 'A').length} · B ${seen.filter(c => c.streetCat === 'B').length}).</span><button class="btn sm" data-lact="xlmonth">Export in Excel</button></div>
       <div id="lattBody">${luigiGrid(m, night)}</div></div>`;
   }
   const lead = tab === 'today' ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : tab === 'sum' ? 'Year ' + m.slice(0, 4) : fmtMonth(m) + '. Same sheets as the Luigi tool.';
@@ -2513,7 +2526,7 @@ function planCard(m, team, centre) {
   return `<section class="card" id="plan"${centre !== 'all' ? ` style="border-top:4px solid ${CENTRE_COLOR[centre]}"` : ''}>
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><h2>Plan of visits · ${esc(who)}${esc(fmtMonth(m))}</h2>
       <p class="sub" style="margin:2px 0 0">${list.length ? `${list.length} children planned: ${n('done')} done, ${n('tried')} tried, ${n('planned')} to do.` : 'Nobody planned yet.'} Made at the end of the month for the next one. A visit recorded in the month ticks the child off by itself.</p></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${m !== addMonths(thisMonth(), 1) ? `<a class="btn sm" href="#" data-q="m=${addMonths(thisMonth(), 1)}">Go to ${esc(fmtMonth(addMonths(thisMonth(), 1)))}</a>` : ''}<button class="btn sm" data-pact="xlplan" data-m="${m}" data-team="${team}" data-centre="${centre}">Excel: this plan</button></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${m !== addMonths(thisMonth(), 1) ? `<a class="btn sm" href="#" data-q="m=${addMonths(thisMonth(), 1)}">Go to ${esc(fmtMonth(addMonths(thisMonth(), 1)))}</a>` : ''}<button class="btn sm" data-pact="xlplan" data-m="${m}" data-team="${team}" data-centre="${centre}">Export in Excel</button></div></div>
     ${CENTRES.map(block).join('')}
     ${past ? '' : `<div style="margin-top:14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end">
       <label class="f">Add a child${centre === 'all' ? '' : ' of ' + esc(CENTRE_LABEL[centre])} to ${team === 'all' ? 'the plan' : 'the plan of ' + esc(teamLabel(team))}<input class="in" id="planq" data-m="${m}" data-team="${team}" data-centre="${centre}" placeholder="Name, nickname or ID" autocomplete="off"></label>
@@ -2557,9 +2570,9 @@ function defReport() { const m = mainFlag(USER); return ['Family', 'School', 'Co
 function centreGuide(full) {
   const lm = planMonth();
   const G = [
-    { k: 'Luigi', title: 'Luigi Drop-in', sub: 'Phase 1 · street outreach and drop-in', color: SECTIONS.Luigi.color, links: [['Mark today: centre, street, night', '#/attendance?c=Luigi'], ['New face? Check if the child is known', '#/attendance?c=Luigi&go=knownq'], ['Families to find, home visits to plan', '#/visits?vt=Luigi&vtab=need'], ['Luigi plan of home visits · ' + fmtMonth(lm), '#/visits?vt=Luigi&vtab=plan&m=' + lm], ['Luigi children', '#/children?section=Luigi'], ['Luigi report', '#/reports?s=Luigi']] },
-    { k: 'Minsundu', title: 'Minsundu', sub: 'Phase 2 UCC children · Phase 4 Youth Centre', color: SECTIONS.UCC.color, links: [['Mark today\'s attendance', '#/attendance?c=Minsundu'], ['UCC children', '#/children?section=UCC'], ['Youth', '#/children?section=Youth'], ['Visits to Minsundu children', '#/visits?vt=all&vc=Minsundu'], ['Absent 3 days or more', '#/attendance?c=Minsundu&go=attcheck'], ['Reports: UCC, Youth, Table 6.0', '#/reports?s=' + ('UCC')]] },
-    { k: 'Nkwazi', title: 'Nkwazi', sub: 'Phase 3 · community school, GRZ and private schools', color: SECTIONS.Nkwazi.color, links: [['Mark today\'s attendance', '#/attendance?c=Nkwazi'], ['Admissions, transfers and discharges', '#/paths?ps=Nkwazi'], ['Visits to Nkwazi children', '#/visits?vt=all&vc=Nkwazi'], ['Nkwazi children', '#/children?section=Nkwazi'], ['Add a child', '#/child/new'], ['Nkwazi report', '#/reports?s=Nkwazi']] },
+    { k: 'Luigi', title: 'Luigi Drop-in', sub: 'Phase 1 · street outreach and drop-in', color: SECTIONS.Luigi.color, links: [['Mark today: centre, street, night', '#/attendance?c=Luigi'], ['Luigi children', '#/children?section=Luigi'], ['Admissions, transfers and discharges', '#/paths?ps=Luigi'], ['Families to find, home visits to plan', '#/visits?vt=Luigi&vtab=need'], ['New face? Check if the child is known', '#/attendance?c=Luigi&go=knownq'], ['Luigi report', '#/reports?s=Luigi']] },
+    { k: 'Minsundu', title: 'Minsundu', sub: 'Phase 2 UCC children · Phase 4 Youth Centre', color: SECTIONS.UCC.color, links: [['Mark today\'s attendance', '#/attendance?c=Minsundu'], ['Minsundu children: UCC and Youth', '#/children?section=Minsundu'], ['Admissions, transfers and discharges', '#/paths?ps=UCC'], ['Visits to Minsundu children', '#/visits?vt=all&vc=Minsundu'], ['Absences to check', '#/attendance?c=Minsundu&go=attcheck'], ['Reports: UCC, Youth, Table 6.0', '#/reports?s=' + ('UCC')]] },
+    { k: 'Nkwazi', title: 'Nkwazi', sub: 'Phase 3 · community school, GRZ and private schools', color: SECTIONS.Nkwazi.color, links: [['Mark today\'s attendance', '#/attendance?c=Nkwazi'], ['Nkwazi children', '#/children?section=Nkwazi'], ['Admissions, transfers and discharges', '#/paths?ps=Nkwazi'], ['Visits to Nkwazi children', '#/visits?vt=all&vc=Nkwazi'], ['Absences to check', '#/attendance?c=Nkwazi&go=attcheck'], ['Nkwazi report', '#/reports?s=Nkwazi']] },
     { k: 'All', title: 'Family, School, Counseling', sub: 'Sections working in all centres', color: '#73726E', links: [[mainFlag(USER) === 'Counseling' ? 'Record a counseling session' : 'Record a home or school visit', mainFlag(USER) === 'Counseling' ? '#/counseling' : '#/visit/new'], ['Who needs a visit', '#/visits?vtab=need'], ['Plan of visits of your section · ' + fmtMonth(lm), '#/visits?vtab=plan&m=' + lm], ['Counseling sessions', '#/counseling'], ['Reports: Family, School, Counseling', '#/reports?s=' + (['Family', 'School', 'Counseling'].includes(mainFlag(USER)) ? mainFlag(USER) : 'Family')]] }
   ];
   const mine = full ? [] : myBoxes();
@@ -2837,7 +2850,7 @@ function vPending(r) {
   const card = c => `<section class="card ovcard" style="border-top:5px solid ${c.color}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><h2>${esc(c.title)}</h2>${own(c) ? '<span class="chip c-blue">You work here</span>' : ''}</div>
     <p class="ovsum ${open(c) ? 'has' : 'ok'}">${c.empty ? esc(c.empty) : open(c) ? open(c) + (open(c) === 1 ? ' thing' : ' things') + ' to look at' : 'Nothing open'}</p>
     ${c.lines.map(l => `<a class="al ${l.lvl}" href="${l.href}">${l.n !== '' ? `<b>${esc(l.n)}</b>` : '<b>·</b>'}<span>${esc(l.text)}</span><i aria-hidden="true">›</i></a>`).join('')}</section>`;
-  return `<div class="top"><div><h1>To do</h1><p class="lead">One box per section, a few lines each. Click a line to open the page where the full list is.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="xl" data-k="pending">Excel: everything open</button></div></div>
+  return `<div class="top"><div><h1>To do</h1><p class="lead">One box per section, a few lines each. Click a line to open the page where the full list is.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="xl" data-k="pending">Export in Excel</button></div></div>
   <div class="grid g3 ovgrid" id="ovgrid" style="align-items:start">${sorted.map(card).join('')}</div>
   <p class="sub" style="margin:0">Red: late or missing. Orange: to do soon. Grey: where the month stands. The lists are in their own pages: Attendance, Visits, Children, Counseling, Reports.</p>`;
 }
@@ -3175,7 +3188,7 @@ function vPaths(r) {
     <select class="in" data-filter="py" style="width:auto" aria-label="Year">${opt(years.map(v => ({ v, l: v === 'all' ? 'All years' : v })), y)}</select></div></div>
   <section class="card">${flowSvg(F, sec)}<p class="sub" style="margin:8px 0 0">Built from the date of entry, the moves between sections and the files closed. A child who was discharged and readmitted counts once for each stay.</p></section>
   <div class="grid g4">${tile('', F.rows.length, 'Worked with in the period')}${tile('in', nIn, 'Admitted')}${tile('out', nOut, 'Discharged or transferred')}${tile('here', nHere, 'Still at the centre')}</div>
-  <section class="card" style="padding:6px 8px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px"><h2 style="margin:0">Admissions and discharges register · ${rows.length}</h2><button class="btn sm" data-act="xl" data-k="paths">Excel: this register</button></div>
+  <section class="card" style="padding:6px 8px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px"><h2 style="margin:0">Admissions and discharges register · ${rows.length}</h2><button class="btn sm" data-act="xl" data-k="paths">Export in Excel</button></div>
     <div class="tw"><table class="mt"><thead><tr><th>Name</th><th>Admitted</th><th>From</th><th>Out</th><th>Date</th><th>Reason</th></tr></thead><tbody>${rows.map(x => `<tr><td>${childLink(x.c)}<div class="sub">ID ${esc(x.c.id)} · ${esc(x.c.sex || '?')}</div></td><td>${esc(x.s.a ? (x.s.approx ? x.s.a.slice(0, 4) : fmtDate(x.s.a)) : 'not written')}</td><td>${esc(x.srcLab)}</td><td>${x.s.end ? esc(x.outLab) : `<span class="chip ${STATUS_CHIP[x.c.status] || ''}">${esc(x.c.status)}</span>`}</td><td>${esc(x.s.end ? fmtDate(x.s.b) || 'not written' : '')}</td><td>${esc(x.s.reason || x.c.admissionNote || '')}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Nobody.</td></tr>'}</tbody></table></div></section>
   <p class="sub" style="margin:0">This page replaces the Data Tool: a new admission is a child added with the date of entry and where he or she comes from; a discharge is a file closed; a transfer is "Change status or section" in the profile.</p>`;
 }
@@ -3210,6 +3223,17 @@ function nkzFilters(q) {
 const WORDS = [[/Counseling/g, 'Counselling'], [/counseling/g, 'counselling'], [/\bCounselor/g, 'Counsellor'], [/\bcounselor/g, 'counsellor'], [/\bEnrollment/g, 'Enrolment'], [/\benrollment/g, 'enrolment']];
 function zmText(t) { for (const [a, b] of WORDS) t = t.replace(a, b); return t; }
 function zm(html) { return String(html).replace(/>([^<]+)</g, (m, t) => '>' + zmText(t) + '<'); }
+
+/* ---------- attendance: the month as a register, like the paper one ---------- */
+const ATT_SHOW = { P: '✓', A: 'X', S: 'S', E: 'P', H: 'H' };
+function attMonthTable(q) {
+  const d = q.get('d') || today(), m = d.slice(0, 7), n = Number(monthEnd(m).slice(8));
+  const q2 = new URLSearchParams(q.toString()); q2.delete('only');
+  const kids = attKids(q2, true), days = []; for (let i = 1; i <= n; i++) days.push(m + '-' + String(i).padStart(2, '0'));
+  if (!kids.length) return '<p class="empty">No child matches.</p>';
+  const wk = x => { const w = new Date(x + 'T00:00:00').getDay(); return w === 0 || w === 6; };
+  return `<div class="tw"><table class="mreg"><thead><tr><th>Name</th>${days.map(x => `<th class="${wk(x) ? 'we' : ''}${x === today() ? ' td' : ''}">${Number(x.slice(8))}</th>`).join('')}<th title="Present">✓</th><th title="Absent">X</th><th title="Sick">S</th><th title="Permission">P</th></tr></thead><tbody>${kids.map(c => { const v = days.map(x => (S.attendance[x] || {})[c.id] || ''); const cnt = k => v.filter(x => x === k).length; return `<tr><td>${childLink(c)}</td>${v.map((x, i) => `<td class="${x ? 'm' + x : ''}${wk(days[i]) ? ' we' : ''}">${ATT_SHOW[x] || ''}</td>`).join('')}<td><b>${cnt('P')}</b></td><td>${cnt('A') || ''}</td><td>${cnt('S') || ''}</td><td>${cnt('E') || ''}</td></tr>`; }).join('')}</tbody></table></div><p class="sub" style="margin:8px 4px 2px">✓ present · X absent · S sick · P permission · H home leave. Same signs as the paper register.</p>`;
+}
 
 /* ====================================================================
    PIN for the staff
