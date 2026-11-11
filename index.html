@@ -398,6 +398,11 @@ body.guest .qrow button,body.guest .qrest button,body.guest .qcount button{point
 @media (max-width:760px){.qtop{top:var(--hdh,49px);margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}}
 .qctl{margin-top:8px;width:100%}.qctl>summary{cursor:pointer;font-weight:600;font-size:13.5px;color:var(--pri2);padding:8px 0;list-style-position:inside}
 .qctl[open]>summary{margin-bottom:6px}
+table.mreg td.mc{cursor:pointer;min-width:26px;height:26px}
+table.mreg td.mc:hover{box-shadow:inset 0 0 0 2px var(--pri)}
+table.mreg td.fu{background:#FAFAF9}
+body.guest table.mreg td.mc{pointer-events:none}
+@media (max-width:760px){table.mreg td.mc{min-width:34px;height:36px;font-size:14px}}
 
 </style>
 </head>
@@ -411,7 +416,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 1.9';
+const VERSION = 'alpha 2.0';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -682,7 +687,7 @@ function zipStore(files, type) {
 function xEsc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ''); }
 function colName(i) { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
 function cellVal(v) { if (typeof v === 'string' && /^-?\d{1,9}(\.\d+)?$/.test(v) && !/^0\d/.test(v)) return Number(v); return v; }
-function sheetXml(rows) {
+function sheetXml(rows, filter) {
   const w = [];
   rows.forEach(r => r.forEach((v, i) => { const l = String(v == null ? '' : v).length; w[i] = Math.min(60, Math.max(w[i] || 6, l + 2)); }));
   const cols = w.length ? '<cols>' + w.map((x, i) => `<col min="${i + 1}" max="${i + 1}" width="${x}" customWidth="1"/>`).join('') + '</cols>' : '';
@@ -692,12 +697,12 @@ function sheetXml(rows) {
     if (typeof v === 'number' && isFinite(v)) return `<c r="${ref}"${st}><v>${v}</v></c>`;
     return `<c r="${ref}" t="inlineStr"${st}><is><t xml:space="preserve">${xEsc(v)}</t></is></c>`;
   }).join('') + '</row>').join('');
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${body}</sheetData></worksheet>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>${cols}<sheetData>${body}</sheetData>${filter && rows.length > 1 && w.length ? `<autoFilter ref="A1:${colName(w.length - 1)}${typeof filter === 'number' ? filter : rows.length}"/>` : ''}</worksheet>`;
 }
 /* sheets: [{ name, rows: [[header...], [values...], ...] }] */
 function downloadXlsx(filename, sheets) {
   const used = {};
-  sheets = sheets.map((s, i) => { let n = String(s.name || 'Sheet' + (i + 1)).replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31) || 'Sheet' + (i + 1); while (used[n]) n = n.slice(0, 28) + ' ' + i; used[n] = 1; return { name: n, rows: s.rows }; });
+  sheets = sheets.map((s, i) => { let n = String(s.name || 'Sheet' + (i + 1)).replace(/[\[\]:*?\/\\]/g, ' ').slice(0, 31) || 'Sheet' + (i + 1); while (used[n]) n = n.slice(0, 28) + ' ' + i; used[n] = 1; return { name: n, rows: s.rows, filter: s.filter }; });
   const ns = 'http://schemas.openxmlformats.org/';
   const files = [
     { name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="${ns}package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${sheets.map((s, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join('')}</Types>` },
@@ -705,7 +710,7 @@ function downloadXlsx(filename, sheets) {
     { name: 'xl/workbook.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${ns}spreadsheetml/2006/main" xmlns:r="${ns}officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${xEsc(s.name)}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
     { name: 'xl/_rels/workbook.xml.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${ns}package/2006/relationships">${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="${ns}officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="${ns}officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
     { name: 'xl/styles.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${ns}spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>` }
-  ].concat(sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(s.rows) })));
+  ].concat(sheets.map((s, i) => ({ name: `xl/worksheets/sheet${i + 1}.xml`, data: sheetXml(s.rows, s.filter) })));
   const blob = zipStore(files, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename.replace(/\.(csv|xlsx)$/i, '') + '.xlsx'; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 800);
@@ -1133,9 +1138,9 @@ function setQuery(changes) {
 }
 
 /* ---------- layout ---------- */
-const NAV = [['home', 'Home'], ['pending', 'To do'], ['children', 'Children'], ['attendance', 'Attendance'], ['visits', 'Visits'], ['counseling', 'Counseling'], ['reports', 'Reports'], ['staff', 'Staff', true]];
+const NAV = [['home', 'Home'], ['pending', 'To do'], ['children', 'Children'], ['attendance', 'Attendance'], ['visits', 'Visits'], ['counseling', 'Counseling'], ['reports', 'Reports'], ['staff', 'Admin', true]];
 function shell(active, body) {
-  const pc = pendingData().urgent;
+  const pc = todoCount();
   const nav = NAV.filter(n => !n[2] || (USER && USER.admin)).map(([k, l]) => `<a href="#/${k}" class="${active === k ? 'on' : ''}">${l}${k === 'pending' && pc ? ` <span class="chip c-red">${pc}</span>` : ''}</a>`).join('');
   return `${IS_DEMO ? demoBar() : ''}${GUEST ? guestBar() : ''}<header class="hd">
     <a class="brand" href="#/home" aria-label="CYP EDU, home"><img src="${LOGO}" alt="">${logoSvg(26)}<span class="bsub">Cicetekelo Youth Project · Education Department records · Association Pope John XXIII</span></a>
@@ -1149,7 +1154,7 @@ function shell(active, body) {
   <nav class="nav" aria-label="Main">${nav}</nav>
   <main class="main">${body}</main>
   ${mobileNav(active, pc)}
-  <div class="foot">CYP EDU ${VERSION}. Data stays in this browser on this computer: make a backup every week (Staff page). Everyone sees the whole site; only administrators see the Staff page. <a href="#/help">How it works and what to tell us</a></div>`;
+  <div class="foot">CYP EDU ${VERSION}. Data stays in this browser on this computer: make a backup every week (Admin page). Everyone sees the whole site; only administrators see the Admin page. <a href="#/help">How it works and what to tell us</a></div>`;
 }
 function demoBar() { return `<div class="demobar"><button class="btn sm pri" data-tour="start" style="margin-right:10px"><span class="dlong">Start the guided tour</span><span class="dshort">Guided tour</span></button><b>Demo version.</b> <span class="dshort">Invented children.</span><span class="dlong">All children, visits and attendance are invented. The 2026 report figures are the real ones from the section reports. Try everything: nothing here is real and nothing leaves this computer. <a href="#/help">What we want to know from you</a> · <button class="btn link" data-act="resetdemo">Start the demo again</button></span></div>`; }
 function chip(status) { return `<span class="chip ${STATUS_CHIP[status] || ''}">${esc(STATUS_LABEL[status] || status)}</span>`; }
@@ -1170,7 +1175,7 @@ function vLogin() {
     ${IS_DEMO ? '<div class="demobar" style="border-radius:8px">Demo version with invented children. Choose any name to try it, then click "Start the guided tour" at the top of the page.</div>' : ''}
     <div><h1>Who is using this ${isPhone() ? 'phone' : 'computer'}?</h1><p class="lead">CYP EDU ${VERSION} · Cicetekelo Youth Project, Education Department. Everything you record is saved under your name.</p></div>
     <div style="width:100%"><button class="stile gtile" data-act="guest"><span class="av">G</span>Guest<small>For visitors. Names, photos and personal details of the children are hidden. View only.</small></button>${loginTiles()}</div>
-    <p class="sub" style="max-width:560px">Alpha version: there is no PIN yet. Names come from the organigram and the section reports; an administrator can add or remove people on the Staff page.</p>
+    <p class="sub" style="max-width:560px">Alpha version: there is no PIN yet. Names come from the organigram and the section reports; an administrator can add or remove people on the Admin page.</p>
   </div>`;
 }
 
@@ -1378,7 +1383,7 @@ function vChild(r) {
   const dl = rows => `<dl class="dl">${rows.filter(x => x[1] !== '' && x[1] != null && !(Array.isArray(x[1]) && !x[1].length)).map(x => `<dt>${esc(x[0])}</dt><dd>${Array.isArray(x[1]) ? esc(x[1].join(', ')) : esc(x[1])}</dd>`).join('')}</dl>`;
   const iss = issuesOf(c);
   return `<div class="top"><div style="display:flex;gap:14px;align-items:center">${avatar(c, photoOf(c) ? 96 : 56)}<div><h1>${esc(fullName(c))}${c.nickname ? ` <span style="font-weight:400;color:var(--muted)">"${esc(c.nickname)}"</span>` : ''}</h1>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><span class="chip">ID ${esc(c.id)}</span>${secChip(c.section)}${chip(c.status)}${c.residence ? `<span class="chip c-blue">${esc(c.residence)}</span>` : ''}${curAge(c) !== '' ? `<span class="chip">${esc(curAge(c))} years</span>` : ''}${c.streetCat ? `<span class="chip c-orange">${esc(STREET_CATS[c.streetCat])}</span>` : ''}${isAba(c) ? '<span class="chip c-green">ABA</span>' : ''}${c.relStreet === 'Yes' ? '<span class="chip c-orange">Relatives on the street</span>' : ''}${c.backStreet ? '<span class="chip c-red">Back on the street</span>' : ''}${absChip(c)}</div></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><span class="chip">ID ${esc(c.id)}</span>${secChip(c.section)}${chip(c.status)}${c.residence ? `<span class="chip c-blue">${esc(c.residence)}</span>` : ''}${curAge(c) !== '' ? `<span class="chip">${esc(curAge(c))} years</span>` : ''}${c.streetCat && c.section === 'Luigi' && isCurrent(c) ? `<span class="chip c-orange">${esc(STREET_CATS[c.streetCat])}</span>` : ''}${isAba(c) ? '<span class="chip c-green">ABA</span>' : ''}${c.relStreet === 'Yes' ? '<span class="chip c-orange">Relatives on the street</span>' : ''}${c.backStreet ? '<span class="chip c-red">Back on the street</span>' : ''}${absChip(c)}</div></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="#/visit/new?child=${esc(c.id)}">Record a visit</a><a class="btn" href="#/child/${esc(c.id)}/status">Change status or section</a><a class="btn" href="#/child/${esc(c.id)}/edit">Edit</a></div></div>
   ${whereHtml(c)}
   ${c.sameAs && child(c.sameAs) ? `<div class="note">Probably the same child as <a href="#/child/${esc(c.sameAs)}">${esc(fullName(child(c.sameAs)))}, ID ${esc(c.sameAs)}</a> in ${esc(SECTIONS[child(c.sameAs).section].label)}: same name and a similar age. Check with the section before using two files.</div>` : ''}
@@ -1418,6 +1423,7 @@ function moveLabel(m) {
   if (m.type === 'reopened') return 'File reopened';
   if (m.type === 'status') return 'Status changed to ' + (STATUS_LABEL[m.to] || m.to);
   if (m.type === 'residence') return 'Now ' + (m.to || '').toLowerCase();
+  if (m.type === 'street') return 'Street situation: ' + (m.to ? STREET_CATS[m.to] : 'not on the street any more');
   if (m.type === 'handover') return 'Handed over';
   if (m.type === 'admitted') return 'Admitted';
   return m.type;
@@ -1428,6 +1434,8 @@ function vStatus(c) {
   <div class="grid g2" style="align-items:start">
     ${closed ? `<form class="card" data-form="reopen"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Reopen the file</h2><p class="sub">The child comes back into the programme. Everything recorded before stays in the history.</p>
       <div class="fs two">${field('Date', 'date', today(), 'date', { req: true })}${field('Section', 'section', '', 'select', { options: opt(SECTION_KEYS.map(k => ({ v: k, l: SECTIONS[k].label })), c.section) })}${field('Note', 'note', '', 'text', { wide: true })}</div><button class="btn pri" style="margin-top:12px">Reopen</button></form>` : `
+    ${c.section === 'Luigi' || c.streetCat ? `<form class="card" data-form="street"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Street situation</h2><p class="sub">Now: <b>${esc(c.streetCat ? STREET_CATS[c.streetCat] : 'not on the street, or not known')}</b>. Change it here when the child stops sleeping on the street, or goes back. The change is written in the history.</p>
+      <div class="fs two">${field('Situation now', 'cat', '', 'select', { options: opt([{ v: 'A', l: STREET_CATS.A }, { v: 'B', l: STREET_CATS.B }, { v: 'none', l: 'Not on the street any more' }], c.streetCat || 'none') })}${field('Date', 'date', today(), 'date', { req: true })}</div><button class="btn" style="margin-top:12px">Save</button></form>` : ''}
     <form class="card" data-form="move"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Move to another section</h2><p class="sub">For example from Luigi to Minsundu, or from UCC to the Youth Centre.</p>
       <div class="fs two">${field('New section', 'to', '', 'select', { options: opt(SECTION_KEYS.filter(k => k !== c.section).map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label }))) })}${field('Date', 'date', today(), 'date', { req: true })}${field('Residence', 'residence', '', 'select', { options: opt(['Resident', 'Non-resident'], c.residence) })}${field('Note', 'note', '')}</div><button class="btn pri" style="margin-top:12px">Move</button></form>
     <form class="card" data-form="activity"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Active or semi-active</h2><p class="sub">Semi-active: still in the programme but not attending regularly.</p>
@@ -1553,7 +1561,7 @@ function vAttendance(r) {
     <label class="f">Show<select class="in" data-filter="only">${opt([{ v: 'unmarked', l: 'Not marked yet' }, { v: 'P', l: 'Present' }, { v: 'H', l: 'Home leave' }, { v: 'A', l: 'Absent' }, { v: 'S', l: 'Sick' }, { v: 'E', l: 'Permission' }], only, 'Everyone')}</select></label>
   </div>
   <div class="card" style="padding:6px 8px">
-    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px"><button class="btn sm" data-act="xl" data-k="${month ? 'attmonth' : 'attday'}">Export in Excel</button>${month ? `<span class="sub" style="align-self:center">${esc(fmtMonth(d.slice(0, 7)))} · to change a mark, go back to Day</span>` : `<button class="btn sm" data-act="allpresent" data-d="${d}" data-g="${grp}" data-c="${centre}">Mark everyone not marked as present</button>`}</div>
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px"><button class="btn sm" data-act="xl" data-k="${month ? 'attmonth' : 'attday'}">Export in Excel</button>${month ? `<span class="sub" style="align-self:center">${esc(fmtMonth(d.slice(0, 7)))} · click a box to mark or change</span>` : `<button class="btn sm" data-act="allpresent" data-d="${d}" data-g="${grp}" data-c="${centre}">Mark everyone not marked as present</button>`}</div>
     <div id="attTable">${month ? attMonthTable(q) : attTable(q)}</div>
   </div>`}
   ${attCheckList(centre)}
@@ -1624,7 +1632,7 @@ function vReports(r) {
   <section class="card">
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
       <div><h2>${esc(def.label)}${aba ? ' · ABA children only' : ''} · ${esc(def.quarterly ? quarterOf(m).label : rg.label)}</h2>${canAba ? `<div class="seg" role="group" aria-label="All children or ABA" style="margin:8px 0 2px"><a href="#" data-q="aba=" class="${aba ? '' : 'on'}">All children</a><a href="#" data-q="aba=1" class="${aba ? 'on' : ''}">ABA only (distance adoption) · ${S.children.filter(c => isAba(c) && c.status !== 'Closed').length}</a></div>` : ''}<p class="sub" style="margin:4px 0 0">${def.note ? esc(def.note) + ' ' : ''}Counted from today's records: a child counts in the section where he or she is now.</p></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="copytable">Copy table</button>${k === 'Luigi' ? '<button class="btn sm" data-lact="xlreport">Export in Excel: all tables and names</button>' : `<button class="btn sm" data-act="csvtable" data-name="${esc(k + (aba ? '-ABA' : '') + '-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)))}">Export in Excel</button>`}${canAba ? `<button class="btn sm" data-mact="abasheet" data-y="${m.slice(0, 4)}">Export in Excel: scheda ABA ${m.slice(0, 4)} (italiano)</button>` : ''}<button class="btn sm" data-act="print">Print</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-act="copytable">Copy table</button>${k === 'Luigi' ? '<button class="btn sm" data-lact="xlreport">Export in Excel</button><button class="btn sm" data-lact="xlreportn">Export in Excel with names</button>' : `<button class="btn sm" data-act="csvtable" data-name="${esc(k + (aba ? '-ABA' : '') + '-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)))}">Export in Excel</button>${def.rows ? '<button class="btn sm" data-act="xlnames">Export in Excel with names</button>' : ''}`}${canAba ? `<button class="btn sm" data-mact="abasheet" data-y="${m.slice(0, 4)}">Export in Excel: scheda ABA ${m.slice(0, 4)} (italiano)</button>` : ''}<button class="btn sm" data-act="print">Print</button></div>
     </div>
     <div style="margin-top:12px">${body}</div>
   </section>
@@ -1653,11 +1661,11 @@ function vHistory(r) {
 }
 
 function vStaff(r) {
-  if (!USER.admin) return `<h1>Staff</h1><p>Only administrators see this page.</p>`;
+  if (!USER.admin) return `<h1>Admin</h1><p>Only administrators see this page.</p>`;
   if (r.id === 'data') return vData();
-  return `<div class="top"><div><h1>Staff</h1><p class="lead">Who works where. Everyone can open every page; Education admin also opens this one.</p></div><a class="btn" href="#/staff/data">Data: import, backup, export</a></div>
+  return `<div class="top"><div><h1>Admin</h1><p class="lead">Who works where. Everyone can open every page; Education admin also opens this one.</p></div><a class="btn" href="#/staff/data">Data: import, backup, export</a></div>
   <section class="card" style="padding:6px 8px">${staffTable()}</section>
-  <p class="sub" style="margin:0">Tick every area where the person works: staff rotate between centres, so one person can have several. The areas decide what each person sees first on the Home page. Education admin and Sports see all centres. Only Education admin opens this Staff page.</p>
+  <p class="sub" style="margin:0">Tick every area where the person works: staff rotate between centres, so one person can have several. The areas decide what each person sees first on the Home page. Education admin and Sports see all centres. Only Education admin opens this Admin page.</p>
   <div class="grid g2" style="align-items:start">
     <form class="card" data-form="staffadd"><h2>Add a staff member</h2><div class="fs two" style="margin-top:10px">${field('Name', 'name', '', 'text', { req: true })}${field('Role', 'role', '', 'text')}<label class="f wide"><span>Areas of work</span>${checks('areas', STAFF_FLAGS.map(x => x[0]), [])}</label></div><button class="btn pri" style="margin-top:12px">Add</button></form>
     <form class="card" data-form="handover"><h2>Hand over children</h2><p class="sub">When someone leaves or goes on leave, the children they follow move to a colleague. The history keeps who did what.</p>
@@ -1712,8 +1720,8 @@ function vHelp() {
       <li>Open the file in Microsoft Edge or Google Chrome, always the same browser on the same computer.</li>
       <li>Choose your name.</li>
       <li>On a phone the menu is at the bottom of the screen: Home, Attendance, Visits, Children, More. Lists become one child per row with large buttons.</li>
-      <li>Shared database (in More, or in Staff, Data): once a device is connected, what is recorded on it is sent by itself and what the others record arrives by itself. Without a connection the app keeps working and sends later.</li>
-      <li>Staff names ask for the staff PIN. The PIN is changed on the Staff page.</li>
+      <li>Shared database (in More, or in Admin, Data): once a device is connected, what is recorded on it is sent by itself and what the others record arrives by itself. Without a connection the app keeps working and sends later.</li>
+      <li>Staff names ask for the staff PIN. The PIN is changed on the Admin page.</li>
       <li>Guest (first name on the opening screen): for visitors. Children's names, photos and personal details are hidden and nothing can be changed.</li>
       <li>Start from Home, in the box of your centre. Record what you did: a visit, the attendance, a session. To do shows what is still open in every section.</li>
       <li>Administrators: download a backup every week (Staff, then Data).</li>
@@ -1871,6 +1879,7 @@ const FORMS = {
     if (o.residence && o.residence !== c.residence) addMove(c.id, 'residence', o.date, { from: c.residence, to: o.residence });
     c.section = o.to; c.residence = o.residence || c.residence; c.sectionToCheck = false; save(); toast('Moved to ' + SECTIONS[o.to].label); go('#/child/' + c.id);
   },
+  street(o) { const c = child(o.id), to = o.cat === 'none' ? '' : o.cat, from = c.streetCat || ''; if (to !== from) { addMove(c.id, 'street', o.date, { from, to }); c.streetCat = to; if (from === 'A' && to === 'B') c.connectionDate = o.date; c.updatedAt = today(); } save(); toast('Street situation saved'); go('#/child/' + c.id); },
   activity(o) { const c = child(o.id); if (c.status !== o.status) { addMove(c.id, 'status', o.date, { from: c.status, to: o.status }); c.status = o.status; } save(); go('#/child/' + c.id); },
   reintegrate(o) { const c = child(o.id); addMove(c.id, 'reintegrated', o.date, { note: o.note }); c.status = 'Follow-up'; c.reintegrationDate = o.date; save(); toast('Reintegration recorded'); go('#/child/' + c.id); },
   close(o) { const c = child(o.id); addMove(c.id, 'closed', o.date, { reason: o.reason, note: o.note }); c.status = 'Closed'; c.closeDate = o.date; c.closeReason = o.reason; save(); toast('File closed'); go('#/child/' + c.id); },
@@ -1941,6 +1950,8 @@ document.addEventListener('click', e => {
   else if (act === 'names') { const r = $('#names' + b.dataset.i); if (r) r.classList.toggle('hide'); }
   else if (act === 'rstatus') { const m = b.dataset.m, k = b.dataset.k; S.reports[m] = S.reports[m] || {}; const st = S.reports[m][k] = S.reports[m][k] || {}; if (b.dataset.v === 'reset') delete S.reports[m][k]; else st[b.dataset.v] = { by: USER.id, date: today() }; save(); render(); }
   else if (act === 'copytable') { const txt = tableToRows().map(r => r.join('\t')).join('\n'); copyText(txt); }
+  else if (act === 'xlnames') { reportNamesXlsx(); }
+  else if (act === 'mcell') { monthCellAct(b); }
   else if (act === 'csvtable') { downloadXlsx(b.dataset.name, [{ name: b.dataset.name, rows: tableToRows() }]); }
   else if (act === 'print') window.print();
   else if (act === 'staffactive') { const s = S.staff.find(x => x.id === b.dataset.id); s.active = !s.active; save(); render(); }
@@ -2048,7 +2059,7 @@ function exportTable(k) {
 })();
 
 /* ================= Luigi: database import, attendance grid, period reports, known-child check ================= */
-const STREET_CATS = { A: 'A · lives on the street (sleeps there)', B: 'B · street connected (goes home to sleep)' };
+const STREET_CATS = { A: 'A · sleeps on the street', B: 'B · street connected (goes home to sleep)' };
 const WHERE_REASON = { Chichetekelo: 'Moved to another Cicetekelo centre', OtherFacility: 'Transferred to another partner', Family: 'Went back to the family', OtherCity: 'Moved to another town' };
 function photos() { if (!S.photos) S.photos = {}; return S.photos; }
 function photoOf(c) { return photos()[c.id] || ''; }
@@ -2173,7 +2184,7 @@ function luigiTables(a, b) {
   const origin = pivot(originKey, (x, y) => x.localeCompare(y), 'Place of origin');
   const ages = pivot(c => curAge(c) === '' ? 'Not known' : String(curAge(c)), (x, y) => (Number(x) || 99) - (Number(y) || 99), 'Age');
   const cat = [['Street situation', 'Day outreach', 'Drop-in centre', 'Night outreach', 'Boys', 'Girls', 'Total worked with']];
-  for (const [k, l] of [['A', 'A · living on the street (sleeps there)'], ['B', 'B · street connected (goes home to sleep)']]) {
+  for (const [k, l] of [['A', 'A · sleeps on the street'], ['B', 'B · street connected (goes home to sleep)']]) {
     const f = c => c.streetCat === k;
     cat.push([l, D.kids('day').filter(f).length, D.kids('dropin').filter(f).length, D.kids('night').filter(f).length, all.filter(c => f(c) && c.sex !== 'F').length, all.filter(c => f(c) && c.sex === 'F').length, all.filter(f).length]);
   }
@@ -2186,7 +2197,7 @@ function luigiTables(a, b) {
   const days = t => uniq(ss.filter(s => s.type === t).map(s => s.date)).length;
   const staffT = [['Staff', 'Drop-in days', 'Day outreach days', 'Night outreach nights']].concat(Object.keys(who).sort((x, y) => (x === 'Not recorded') - (y === 'Not recorded') || x.localeCompare(y)).map(nm => [nm, who[nm]['Drop-in'].size, who[nm]['Day outreach'].size, who[nm]['Night outreach'].size])).concat([['Total days with the activity', days('Drop-in'), days('Day outreach'), days('Night outreach')]]);
   const bg = f => { const x = all.filter(f); return [x.filter(c => c.sex !== 'F').length, x.filter(c => c.sex === 'F').length, x.length]; };
-  const extra = [['Children met in the period', 'Boys', 'Girls', 'Total'], ['With relatives on the street'].concat(bg(c => c.relStreet === 'Yes')), ['No relatives on the street'].concat(bg(c => c.relStreet === 'No')), ['Relatives on the street: not known'].concat(bg(c => !c.relStreet)), ['Back on the street after a service'].concat(bg(c => !!c.backStreet))]
+  const extra = [['Children met in the period', 'Boys', 'Girls', 'Total'], ['With relatives on the street'].concat(bg(c => c.relStreet === 'Yes')), ['Back on the street after a service'].concat(bg(c => !!c.backStreet))]
     .concat(BACK_OPTS.filter(([k]) => all.some(c => c.backStreet === k)).map(([k, lab]) => ['   ' + lab].concat(bg(c => c.backStreet === k))));
   const findings = [['Date', 'Sheet', 'Done by', 'Places and facts', 'Findings: assessment']].concat(ss.filter(s => s.findings || s.notes).sort((x, y) => x.date.localeCompare(y.date)).map(s => [fmtDate(s.date), (L_SHEETS.find(o => o.type === s.type) || {}).label || s.type, sessStaff(s), s.notes || '', s.findings || '']));
   return { D, main, origin, ages, cat, visits, all, staffT, extra, findings };
@@ -2321,9 +2332,9 @@ function luigiSummary(year) {
   const th = (key, label, n) => `<th class="${n ? 'n' : ''}"><a href="#" class="sortth" data-q="lso=${key}&lsd=${so === key && sd === 'desc' ? 'asc' : 'desc'}" title="Sort by this column">${label}${so === key ? (sd === 'asc' ? ' ▲' : ' ▼') : ''}</a></th>`;
   const nOpt = [{ v: '1', l: '1 or more' }, { v: '5', l: '5 or more' }, { v: '10', l: '10 or more' }, { v: '0', l: 'None' }];
   const any = ['fcat', 'fc', 'fs', 'fn', 'fl', 'fg'].some(x => q.get(x));
-  return `<div class="grid g6">${k(lu.length, 'Children on record')}${k(lu.filter(c => c.status !== 'Closed').length, 'In town now')}${k(lu.filter(c => c.streetCat === 'A').length, 'A · living on the street')}${k(lu.filter(c => c.streetCat === 'B').length, 'B · street connected')}${k(Object.values(st).filter(r => r.c).length, 'Came to the centre in ' + year)}${k(Object.values(st).filter(r => r.n).length, 'Met at night in ' + year)}</div>
+  return `<div class="grid g6">${k(lu.length, 'Children on record')}${k(lu.filter(c => c.status !== 'Closed').length, 'In town now')}${k(lu.filter(c => c.streetCat === 'A').length, 'A · sleeps on the street')}${k(lu.filter(c => c.streetCat === 'B').length, 'B · street connected')}${k(Object.values(st).filter(r => r.c).length, 'Came to the centre in ' + year)}${k(Object.values(st).filter(r => r.n).length, 'Met at night in ' + year)}</div>
   <div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:repeat(6,1fr);margin-top:16px">
-    <label class="f">Situation<select class="in" data-filter="fcat">${opt([{ v: 'A', l: 'A · living on the street' }, { v: 'B', l: 'B · street connected' }, { v: 'none', l: 'Not written' }], q.get('fcat'), 'All')}</select></label>${filtBtn()}
+    <label class="f">Situation<select class="in" data-filter="fcat">${opt([{ v: 'A', l: 'A · sleeps on the street' }, { v: 'B', l: 'B · street connected' }, { v: 'none', l: 'Not written' }], q.get('fcat'), 'All')}</select></label>${filtBtn()}
     <label class="f">Days in centre<select class="in" data-filter="fc">${opt(nOpt, q.get('fc'), 'Any')}</select></label>
     <label class="f">Days met on the street<select class="in" data-filter="fs">${opt(nOpt, q.get('fs'), 'Any')}</select></label>
     <label class="f">Nights on the street<select class="in" data-filter="fn">${opt(nOpt, q.get('fn'), 'Any')}</select></label>
@@ -2355,7 +2366,7 @@ function vLuigiAtt(r) {
   const q = r.q, m = q.get('lm') || thisMonth(), tab = q.get('lt') || 'today', night = tab === 'night', d = q.get('ld') || today();
   const tabs = `<div class="seg">${[['today', 'One day', 'One day'], ['day', 'Month sheet: day', 'Month: day'], ['night', 'Month sheet: night', 'Month: night'], ['sum', 'Whole year', 'Year']].map(([k, l, s]) => `<a href="#" data-q="lt=${k}" class="${tab === k ? 'on' : ''}"><span class="dlong">${l}</span><span class="dshort">${s}</span></a>`).join('')}</div>`;
   const search = `<label class="f">Find a name<input class="in" id="lattsearch" placeholder="Name, nickname, ID or place" value="${esc(UI.lattq || '')}"></label>`;
-  const catSel = `<label class="f">Street situation<select class="in" data-filter="lcat">${opt([{ v: 'A', l: 'A · living on the street' }, { v: 'B', l: 'B · street connected' }], q.get('lcat'), 'All')}</select></label>`;
+  const catSel = `<label class="f">Street situation<select class="in" data-filter="lcat">${opt([{ v: 'A', l: 'A · sleeps on the street' }, { v: 'B', l: 'B · street connected' }], q.get('lcat'), 'All')}</select></label>`;
   let body, filters, when;
   if (tab === 'today') {
     const sh = lSheet(q.get('ls')), { sets, any, all } = luigiDayAll(d), only = q.get('lonly') || '';
@@ -2471,9 +2482,17 @@ document.addEventListener('click', e => {
     downloadXlsx('luigi-' + (night ? 'night' : 'day') + '-' + m, [{ name: fmtMonth(m), rows }]);
   } else if (act === 'xlreport') {
     const q = route().q, m = q.get('m') || thisMonth(), rg = periodRange(m, q.get('p') || 'M'), T = luigiTables(rg.a, rg.b);
-    const nm = [['Column', 'ID', 'Name', 'Sex', 'Age', 'From', 'Situation', 'Known or new']];
-    for (const [k, l] of L_COLS) for (const c of T.D.kids(k)) nm.push([l, c.id, fullName(c), c.sex, curAge(c), c.compound || '', c.streetCat || '', T.D.isNew(c) ? 'New' : 'Known']);
-    downloadXlsx('luigi-report-' + rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7), [{ name: 'Statistics', rows: T.main }, { name: 'Places of origin', rows: T.origin }, { name: 'Ages', rows: T.ages }, { name: 'Street situation', rows: T.cat }, { name: 'Home visits', rows: T.visits }, { name: 'Staff by activity', rows: T.staffT }, { name: 'Relatives, back on street', rows: T.extra }, { name: 'Findings', rows: T.findings }, { name: 'Names', rows: nm }]);
+    downloadXlsx('luigi-report-' + rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7), [{ name: 'Statistics', rows: T.main }, { name: 'Places of origin', rows: T.origin }, { name: 'Ages', rows: T.ages }, { name: 'Street situation', rows: T.cat }, { name: 'Home visits', rows: T.visits }, { name: 'Staff by activity', rows: T.staffT }, { name: 'Relatives, back on street', rows: T.extra }, { name: 'Findings', rows: T.findings }]);
+  } else if (act === 'xlreportn') {
+    const q = route().q, m = q.get('m') || thisMonth(), rg = periodRange(m, q.get('p') || 'M'), T = luigiTables(rg.a, rg.b);
+    const cnt = { 'Drop-in': {}, 'Day outreach': {}, 'Night outreach': {} };
+    for (const s of S.outreach) if (cnt[s.type] && inRange(s.date, rg.a, rg.b)) for (const id of new Set((s.children || []).map(String))) cnt[s.type][id] = (cnt[s.type][id] || 0) + 1;
+    const cols = L_COLS.filter(([k]) => k !== 'all'), has = {}; for (const [k] of cols) has[k] = new Set(T.D.kids(k).map(c => String(c.id)));
+    const kids = T.D.kids('all').sort((x, y) => fullName(x).localeCompare(fullName(y)));
+    const head = ['ID', 'Name', 'Nickname', 'Sex', 'Age', 'From', 'Situation', 'Known or new', 'Days in the centre', 'Days met on the street', 'Nights met on the street'].concat(cols.map(([, l]) => l)).concat(['Relatives on the street', 'Back on the street']);
+    const rows = kids.map(c => [c.id, fullName(c), c.nickname || '', c.sex || '', curAge(c), c.compound || '', c.streetCat || '', T.D.isNew(c) ? 'New' : 'Known', cnt['Drop-in'][c.id] || 0, cnt['Day outreach'][c.id] || 0, cnt['Night outreach'][c.id] || 0].concat(cols.map(([k]) => has[k].has(String(c.id)) ? 1 : '')).concat([c.relStreet === 'Yes' ? 1 : '', c.backStreet ? 1 : '']));
+    const tot = ['', 'Total: ' + kids.length + ' children', '', '', '', '', '', '', rows.reduce((s, r) => s + r[8], 0), rows.reduce((s, r) => s + r[9], 0), rows.reduce((s, r) => s + r[10], 0)].concat(head.slice(11).map((h, i) => rows.filter(r => r[11 + i] === 1).length));
+    downloadXlsx('luigi-report-with-names-' + rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7), [{ name: 'Children', rows: [head].concat(rows).concat([tot]), filter: rows.length + 1 }]);
   }
 });
 document.addEventListener('input', e => {
@@ -2657,7 +2676,7 @@ function centreGuide(full) {
       <details class="more" style="margin-top:10px"><summary>Other centres and sections</summary><div class="grid g${Math.min(3, rest.length)}" style="align-items:stretch;margin-top:10px">${rest.map(g => box(g, false, false)).join('')}</div></details></div>`;
   }
   return `<div id="guide"><p class="sec" style="margin:0 0 8px">Where to go${full ? ', by centre' : mine.length ? '' : ' · choose your centre'}</p><div class="grid g4" style="align-items:stretch">${G.map(g => box(g, false, false)).join('')}</div>
-    ${full || mine.length ? '' : '<p class="sub" style="margin:8px 0 0">An administrator can set your areas of work on the Staff page: then this page starts with your own centres.</p>'}</div>`;
+    ${full || mine.length ? '' : '<p class="sub" style="margin:8px 0 0">An administrator can set your areas of work on the Admin page: then this page starts with your own centres.</p>'}</div>`;
 }
 
 /* ---------- events ---------- */
@@ -2862,8 +2881,8 @@ function overviewData() {
   const gapLines = (centre) => { const out = []; for (const [g, lab] of [['Resident', 'residents'], ['Non-resident', 'non-residents']]) { const x = attGap(centre, g); if (!x) continue;
       if (x.days == null) out.push(L('!', `No attendance marked yet for the ${x.n} ${lab}`, `#/attendance?c=${centre}&g=${g}`, 'orange'));
       else if (x.days >= 2) out.push(L(x.days, `days without attendance for the ${lab} (last: ${fmtDate(x.last)})`, `#/attendance?c=${centre}&g=${g}`, x.days >= 5 ? 'red' : 'orange')); }
-    const lg = P.longAbs.filter(y => centreOf(y.c) === centre).length; if (lg) out.push(L(lg, `children not coming for ${absSet().review} days or more: check the status`, `#/attendance?c=${centre}&go=attlong`));
-    const miss = P.missing.filter(y => centreOf(y.c) === centre).length; if (miss) out.push(L(miss, `children absent ${absSet().alert} days or more in a row`, `#/attendance?c=${centre}&go=attcheck`, 'orange'));
+    const lg = P.longAbs.filter(y => (y.centre || centreOf(y.c)) === centre).length; if (lg) out.push(L(lg, `children not coming for ${absSet().review} days or more: check the status`, `#/attendance?c=${centre}&go=attlong`));
+    const miss = P.missing.filter(y => (y.centre || centreOf(y.c)) === centre).length; if (miss) out.push(L(miss, `children absent ${absSet().alert} days or more in a row`, `#/attendance?c=${centre}&go=attcheck`, 'orange'));
     if (centre === 'Nkwazi') { const fc = S.children.filter(c => c.section === 'Nkwazi' && (c.toCheck || []).length).length; if (fc) out.push(L(fc, 'children with something to confirm from the two Nkwazi files', '#/children?section=Nkwazi&status=all&issue=files', 'orange')); }
     return out; };
   const planLines = (team) => { const out = [], pl = planFor(m, team); if (pl.length) out.push(L(pl.filter(p => planStatus(p).k === 'done').length + ' / ' + pl.length, `visits of the plan of ${fmtMonth(m)} done`, `#/visits?vt=${team}&vtab=plan&m=${m}`, 'info'));
@@ -2913,16 +2932,25 @@ function overviewData() {
     cards.push({ k: 'Admin', title: 'Education office', color: '#37352F', lines }); }
   return cards;
 }
+/* the red number in the menu: supervisors count everything, the others only their own sections */
+function todoCount() {
+  if (!USER || USER.admin) return pendingData().urgent;
+  const mine = staffAreas(USER); if (!mine.length) return pendingData().urgent;
+  const own = c => mine.includes(c.k) || (mine.includes('Sports') && CENTRES.includes(c.k));
+  let n = 0; for (const c of overviewData()) if (own(c)) for (const x of c.lines) if (x.lvl === 'red') n += typeof x.n === 'number' ? x.n : 1;
+  return n;
+}
 function vPending(r) {
   const cards = overviewData(), mine = USER ? staffAreas(USER) : [];
   const own = c => mine.includes(c.k) || (mine.includes('Sports') && CENTRES.includes(c.k));
   const mf = USER ? mainFlag(USER) : '', score = c => c.k === mf ? 2 : own(c) ? 1 : 0;
-  const sorted = cards.slice().sort((x, y) => score(y) - score(x));
+  const sup = !USER || USER.admin || !mine.length;
+  const sorted = cards.filter(c => sup || own(c)).sort((x, y) => score(y) - score(x));
   const open = c => c.lines.filter(l => l.lvl !== 'info').length;
   const card = c => `<section class="card ovcard" style="border-top:5px solid ${c.color}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><h2>${esc(c.title)}</h2>${own(c) ? '<span class="chip c-blue">You work here</span>' : ''}</div>
     <p class="ovsum ${open(c) ? 'has' : 'ok'}">${c.empty ? esc(c.empty) : open(c) ? open(c) + (open(c) === 1 ? ' thing' : ' things') + ' to look at' : 'Nothing open'}</p>
     ${c.lines.map(l => `<a class="al ${l.lvl}" href="${l.href}">${l.n !== '' ? `<b>${esc(l.n)}</b>` : '<b>·</b>'}<span>${esc(l.text)}</span><i aria-hidden="true">›</i></a>`).join('')}</section>`;
-  return `<div class="top"><div><h1>To do</h1><p class="lead">One box per section, a few lines each. Click a line to open the page where the full list is.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="xl" data-k="pending">Export in Excel</button></div></div>
+  return `<div class="top"><div><h1>To do</h1><p class="lead">${sup ? (USER && USER.admin ? 'You see all sections. ' : '') + 'One box per section, a few lines each.' : 'Only the sections where you work.'} Click a line to open the page where the full list is.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="xl" data-k="pending">Export in Excel</button></div></div>
   <div class="grid g3 ovgrid" id="ovgrid" style="align-items:start">${sorted.map(card).join('')}</div>
   <p class="sub" style="margin:0">Red: late or missing. Orange: to do soon. Grey: where the month stands. The lists are in their own pages: Attendance, Visits, Children, Counseling, Reports.</p>`;
 }
@@ -2947,14 +2975,14 @@ function mobileNav(active, pc) {
   return `<nav class="mnav" aria-label="Main, phone">${main.map(k => `<a href="#/${k}" class="${active === k ? 'on' : ''}">${svg(k)}<span>${lab[k]}</span></a>`).join('')}<a href="#/more" class="${main.includes(active) ? '' : 'on'}">${svg('more')}<span>More${pc ? ` <i>${pc}</i>` : ''}</span></a></nav>`;
 }
 function vMore() {
-  const pc = pendingData().urgent, item = (h, t, s, n) => `<a class="mitem" href="${h}"><span><b>${t}</b><small>${s}</small></span>${n ? `<span class="chip c-red">${n}</span>` : ''}<i aria-hidden="true">›</i></a>`;
+  const pc = todoCount(), item = (h, t, s, n) => `<a class="mitem" href="${h}"><span><b>${t}</b><small>${s}</small></span>${n ? `<span class="chip c-red">${n}</span>` : ''}<i aria-hidden="true">›</i></a>`;
   return `<div class="top"><div><h1>More</h1><p class="lead">${esc(USER.name)}${staffAreas(USER).length ? ' · ' + esc(areasText(USER)) : ''}</p></div></div>
   <div class="mlist">
     ${item('#/pending', 'To do', 'What is still open, section by section', pc)}
     <a class="mitem" href="#/sync"><span><b>Shared database</b><small>${syncOn() ? (SY.state === 'off' ? 'No connection: saved here, sent later' : 'Connected: sent and received by itself') : 'Not connected yet'}</small></span>${syncOn() && pendingCount() ? '<span class="chip c-blue">Sending</span>' : ''}<i aria-hidden="true">›</i></a>
     ${item('#/counseling', 'Counseling', 'Record a session, sessions of the month')}
     ${item('#/reports', 'Reports', 'Tables of each section')}
-    ${USER.admin ? item('#/staff', 'Staff and data', 'People, areas, backup') : ''}
+    ${USER.admin ? item('#/staff', 'Admin', 'People, areas, PIN, backup') : ''}
     ${item('#/help', 'How it works', 'And what we want to know from you')}
   </div>
   ${installCard()}
@@ -3307,7 +3335,7 @@ function attMonthTable(q) {
   const kids = attKids(q2, true), days = []; for (let i = 1; i <= n; i++) days.push(m + '-' + String(i).padStart(2, '0'));
   if (!kids.length) return '<p class="empty">No child matches.</p>';
   const wk = x => { const w = new Date(x + 'T00:00:00').getDay(); return w === 0 || w === 6; };
-  return `<div class="tw"><table class="mreg"><thead><tr><th>Name</th>${days.map(x => `<th class="${wk(x) ? 'we' : ''}${x === today() ? ' td' : ''}">${Number(x.slice(8))}</th>`).join('')}<th title="Present">✓</th><th title="Absent">X</th><th title="Sick">S</th><th title="Permission">P</th></tr></thead><tbody>${kids.map(c => { const v = days.map(x => (S.attendance[x] || {})[attKey(c, q.get('c') || defCentre())] || ''); const cnt = k => v.filter(x => x === k).length; return `<tr><td>${childLink(c)}</td>${v.map((x, i) => `<td class="${x ? 'm' + x : ''}${wk(days[i]) ? ' we' : ''}">${ATT_SHOW[x] || ''}</td>`).join('')}<td><b>${cnt('P')}</b></td><td>${cnt('A') || ''}</td><td>${cnt('S') || ''}</td><td>${cnt('E') || ''}</td></tr>`; }).join('')}</tbody></table></div><p class="sub" style="margin:8px 4px 2px">✓ present · X absent · S sick · P permission · H home leave. Same signs as the paper register.</p>`;
+  return `<div class="tw"><table class="mreg"><thead><tr><th>Name</th>${days.map(x => `<th class="${wk(x) ? 'we' : ''}${x === today() ? ' td' : ''}">${Number(x.slice(8))}</th>`).join('')}<th title="Present">✓</th><th title="Absent">X</th><th title="Sick">S</th><th title="Permission">P</th></tr></thead><tbody>${kids.map(c => { const v = days.map(x => (S.attendance[x] || {})[attKey(c, q.get('c') || defCentre())] || ''); const cnt = k => v.filter(x => x === k).length; const key = attKey(c, q.get('c') || defCentre()); return `<tr><td>${childLink(c)}</td>${v.map((x, i) => days[i] > today() ? `<td class="fu${wk(days[i]) ? ' we' : ''}"></td>` : `<td class="mc ${x ? 'm' + x : ''}${wk(days[i]) ? ' we' : ''}" data-act="mcell" data-d="${days[i]}" data-id="${esc(key)}" data-c="${esc(c.id)}">${ATT_SHOW[x] || ''}</td>`).join('')}<td><b>${cnt('P')}</b></td><td>${cnt('A') || ''}</td><td>${cnt('S') || ''}</td><td>${cnt('E') || ''}</td></tr>`; }).join('')}</tbody></table></div><p class="sub" style="margin:8px 4px 2px">Click a box to mark. Each click changes the sign: ✓ present, X absent, S sick, P permission (H home leave for the residents of Minsundu), then empty. Same signs as the paper register.</p>`;
 }
 
 /* ---------- section, where the child sleeps, where the child comes by day: three separate things ---------- */
@@ -3401,6 +3429,33 @@ function attQuickAct(act, b) {
     for (const c of list) { const k = attKey(c, centre); day[k] = v; touchAtt(d, k); } UI.lastMark = null; save(); render(); return true;
   }
   return true;
+}
+
+/* ---------- month register: a click on a box changes the mark ---------- */
+function monthCellAct(b) {
+  if (GUEST) return;
+  const d = b.dataset.d, id = b.dataset.id, c = child(b.dataset.c), centre = route().q.get('c') || defCentre(); if (!c) return;
+  const order = attOpts(c, centre).map(x => x[0]).concat(['']);
+  S.attendance[d] = S.attendance[d] || {};
+  const cur = S.attendance[d][id] || '', nx = order[(order.indexOf(cur) + 1) % order.length];
+  touchAtt(d, id); if (nx) S.attendance[d][id] = nx; else delete S.attendance[d][id];
+  save();
+  const box = document.querySelector('#attTable .tw'), x = box ? box.scrollLeft : 0, t = $('#attTable');
+  if (t) { t.innerHTML = attMonthTable(route().q); const nb = document.querySelector('#attTable .tw'); if (nb) nb.scrollLeft = x; }
+}
+
+/* ---------- report with names: one row per child, one column per indicator ---------- */
+function reportNamesXlsx() {
+  const r = route(), m = r.q.get('m') || thisMonth(), k = r.q.get('s') || defReport(), def = REPORTS[k]; if (!def || !def.rows) return;
+  const p = k === 'Table6' ? 'M' : (r.q.get('p') || 'M'), rg = periodRange(m, p), aba = (k === 'Family' || k === 'School') && r.q.get('aba') === '1';
+  const rows = abaScope(aba, () => def.rows(p === 'M' ? m : rg.a.slice(0, 7) + '~' + rg.b.slice(0, 7)));
+  const inds = rows.filter(x => Array.isArray(x[3])), sets = inds.map(x => new Set(x[3].map(c => String(c.id))));
+  const seen = new Set(), kids = []; for (const x of inds) for (const c of x[3]) if (!seen.has(String(c.id))) { seen.add(String(c.id)); kids.push(c); }
+  kids.sort((x, y) => fullName(x).localeCompare(fullName(y)));
+  const head = ['ID', 'Name', 'Nickname', 'Sex', 'Age', 'Section', 'Sleeps', 'Status', 'Compound', 'School', 'Grade'].concat(inds.map(x => (x[0] + ' ' + x[1]).trim()));
+  const body = kids.map(c => [c.id, fullName(c), c.nickname || '', c.sex || '', curAge(c), (SECTIONS[c.section] || {}).label || '', c.residence || '', STATUS_LABEL[c.status] || c.status || '', c.compound || c.familyAddress || '', c.schoolName || c.schoolType || '', c.grade || ''].concat(sets.map(s => s.has(String(c.id)) ? 1 : '')));
+  const tot = ['', 'Total: ' + kids.length + ' children', '', '', '', '', '', '', '', '', ''].concat(sets.map(s => s.size));
+  downloadXlsx(k + (aba ? '-ABA' : '') + '-with-names-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)), [{ name: 'Children', rows: [head].concat(body).concat([tot]), filter: body.length + 1 }]);
 }
 
 /* ====================================================================
