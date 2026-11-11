@@ -403,6 +403,8 @@ table.mreg td.mc:hover{box-shadow:inset 0 0 0 2px var(--pri)}
 table.mreg td.fu{background:#FAFAF9}
 body.guest table.mreg td.mc{pointer-events:none}
 @media (max-width:760px){table.mreg td.mc{min-width:34px;height:36px;font-size:14px}}
+.bday{border-left:4px solid #CB912F;background:#FBF3DB;color:var(--ink)}
+.bday p{margin:0 0 4px}.bday p:last-child{margin:4px 0 0}
 
 </style>
 </head>
@@ -416,7 +418,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 2.3';
+const VERSION = 'alpha 2.4';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -1234,6 +1236,7 @@ function vHome(r) {
   return `<div class="top"><div><h1>${esc(fmtMonth(m))}</h1><p class="lead">Children and youth in the programme, and this month's plans.</p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Children shown">${[['all', 'All'], ['res', 'Residents'], ['non', 'Non-residents']].map(([k, l]) => `<a href="#" data-q="f=${k}" class="${filt === k ? 'on' : ''}">${l}</a>`).join('')}</div>${monthPicker(m)}</div></div>
   ${centreGuide()}
+  ${homeBirthdays()}
   ${homeTodo()}
   ${syncReminder()}
   ${(() => { const d = S.meta.lastBackup ? daysBetween(S.meta.lastBackup, today()) : null; return (d == null || d > 7) ? `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span>${d == null ? 'No safety copy of the data has been made on this computer yet.' : 'The last safety copy of the data is ' + d + ' days old.'} If this computer breaks, everything recorded since is lost.</span>${USER.admin ? '<button class="btn" data-act="backup">Save a copy now</button>' : '<span>Ask an administrator to save a copy.</span>'}</div>` : ''; })()}
@@ -2954,6 +2957,30 @@ function todoCount() {
   const own = c => mine.includes(c.k) || (mine.includes('Sports') && CENTRES.includes(c.k));
   let n = 0; for (const c of overviewData()) if (own(c)) for (const x of c.lines) if (x.lvl === 'red') n += typeof x.n === 'number' ? x.n : 1;
   return n;
+}
+/* staff of a centre: birthdays of the children of their centres, yesterday, today and the next 7 days.
+   Only a real date of birth counts: never the age written on a day, never 1 January (used when the day is not known) */
+function birthdayList() {
+  if (!USER || USER.admin || GUEST) return [];
+  const mine = staffAreas(USER).filter(k => CENTRES.includes(k)); if (!mine.length) return [];
+  const t = today(), out = [];
+  const leap = y => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  for (const c of S.children) {
+    if (!c.dob || c.status === 'Closed' || !/^\d{4}-\d{2}-\d{2}$/.test(c.dob) || c.dob.slice(5) === '01-01') continue;
+    if (!attCentres(c).some(k => mine.includes(k))) continue;
+    for (let k = -1; k <= 7; k++) {
+      const d = addDays(t, k), y = Number(d.slice(0, 4)); let md = c.dob.slice(5); if (md === '02-29' && !leap(y)) md = '02-28';
+      if (d.slice(5) === md && y > Number(c.dob.slice(0, 4))) { out.push({ c, k, d, age: y - Number(c.dob.slice(0, 4)) }); break; }
+    }
+  }
+  return out.sort((x, y) => x.k - y.k || fullName(x.c).localeCompare(fullName(y.c)));
+}
+function homeBirthdays() {
+  const L = birthdayList(); if (!L.length) return '';
+  const nm = x => `<a href="#/child/${esc(x.c.id)}"><b>${esc(fullName(x.c))}</b></a> (${x.age})`, join = a => a.map(nm).join(', ');
+  const tod = L.filter(x => x.k === 0), yes = L.filter(x => x.k === -1), wk = L.filter(x => x.k > 0);
+  const day = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  return `<div class="note bday" id="birthdays">${tod.length ? `<p><b>Today is the birthday of</b> ${join(tod)}.</p>` : ''}${yes.length ? `<p>Yesterday was the birthday of ${join(yes)}.</p>` : ''}${wk.length ? `<p>Birthdays in the next 7 days: ${wk.map(x => esc(day(x.d)) + ' ' + nm(x)).join(' · ')}.</p>` : ''}<p class="sub">In brackets the age the child turns. Only children with a real date of birth in the file.</p></div>`;
 }
 /* staff who are not supervisors: the To do of their own sections, on the Home page */
 function homeTodo() {
