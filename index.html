@@ -416,7 +416,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 2.2';
+const VERSION = 'alpha 2.3';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -539,11 +539,23 @@ function activeStaff() { return S.staff.filter(s => s.active); }
 function child(id) { id = String(id); const al = S.aliases && S.aliases[id]; if (al) id = String(al); return S.children.find(c => String(c.id) === id); }
 function fullName(c) { return [c.name, c.surname].filter(Boolean).join(' ') || '(no name)'; }
 function displayName(c) { return fullName(c) + (c.nickname ? ' "' + c.nickname + '"' : ''); }
+/* full years between two dates: the number changes on the day of the birthday */
+function yearsBetween(from, to) {
+  const f = String(from || '').slice(0, 10).split('-').map(Number), t = String(to || '').slice(0, 10).split('-').map(Number);
+  if (f.length < 3 || t.length < 3 || f.some(isNaN) || t.some(isNaN)) return NaN;
+  return t[0] - f[0] - (t[1] < f[1] || (t[1] === f[1] && t[2] < f[2]) ? 1 : 0);
+}
 function curAge(c) {
-  if (c.dob) { const a = Math.floor(daysBetween(c.dob, today()) / 365.25); return isNaN(a) ? '' : a; }
+  if (c.dob) { const a = yearsBetween(c.dob, today()); return isNaN(a) || a < 0 ? '' : a; }
   if (c.age === '' || c.age == null || isNaN(Number(c.age))) return '';
-  const extra = c.ageAsOf ? Math.max(0, Math.floor(daysBetween(c.ageAsOf, today()) / 365.25)) : 0;
-  return Number(c.age) + extra;
+  const extra = c.ageAsOf ? yearsBetween(c.ageAsOf, today()) : 0;
+  return Number(c.age) + (isNaN(extra) ? 0 : Math.max(0, extra));
+}
+/* how the age is known: from the date of birth, or from an age written on a given day */
+function ageText(c) {
+  const a = curAge(c); if (a === '') return 'Not known';
+  if (c.dob) return a + ' years';
+  return a + ' years, about. Date of birth not known' + (c.ageAsOf ? ': the age ' + c.age + ' was written on ' + fmtDate(c.ageAsOf) + ' and one year is added every 12 months' : '');
 }
 function centreOf(c) { return (SECTIONS[c.section] || {}).centre || ''; }
 function isCurrent(c) { return c.status === 'Active' || c.status === 'Semi-active'; }
@@ -588,7 +600,8 @@ const ISSUES = {
   school: 'No school type (under 18)',
   sex: 'No sex recorded',
   exit: 'Reintegrated or closed without a date',
-  files: 'The two Nkwazi files disagree or something is missing: see the note in the profile'
+  files: 'The two Nkwazi files disagree or something is missing: see the note in the profile',
+  dob: 'No date of birth (age only, or nothing)'
 };
 function issuesOf(c) {
   const out = [];
@@ -1272,7 +1285,7 @@ function filteredChildren(q) {
     if (res && c.residence !== res) return false;
     if (sx && c.sex !== sx) return false;
     if (who && c.responsible !== who) return false;
-    if (issue && !issuesOf(c).includes(issue)) return false;
+    if (issue && !(issue === 'dob' ? !c.dob : issuesOf(c).includes(issue))) return false;
     if (grp && !inGroup(c, grp)) return false;
     if (term) { const hay = [c.id, c.name, c.surname, c.nickname, c.compound].join(' ').toLowerCase(); if (!hay.includes(term)) return false; }
     return true;
@@ -1324,7 +1337,7 @@ function vChildForm(c) {
     <div><p class="sec">Identity</p><fieldset class="fs">
       ${field('First name', 'name', c.name, 'text', { req: true })}${field('Surname', 'surname', c.surname)}${field('Nickname', 'nickname', c.nickname)}
       ${field('Sex', 'sex', '', 'select', { req: true, options: opt([{ v: 'M', l: 'Male' }, { v: 'F', l: 'Female' }], c.sex, '') })}
-      ${field('Date of birth', 'dob', c.dob, 'date', { hint: 'If not known, give the age below' })}${field('Age', 'age', c.dob ? '' : curAge(c), 'number', { attrs: ' min="0" max="40"' })}
+      ${field('Date of birth', 'dob', c.dob, 'date', { hint: 'With the date of birth the age changes by itself on the birthday. If not known, give the age.', attrs: ' max="' + today() + '"' })}${field('Age, if the date of birth is not known', 'age', c.dob ? '' : curAge(c), 'number', { attrs: ' min="0" max="40"', hint: 'The app adds one year every 12 months from the day the age is written.' })}
       ${field('Languages', 'languages', c.languages)}
       <label class="f"><span>Photo</span><span style="display:flex;gap:10px;align-items:center"><span id="photoprev">${c.id && photoOf(c) ? `<img src="${photoOf(c)}" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover">` : ''}</span><input type="file" accept="image/*" id="photofile" class="in"></span><span class="sub" style="font-weight:400">Made small automatically. Kept only in this app.</span></label>
     </fieldset>${isNew ? `<div id="dupbox" style="margin-top:10px">${c.name ? knownHtml([c.name, c.surname].join(' '), 'form') : ''}</div>` : ''}</div>
@@ -1384,7 +1397,7 @@ function vChild(r) {
   const dl = rows => `<dl class="dl">${rows.filter(x => x[1] !== '' && x[1] != null && !(Array.isArray(x[1]) && !x[1].length)).map(x => `<dt>${esc(x[0])}</dt><dd>${Array.isArray(x[1]) ? esc(x[1].join(', ')) : esc(x[1])}</dd>`).join('')}</dl>`;
   const iss = issuesOf(c);
   return `<div class="top"><div style="display:flex;gap:14px;align-items:center">${avatar(c, photoOf(c) ? 96 : 56)}<div><h1>${esc(fullName(c))}${c.nickname ? ` <span style="font-weight:400;color:var(--muted)">"${esc(c.nickname)}"</span>` : ''}</h1>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><span class="chip">ID ${esc(c.id)}</span>${secChip(c.section)}${chip(c.status)}${c.residence ? `<span class="chip c-blue">${esc(c.residence)}</span>` : ''}${curAge(c) !== '' ? `<span class="chip">${esc(curAge(c))} years</span>` : ''}${c.streetCat && c.section === 'Luigi' && isCurrent(c) ? `<span class="chip c-orange">${esc(STREET_CATS[c.streetCat])}</span>` : ''}${isAba(c) ? '<span class="chip c-green">ABA</span>' : ''}${c.relStreet === 'Yes' ? '<span class="chip c-orange">Relatives on the street</span>' : ''}${c.backStreet ? '<span class="chip c-red">Back on the street</span>' : ''}${absChip(c)}</div></div></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><span class="chip">ID ${esc(c.id)}</span>${secChip(c.section)}${chip(c.status)}${c.residence ? `<span class="chip c-blue">${esc(c.residence)}</span>` : ''}${curAge(c) !== '' ? `<span class="chip">${c.dob ? '' : 'about '}${esc(curAge(c))} years</span>` : ''}${c.streetCat && c.section === 'Luigi' && isCurrent(c) ? `<span class="chip c-orange">${esc(STREET_CATS[c.streetCat])}</span>` : ''}${isAba(c) ? '<span class="chip c-green">ABA</span>' : ''}${c.relStreet === 'Yes' ? '<span class="chip c-orange">Relatives on the street</span>' : ''}${c.backStreet ? '<span class="chip c-red">Back on the street</span>' : ''}${absChip(c)}</div></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="#/visit/new?child=${esc(c.id)}">Record a visit</a><a class="btn" href="#/child/${esc(c.id)}/status">Change status or section</a><a class="btn" href="#/child/${esc(c.id)}/edit">Edit</a></div></div>
   ${whereHtml(c)}
   ${c.sameAs && child(c.sameAs) ? `<div class="note">Probably the same child as <a href="#/child/${esc(c.sameAs)}">${esc(fullName(child(c.sameAs)))}, ID ${esc(c.sameAs)}</a> in ${esc(SECTIONS[child(c.sameAs).section].label)}: same name and a similar age. Check with the section before using two files.</div>` : ''}
@@ -1399,6 +1412,7 @@ function vChild(r) {
         ${needsVisits(c) || c.section === 'Luigi' ? planProfileHtml(c) : ''}
       </section>
       <section class="card"><h2>Details</h2>
+        <p class="sec" style="margin-top:12px">Age</p>${dl([['Date of birth', c.dob ? fmtDate(c.dob) : 'Not known'], ['Age today', ageText(c)]])}
         <p class="sec" style="margin-top:12px">In the programme</p>${dl([['Phase', SECTIONS[c.section] ? 'Phase ' + SECTIONS[c.section].phase + ' · ' + SECTIONS[c.section].label : ''], ['Date of entry', entryText(c)], ['Came from', c.referredBy], ['Note at admission', c.admissionNote], ['No in the Nkwazi Data Tool', c.toolNo], ['Followed by', staffName(c.responsible)], ['Programmes', c.programmes], ['Support received', c.support], ['Street situation', STREET_CATS[c.streetCat] || ''], ['Relatives on the street', c.relStreet ? c.relStreet + (c.relStreetWho ? ' · ' + c.relStreetWho : '') : ''], ['Back on the street', c.backStreet ? backLabel(c.backStreet) + (c.backStreetDate ? ' · found again on ' + fmtDate(c.backStreetDate) : '') : ''], ['Where now', [c.whereNow && c.whereNow !== 'InCity' ? c.whereNow : '', c.streetPlace].filter(Boolean).join(', ')], ['Taken to another place on', fmtDate(c.transferDate)], ['Connected (A to B) on', fmtDate(c.connectionDate)], ['Reintegrated on', fmtDate(c.reintegrationDate)], ['File closed', c.closeDate ? fmtDate(c.closeDate) + ' · ' + (c.closeReason || '') : '']])}
         <p class="sec" style="margin-top:14px">Family</p>${dl([['Compound', c.compound], ['Family address', c.familyAddress], ['Contact', c.contact], ['Guardian', [c.guardianName, c.guardianRelation].filter(Boolean).join(', ')], ['Father', c.father], ['Mother', c.mother], ['Other relatives', c.otherRelatives], ['Family background', c.familyBackground], ['Languages', c.languages]])}
         <p class="sec" style="margin-top:14px">School</p>${dl([['School type', c.schoolType ? c.schoolType + (c.schoolTypeToCheck ? ' (from the Nkwazi file: GRZ or private to confirm)' : '') : ''], ['School', c.schoolName], ['Grade', c.grade], ['Class (stream)', c.stream], ['Skill', c.skill], ['Education at entry', c.educationAtEntry]])}
@@ -1856,10 +1870,10 @@ const FORMS = {
   child(o) {
     const isNew = !o.id;
     let c = isNew ? { id: nextChildId(), status: 'Active', createdAt: today(), createdBy: USER.id } : child(o.id);
-    const oldSection = c.section, oldRes = c.residence;
+    const oldSection = c.section, oldRes = c.residence, ageBefore = isNew ? '' : curAge(c), hadDob = !isNew && !!c.dob;
     const keys = ['name', 'surname', 'nickname', 'sex', 'dob', 'languages', 'section', 'residence', 'entryDate', 'entryYear', 'referredBy', 'responsible', 'stream', 'programmes', 'support', 'compound', 'familyAddress', 'contact', 'guardianName', 'guardianRelation', 'father', 'mother', 'otherRelatives', 'familyBackground', 'schoolType', 'schoolName', 'grade', 'skill', 'educationAtEntry', 'medical', 'disabilities', 'objectives', 'notes', 'streetCat', 'streetPlace', 'connectionDate', 'relStreet', 'relStreetWho', 'backStreet', 'backStreetDate'];
     for (const k of keys) c[k] = Array.isArray(o[k]) ? o[k] : String(o[k] == null ? '' : o[k]).trim();
-    if (!o.dob && o.age !== '') { c.age = Number(o.age); c.ageAsOf = today(); } else if (o.dob) { c.age = ''; }
+    if (!o.dob && o.age !== '') { if (hadDob || ageBefore === '' || Number(o.age) !== ageBefore || !c.ageAsOf) { c.age = Number(o.age); c.ageAsOf = today(); } } else if (o.dob) { c.age = ''; }
     c.grade = gradeNorm(c.grade); if (c.schoolType) { c.schoolTypeToCheck = false; c.alsoAt = ''; }
     if (!isNew && oldSection && oldSection !== c.section) { addMove(c.id, 'section', today(), { from: oldSection, to: c.section }); c.sectionToCheck = false; }
     if (!isNew && oldRes && oldRes !== c.residence) addMove(c.id, 'residence', today(), { from: oldRes, to: c.residence });
