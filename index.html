@@ -416,7 +416,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 2.1';
+const VERSION = 'alpha 2.2';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -429,7 +429,7 @@ const STATUSES = ['Active', 'Semi-active', 'Follow-up', 'Closed'];
 const STATUS_LABEL = { 'Active': 'Active', 'Semi-active': 'Semi-active', 'Follow-up': 'Reintegrated, in 2-year follow-up', 'Closed': 'File closed' };
 const STATUS_CHIP = { 'Active': 'c-green', 'Semi-active': 'c-yellow', 'Follow-up': 'c-purple', 'Closed': '' };
 const CLOSE_REASONS = ['2-year follow-up completed', 'Left the programme, no longer comes', 'Transferred to another partner', 'Moved to another Cicetekelo centre', 'Went back to the family', 'Moved to another town', 'Returned to Social Welfare', 'Ran away / lost contact', 'Stopped school', 'Completed school', 'Died', 'Aged out of the programme', 'Other'];
-const SCHOOL_TYPES = ['Nkwazi community school', 'Minsundu school', 'GRZ primary', 'GRZ secondary', 'Private school', 'College / skills training', 'Not in school'];
+const SCHOOL_TYPES = ['Nkwazi community school', 'Minsundu school', 'Sandra Centre', 'GRZ primary', 'GRZ secondary', 'Private school', 'College / skills training', 'Not in school'];
 const VISIT_PURPOSES = ['Family tracing', 'Assessment', 'Follow-up', 'Emergency', 'School visit'];
 const VISIT_WHERE = ['Home', 'School', 'Phone', 'Other'];
 const EVENT_TYPES = ['Visited family', 'Bonding with family', 'Sick, medical attention', 'Sneaked out', 'Came back'];
@@ -1337,7 +1337,6 @@ function vChildForm(c) {
     <div><p class="sec">In the programme</p><fieldset class="fs">
       ${field('Section', 'section', '', 'select', { req: true, options: opt(SECTION_KEYS.map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label })), c.section), hint: 'The team that follows the child. It does not say where the child sleeps or where the child goes by day.' })}
       ${field('Where the child sleeps', 'residence', '', 'select', { options: opt([{ v: 'Resident', l: 'Resident: sleeps at Minsundu Centre' }, { v: 'Non-resident', l: 'Non-resident: sleeps at home' }], c.residence) })}
-      ${field('By day also comes to', 'alsoAt', '', 'select', { options: opt([{ v: 'Nkwazi', l: 'Nkwazi Centre' }, { v: 'Minsundu', l: 'Minsundu Centre' }, { v: 'none', l: 'No other centre' }], c.alsoAt, 'Automatic, from the school'), hint: 'For a child of one section who goes to another centre by day. Example: sleeps at Minsundu, goes to Nkwazi community school. The child is then on the attendance list of both centres.' })}
       ${field('Date of entry', 'entryDate', c.entryDate, 'date', { req: isNew })}${isNew ? '' : field('Year of entry, if the date is not known', 'entryYear', c.entryYear, 'text', { attrs: ' inputmode="numeric" pattern="[0-9]{4}" maxlength="4"' })}
       ${field('Came from (referred by)', 'referredBy', c.referredBy, 'text', { hint: 'Luigi, Minsundu, community school recruitment, stakeholder, Social Welfare...', attrs: ' list="srclist"' })}<datalist id="srclist">${NKZ_SOURCES.concat(['District Social Welfare Office']).map(x => `<option value="${esc(x)}">`).join('')}</datalist>
       ${field('Followed by', 'responsible', '', 'select', { options: opt(activeStaff().map(s => ({ v: s.id, l: s.name })), c.responsible, '') })}
@@ -1351,7 +1350,7 @@ function vChildForm(c) {
     </fieldset></div>
     ${isNew ? '<details class="more"><summary>More details: school, health, notes. They can be added later.</summary><div style="display:flex;flex-direction:column;gap:18px;margin-top:14px">' : ''}
     <div><p class="sec">School</p><fieldset class="fs">
-      ${field('School type', 'schoolType', '', 'select', { options: opt(SCHOOL_TYPES, c.schoolType, '') })}${field('School name', 'schoolName', c.schoolName)}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
+      ${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: 'The school or centre where the child spends the day. Nkwazi community school and Minsundu children school put the child on the attendance list of that centre.' })}${field('School name', 'schoolName', c.schoolName)}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
       ${field('Skill or trade', 'skill', c.skill)}${field('Education at entry', 'educationAtEntry', c.educationAtEntry, 'textarea', { wide: true, rows: 2 })}
     </fieldset></div>
     <div><p class="sec">Health and notes</p><fieldset class="fs">
@@ -1439,7 +1438,7 @@ function vStatus(c) {
     ${c.section === 'Luigi' || c.streetCat ? `<form class="card" data-form="street"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Street situation</h2><p class="sub">Now: <b>${esc(c.streetCat ? STREET_CATS[c.streetCat] : 'not on the street, or not known')}</b>. Change it here when the child stops sleeping on the street, or goes back. The change is written in the history.</p>
       <div class="fs two">${field('Situation now', 'cat', '', 'select', { options: opt([{ v: 'A', l: STREET_CATS.A }, { v: 'B', l: STREET_CATS.B }, { v: 'none', l: 'Not on the street any more' }], c.streetCat || 'none') })}${field('Date', 'date', today(), 'date', { req: true })}</div><button class="btn" style="margin-top:12px">Save</button></form>` : ''}
     <form class="card" data-form="move"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Move to another section</h2><p class="sub">For example from Luigi to Minsundu, or from UCC to the Youth Centre.</p>
-      <div class="fs two">${field('New section', 'to', '', 'select', { options: opt(SECTION_KEYS.filter(k => k !== c.section).map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label }))) })}${field('Date', 'date', today(), 'date', { req: true })}${field('Where the child sleeps', 'residence', '', 'select', { options: opt([{ v: 'Resident', l: 'Resident: sleeps at Minsundu Centre' }, { v: 'Non-resident', l: 'Non-resident: sleeps at home' }], c.residence) })}${field('By day also comes to', 'alsoAt', '', 'select', { options: opt([{ v: 'Nkwazi', l: 'Nkwazi Centre' }, { v: 'Minsundu', l: 'Minsundu Centre' }], c.alsoAt === 'none' ? '' : c.alsoAt, 'No other centre'), hint: 'Example: moves to UCC, sleeps at Minsundu, goes to Nkwazi community school. Choose Nkwazi Centre.' })}${field('Note', 'note', '')}</div><button class="btn pri" style="margin-top:12px">Move</button></form>
+      <div class="fs two">${field('New section', 'to', '', 'select', { options: opt(SECTION_KEYS.filter(k => k !== c.section).map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label }))) })}${field('Date', 'date', today(), 'date', { req: true })}${field('Where the child sleeps', 'residence', '', 'select', { options: opt([{ v: 'Resident', l: 'Resident: sleeps at Minsundu Centre' }, { v: 'Non-resident', l: 'Non-resident: sleeps at home' }], c.residence) })}${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: 'Example: moves to UCC, sleeps at Minsundu, goes to Nkwazi community school.' })}${field('Note', 'note', '')}</div><button class="btn pri" style="margin-top:12px">Move</button></form>
     <form class="card" data-form="activity"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Active or semi-active</h2><p class="sub">Semi-active: still in the programme but not attending regularly.</p>
       <div class="fs two">${field('Status', 'status', '', 'select', { options: opt(['Active', 'Semi-active'], c.status === 'Semi-active' ? 'Semi-active' : 'Active') })}${field('Date', 'date', today(), 'date')}</div><button class="btn" style="margin-top:12px">Save</button></form>
     ${c.status !== 'Follow-up' ? `<form class="card" data-form="reintegrate"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Reintegrated with the family</h2><p class="sub">The child goes home. The file stays open for the 2-year follow-up; home visits continue every ${S.settings.interval['Follow-up']} days.</p>
@@ -1858,10 +1857,10 @@ const FORMS = {
     const isNew = !o.id;
     let c = isNew ? { id: nextChildId(), status: 'Active', createdAt: today(), createdBy: USER.id } : child(o.id);
     const oldSection = c.section, oldRes = c.residence;
-    const keys = ['name', 'surname', 'nickname', 'sex', 'dob', 'languages', 'section', 'residence', 'alsoAt', 'entryDate', 'entryYear', 'referredBy', 'responsible', 'stream', 'programmes', 'support', 'compound', 'familyAddress', 'contact', 'guardianName', 'guardianRelation', 'father', 'mother', 'otherRelatives', 'familyBackground', 'schoolType', 'schoolName', 'grade', 'skill', 'educationAtEntry', 'medical', 'disabilities', 'objectives', 'notes', 'streetCat', 'streetPlace', 'connectionDate', 'relStreet', 'relStreetWho', 'backStreet', 'backStreetDate'];
+    const keys = ['name', 'surname', 'nickname', 'sex', 'dob', 'languages', 'section', 'residence', 'entryDate', 'entryYear', 'referredBy', 'responsible', 'stream', 'programmes', 'support', 'compound', 'familyAddress', 'contact', 'guardianName', 'guardianRelation', 'father', 'mother', 'otherRelatives', 'familyBackground', 'schoolType', 'schoolName', 'grade', 'skill', 'educationAtEntry', 'medical', 'disabilities', 'objectives', 'notes', 'streetCat', 'streetPlace', 'connectionDate', 'relStreet', 'relStreetWho', 'backStreet', 'backStreetDate'];
     for (const k of keys) c[k] = Array.isArray(o[k]) ? o[k] : String(o[k] == null ? '' : o[k]).trim();
     if (!o.dob && o.age !== '') { c.age = Number(o.age); c.ageAsOf = today(); } else if (o.dob) { c.age = ''; }
-    c.grade = gradeNorm(c.grade); if (c.schoolType) c.schoolTypeToCheck = false;
+    c.grade = gradeNorm(c.grade); if (c.schoolType) { c.schoolTypeToCheck = false; c.alsoAt = ''; }
     if (!isNew && oldSection && oldSection !== c.section) { addMove(c.id, 'section', today(), { from: oldSection, to: c.section }); c.sectionToCheck = false; }
     if (!isNew && oldRes && oldRes !== c.residence) addMove(c.id, 'residence', today(), { from: oldRes, to: c.residence });
     c.updatedAt = today(); c.updatedBy = USER.id;
@@ -1879,7 +1878,7 @@ const FORMS = {
   move(o) {
     const c = child(o.id); addMove(c.id, 'section', o.date, { from: c.section, to: o.to, note: o.note });
     if (o.residence && o.residence !== c.residence) addMove(c.id, 'residence', o.date, { from: c.residence, to: o.residence });
-    c.section = o.to; c.residence = o.residence || c.residence; c.sectionToCheck = false; if (o.alsoAt != null) c.alsoAt = o.alsoAt && o.alsoAt !== centreOf(c) ? o.alsoAt : ''; c.updatedAt = today(); save(); toast('Moved to ' + SECTIONS[o.to].label); go('#/child/' + c.id);
+    c.section = o.to; c.residence = o.residence || c.residence; c.sectionToCheck = false; if (o.schoolType != null) { c.schoolType = o.schoolType; c.alsoAt = ''; } c.updatedAt = today(); save(); toast('Moved to ' + SECTIONS[o.to].label); go('#/child/' + c.id);
   },
   street(o) { const c = child(o.id), to = o.cat === 'none' ? '' : o.cat, from = c.streetCat || ''; if (to !== from) { addMove(c.id, 'street', o.date, { from, to }); c.streetCat = to; if (from === 'A' && to === 'B') c.connectionDate = o.date; c.updatedAt = today(); } save(); toast('Street situation saved'); go('#/child/' + c.id); },
   activity(o) { const c = child(o.id); if (c.status !== o.status) { addMove(c.id, 'status', o.date, { from: c.status, to: o.status }); c.status = o.status; } save(); go('#/child/' + c.id); },
@@ -3356,12 +3355,21 @@ function attMonthTable(q) {
 /* ---------- section, where the child sleeps, where the child comes by day: three separate things ---------- */
 const DAY_CENTRE = { Luigi: 'Luigi Drop-in', Minsundu: 'Minsundu Centre', Nkwazi: 'Nkwazi Centre' };
 const ATT_L = { P: 'Present', H: 'Home leave', A: 'Absent', S: 'Sick', E: 'Permission' };
+const DAY_LABEL = { 'Minsundu school': 'Minsundu children school', 'Sandra Centre': 'Sandra Centre (inclusive school)', 'GRZ primary': 'GRZ school, primary', 'GRZ secondary': 'GRZ school, secondary' };
+function dayLabel(t) { return DAY_LABEL[t] || t || ''; }
+function dayOpts() { return SCHOOL_TYPES.map(t => ({ v: t, l: dayLabel(t) })); }
+/* where the child goes by day: the school type of the file; older files may only have the school name or the first "also at" field */
+function dayType(c) {
+  if (c.schoolType) return c.schoolType;
+  if (c.alsoAt === 'Nkwazi') return 'Nkwazi community school';
+  if (c.alsoAt === 'Minsundu') return 'Minsundu school';
+  if (c.alsoAt !== 'none' && centreOf(c) === 'Minsundu' && /^\s*nkwa[sz]i(\s+community(\s+school)?)?\s*$/i.test(c.schoolName || '')) return 'Nkwazi community school';
+  return '';
+}
 function alsoAt(c) {
-  const h = centreOf(c);
-  if (c.alsoAt === 'none') return '';
-  if (c.alsoAt && c.alsoAt !== h) return c.alsoAt;
-  if (h === 'Minsundu' && (c.schoolType === 'Nkwazi community school' || /^\s*nkwa[sz]i(\s+community(\s+school)?)?\s*$/i.test(c.schoolName || ''))) return 'Nkwazi';
-  if (h === 'Nkwazi' && c.schoolType === 'Minsundu school') return 'Minsundu';
+  const h = centreOf(c), t = dayType(c);
+  if (t === 'Nkwazi community school' && h !== 'Nkwazi') return 'Nkwazi';
+  if (t === 'Minsundu school' && h !== 'Minsundu') return 'Minsundu';
   return '';
 }
 function attCentres(c) { const h = centreOf(c), o = alsoAt(c); return o ? [h, o] : [h]; }
@@ -3375,15 +3383,17 @@ function sleepsText(c) {
 }
 function guestLine(c, centre) { return centre !== centreOf(c) ? ` · followed by ${esc(c.section === 'Luigi' ? 'Luigi' : c.section)}, ${c.residence === 'Resident' ? 'sleeps at Minsundu' : 'sleeps at home'}` : c.residence === 'Resident' && centre === 'Nkwazi' ? ' · sleeps at Minsundu' : ''; }
 function whereHtml(c) {
-  const sec = SECTIONS[c.section] || {}, cs = attCentres(c).map(k => DAY_CENTRE[k] || k), auto = alsoAt(c) && !c.alsoAt;
+  const sec = SECTIONS[c.section] || {}, t = dayType(c), auto = t && !c.schoolType;
+  const day = t ? dayLabel(t) + (c.schoolName && !/community school|Minsundu school|Sandra|Not in school/.test(t) ? ' · ' + c.schoolName : '') : c.section === 'Luigi' ? 'Luigi Drop-in' : 'Not written';
+  const lists = attCentres(c).filter(k => k !== 'Luigi');
   const cell = (q, a, s) => `<div class="w3"><span>${q}</span><b>${esc(a)}</b>${s ? `<small>${s}</small>` : ''}</div>`;
-  return `<div class="where3">${cell('Section', sec.label || '', 'Phase ' + sec.phase + ' · the team that follows the child')}${cell('Sleeps', sleepsText(c), '')}${cell('By day comes to', cs.join(' and '), auto ? esc(alsoAt(c)) + ' is taken from the school. If it is wrong, change it in Edit.' : cs.length > 1 ? 'On the attendance list of both centres' : '')}</div>`;
+  return `<div class="where3">${cell('Section', sec.label || '', 'Phase ' + sec.phase + ' · the team that follows the child')}${cell('Sleeps', sleepsText(c), '')}${cell('By day goes to', day, (lists.length ? 'Attendance list: ' + lists.join(' and ') : '') + (auto ? '. Proposed by the app: check it in Edit.' : !t && c.section !== 'Luigi' ? '. Choose the school in Edit.' : ''))}</div>`;
 }
 function secExplain() {
   const cell = (q, t) => `<div class="w3"><span>${q}</span><small style="font-size:13.5px;color:var(--soft)">${t}</small></div>`;
-  return `<section class="card" id="sections"><h2>Section, where the child sleeps, where the child comes by day</h2><p style="margin:8px 0 10px">These are three different things. The app keeps them apart.</p>
-  <div class="where3">${cell('Section', 'The team that follows the child: Luigi, UCC, Nkwazi or Youth. Each child has one section. Reports count the child under this section.')}${cell('Sleeps', 'Resident: sleeps at Minsundu Centre. Non-resident: sleeps at home.')}${cell('By day comes to', 'The centre where the child is marked on the attendance list. Usually the centre of the section. It can be another centre, or two centres.')}</div>
-  <ul style="margin:0;padding-left:18px;line-height:1.6"><li>A child of UCC sleeps at Minsundu and goes to Nkwazi community school: section UCC, resident, on the attendance list of Minsundu and of Nkwazi.</li><li>A child of Youth sleeps at home and comes to Minsundu by day: section Youth, non-resident, on the attendance list of Minsundu.</li><li>UCC is Phase 2: the children at Minsundu who prepare to go to Nkwazi. Their attendance is under Attendance, Minsundu, UCC.</li></ul></section>`;
+  return `<section class="card" id="sections"><h2>Section, where the child sleeps, where the child goes by day</h2><p style="margin:8px 0 10px">These are three different things. The app keeps them apart.</p>
+  <div class="where3">${cell('Section', 'The team that follows the child: Luigi, UCC, Nkwazi or Youth. Each child has one section. Reports count the child under this section.')}${cell('Sleeps', 'Resident: sleeps at Minsundu Centre. Non-resident: sleeps at home.')}${cell('By day goes to', 'The school or centre where the child spends the day: Nkwazi community school, Minsundu children school, Sandra Centre, a GRZ school, a private school, college or skills training.')}</div>
+  <ul style="margin:0;padding-left:18px;line-height:1.6"><li>A child of UCC sleeps at Minsundu and goes to Nkwazi community school: section UCC, resident, on the attendance list of Minsundu and of Nkwazi.</li><li>A child of UCC sleeps at Minsundu and goes to Sandra Centre: section UCC, resident, on the attendance list of Minsundu.</li><li>A child of Youth sleeps at home and comes to Minsundu by day: section Youth, non-resident, on the attendance list of Minsundu.</li><li>UCC is Phase 2: the children at Minsundu who prepare to go to Nkwazi. Their attendance is under Attendance, Minsundu, UCC.</li></ul></section>`;
 }
 function attWho(centre) {
   const g = S.children.filter(c => isCurrent(c) && attCentres(c).includes(centre) && centreOf(c) !== centre).length;
