@@ -359,6 +359,8 @@ table.mreg td.mS{color:#7A5C00;font-weight:700;background:#FBF3DB}
 table.mreg td.mE{color:#5B3F8C;font-weight:700;background:#F1ECF7}
 table.mreg td.mH{color:var(--pri2);font-weight:700;background:var(--prisoft)}
 
+.sortth{color:inherit;text-decoration:none;white-space:nowrap}.sortth:hover{text-decoration:underline}
+
 </style>
 </head>
 <body>
@@ -371,7 +373,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 1.7';
+const VERSION = 'alpha 1.8';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -2248,21 +2250,48 @@ function luigiGrid(m, night) {
   const foot = `<tr class="lfoot"><th class="lname">Children marked</th>${days.map(d => `<td data-fd="${d}">${kids.filter(c => (map[c.id] || {})[d]).length || ''}</td>`).join('')}<td></td>${night ? '' : '<td></td>'}</tr>`;
   return `<div class="tw lwrap"><table class="lgrid" data-night="${night ? 1 : 0}"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;
 }
-function luigiSummary(year) {
+function luigiSumData(year) {
   const st = {};
   for (const s of S.outreach) { if (!s.date || s.date.slice(0, 4) !== year) continue; const k = s.type === 'Drop-in' ? 'c' : s.type === 'Day outreach' ? 's' : s.type === 'Night outreach' ? 'n' : null; if (!k) continue;
     for (const id of s.children || []) { const r = st[id] = st[id] || { c: 0, s: 0, n: 0, last: '' }; r[k]++; if (s.date > r.last) r.last = s.date; } }
   const kids = S.children.filter(c => c.section === 'Luigi' || st[c.id] && c.luigiId != null);
-  const lu = kids.filter(c => c.section === 'Luigi');
-  const term = (UI.lattq || '').trim().toLowerCase();
-  const rows = kids.filter(c => (c.status !== 'Closed' || st[c.id]) && (!term || [c.id, c.name, c.surname, c.nickname].join(' ').toLowerCase().includes(term))).map(c => ({ c, r: st[c.id] || { c: 0, s: 0, n: 0, last: '' } })).map(x => Object.assign(x, { gone: x.r.last ? daysBetween(x.r.last, today()) : null }))
-    .sort((x, y) => (y.gone == null ? -1 : y.gone) - (x.gone == null ? -1 : x.gone));
+  return { st, kids, lu: kids.filter(c => c.section === 'Luigi') };
+}
+/* the rows of the summary, with the filters and the order chosen on the page */
+function luigiSumRows(year) {
+  const q = route().q, { st, kids } = luigiSumData(year), term = (UI.lattq || '').trim().toLowerCase();
+  const cat = q.get('fcat') || '', num = k => q.get(k) || '', fg = q.get('fg') || '', fl = q.get('fl') || '', mNow = today().slice(0, 7);
+  const okNum = (v, f) => !f || (f === '0' ? !v : f === '1' ? v >= 1 : f === '5' ? v >= 5 : f === '10' ? v >= 10 : true);
+  let rows = kids.filter(c => (c.status !== 'Closed' || st[c.id]) && (!term || [c.id, c.name, c.surname, c.nickname].join(' ').toLowerCase().includes(term))).map(c => ({ c, r: st[c.id] || { c: 0, s: 0, n: 0, last: '' } })).map(x => Object.assign(x, { gone: x.r.last ? daysBetween(x.r.last, today()) : null }));
+  rows = rows.filter(x => (!cat || (cat === 'none' ? !x.c.streetCat : x.c.streetCat === cat)) && okNum(x.r.c, num('fc')) && okNum(x.r.s, num('fs')) && okNum(x.r.n, num('fn'))
+    && (!fg || (fg === 'never' ? x.gone == null : fg === 'lt7' ? x.gone != null && x.gone < 7 : fg === '7' ? x.gone != null && x.gone >= 7 : fg === '30' ? x.gone != null && x.gone >= 30 : true))
+    && (!fl || (fl === 'never' ? !x.r.last : fl === 'month' ? x.r.last.slice(0, 7) === mNow : fl === 'before' ? !!x.r.last && x.r.last.slice(0, 7) < mNow : true)));
+  const so = q.get('lso') || 'gone', dir = (q.get('lsd') || 'desc') === 'asc' ? 1 : -1;
+  const val = x => so === 'name' ? fullName(x.c).toLowerCase() : so === 'cat' ? (x.c.streetCat || 'z') : so === 'c' ? x.r.c : so === 's' ? x.r.s : so === 'n' ? x.r.n : so === 'last' ? (x.r.last || '') : (x.gone == null ? -1 : x.gone);
+  return rows.sort((a, b) => { const va = val(a), vb = val(b); return (va < vb ? -1 : va > vb ? 1 : 0) * dir || fullName(a.c).localeCompare(fullName(b.c)); });
+}
+function luigiSummary(year) {
+  const q = route().q, { st, kids, lu } = luigiSumData(year), rows = luigiSumRows(year);
+  const total = kids.filter(c => c.status !== 'Closed' || st[c.id]).length;
   const k = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
+  const so = q.get('lso') || 'gone', sd = q.get('lsd') || 'desc';
+  const th = (key, label, n) => `<th class="${n ? 'n' : ''}"><a href="#" class="sortth" data-q="lso=${key}&lsd=${so === key && sd === 'desc' ? 'asc' : 'desc'}" title="Sort by this column">${label}${so === key ? (sd === 'asc' ? ' ▲' : ' ▼') : ''}</a></th>`;
+  const nOpt = [{ v: '1', l: '1 or more' }, { v: '5', l: '5 or more' }, { v: '10', l: '10 or more' }, { v: '0', l: 'None' }];
+  const any = ['fcat', 'fc', 'fs', 'fn', 'fl', 'fg'].some(x => q.get(x));
   return `<div class="grid g6">${k(lu.length, 'Children on record')}${k(lu.filter(c => c.status !== 'Closed').length, 'In town now')}${k(lu.filter(c => c.streetCat === 'A').length, 'A · living on the street')}${k(lu.filter(c => c.streetCat === 'B').length, 'B · street connected')}${k(Object.values(st).filter(r => r.c).length, 'Came to the centre in ' + year)}${k(Object.values(st).filter(r => r.n).length, 'Met at night in ' + year)}</div>
-  <div class="card" style="padding:6px 8px;margin-top:16px"><div class="tw"><table id="lsumtable"><thead><tr><th>Name</th><th>Situation</th><th class="n">Days in centre</th><th class="n">Days met on the street</th><th class="n">Nights on the street</th><th>Last met</th><th class="n">Days not met</th></tr></thead><tbody>
-  ${rows.map(({ c, r, gone }) => `<tr><td>${childLink(c)}<div class="sub">ID ${esc(c.id)}${c.status === 'Closed' ? ' · ' + esc(c.closeReason || 'closed') : ''}</div></td><td>${esc(c.streetCat || '')}</td><td class="n">${r.c || ''}</td><td class="n">${r.s || ''}</td><td class="n">${r.n || ''}</td><td>${esc(fmtDate(r.last))}</td><td class="n" style="${gone >= 30 ? 'color:var(--red);font-weight:700' : gone >= 7 ? 'color:var(--red)' : ''}">${gone == null ? 'never' : gone}</td></tr>`).join('')}
+  <div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:repeat(6,1fr);margin-top:16px">
+    <label class="f">Situation<select class="in" data-filter="fcat">${opt([{ v: 'A', l: 'A · living on the street' }, { v: 'B', l: 'B · street connected' }, { v: 'none', l: 'Not written' }], q.get('fcat'), 'All')}</select></label>${filtBtn()}
+    <label class="f">Days in centre<select class="in" data-filter="fc">${opt(nOpt, q.get('fc'), 'Any')}</select></label>
+    <label class="f">Days met on the street<select class="in" data-filter="fs">${opt(nOpt, q.get('fs'), 'Any')}</select></label>
+    <label class="f">Nights on the street<select class="in" data-filter="fn">${opt(nOpt, q.get('fn'), 'Any')}</select></label>
+    <label class="f">Last met<select class="in" data-filter="fl">${opt([{ v: 'month', l: 'This month' }, { v: 'before', l: 'Before this month' }, { v: 'never', l: 'Never in ' + year }], q.get('fl'), 'Any time')}</select></label>
+    <label class="f">Days not met<select class="in" data-filter="fg">${opt([{ v: 'lt7', l: 'Less than 7' }, { v: '7', l: '7 or more' }, { v: '30', l: '30 or more' }, { v: 'never', l: 'Never met' }], q.get('fg'), 'Any')}</select></label>
+  </div>
+  <div class="card" style="padding:6px 8px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px;align-items:center"><span class="sub"><b>${rows.length}</b> of ${total} children shown${any ? ' · <a href="#" data-q="fcat=&fc=&fs=&fn=&fl=&fg=">clear the filters</a>' : ''} · click a column title to sort</span><button class="btn sm" data-act="xl" data-k="lsum">Export in Excel</button></div><div class="tw"><table id="lsumtable"><thead><tr>${th('name', 'Name')}${th('cat', 'Situation')}${th('c', 'Days in centre', 1)}${th('s', 'Days met on the street', 1)}${th('n', 'Nights on the street', 1)}${th('last', 'Last met')}${th('gone', 'Days not met', 1)}</tr></thead><tbody>
+  ${rows.map(({ c, r, gone }) => `<tr><td>${childLink(c)}<div class="sub">ID ${esc(c.id)}${c.status === 'Closed' ? ' · ' + esc(c.closeReason || 'closed') : ''}</div></td><td>${esc(c.streetCat || '')}</td><td class="n">${r.c || ''}</td><td class="n">${r.s || ''}</td><td class="n">${r.n || ''}</td><td>${esc(fmtDate(r.last))}</td><td class="n" style="${gone >= 30 ? 'color:var(--red);font-weight:700' : gone >= 7 ? 'color:var(--red)' : ''}">${gone == null ? 'never' : gone}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">No child matches these filters.</td></tr>'}
   </tbody></table></div></div>`;
 }
+XL.lsum = function () { const y = (route().q.get('ly') || route().q.get('lm') || today()).slice(0, 4), rows = luigiSumRows(y); downloadXlsx('luigi-summary-' + y, [{ name: 'Luigi ' + y, rows: [['ID', 'Name', 'Situation', 'Days in centre', 'Days met on the street', 'Nights on the street', 'Last met', 'Days not met']].concat(rows.map(x => [x.c.id, fullName(x.c), x.c.streetCat || '', x.r.c, x.r.s, x.r.n, x.r.last, x.gone == null ? '' : x.gone])) }]); };
 function luigiDayAll(d) {
   const sets = luigiDaySets(d), any = id => L_SHEETS.some(sh => sets[sh.k].has(String(id)));
   return { sets, any, all: S.children.filter(c => (c.section === 'Luigi' && c.status !== 'Closed') || any(c.id)) };
