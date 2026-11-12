@@ -427,6 +427,21 @@ body.guest .actbox button{pointer-events:none}
 .sesslist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 12px;max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px}
 .sesslist label{display:flex;gap:8px;align-items:center;min-height:38px}
 
+.ppick{margin-top:14px}
+.pfil{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:8px;margin-top:10px}
+.ptile{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 6px 8px;border:1.5px solid var(--line2);border-radius:12px;background:#FFFFFF;color:var(--ink);cursor:pointer;text-align:center;font:inherit;min-height:122px}
+.ptile img,.ptile .av{box-shadow:0 0 0 2px #FFFFFF,0 0 0 4px var(--line2)}
+.ptile.late img,.ptile.late .av{box-shadow:0 0 0 2px #FFFFFF,0 0 0 5px #E03E3E}
+.ptile.never img,.ptile.never .av{box-shadow:0 0 0 2px #FFFFFF,0 0 0 5px #D9730D}
+.ptile b{font-size:12.5px;line-height:1.2;font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px}
+.ptile small{font-size:11px;color:var(--soft);line-height:1.2}
+.ptile.in{border-color:var(--pri);background:var(--prisoft)}
+.ptile i{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:var(--pri);color:#FFFFFF;font-style:normal;font-size:13px;line-height:22px;font-weight:700}
+.ptile.done{border-color:var(--green);background:var(--greensoft)}.ptile.done i{background:var(--green)}
+.ptile:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+@media (max-width:760px){.pgrid{grid-template-columns:repeat(3,minmax(0,1fr))}.ptile{min-height:116px}}
+
 </style>
 </head>
 <body>
@@ -439,7 +454,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 3.9';
+const VERSION = 'alpha 4.0';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9' },
@@ -2668,11 +2683,44 @@ function visitChooser(q, m) {
     <div><p class="sec" style="margin:0 0 6px">2 · Children of which centre?</p><div class="cbtns" role="group" aria-label="Centre of the child">${['Luigi', 'Minsundu', 'Nkwazi'].filter(k => !(noLuigi(team) && k === 'Luigi')).map(k => cBtn(k, CENTRE_LABEL[k], CENTRE_COLOR[k])).join('')}${cBtn('all', 'All centres', '#73726E')}</div></div>
   </details>`;
 }
+/* ---------- planner: the children as faces, longest without a visit first; a tap puts in or takes out of the plan ---------- */
+function planPlace(c) { return titleCase((c.familyAddress || c.compound || 'No address').split(/[,#\d(]/)[0].trim()) || 'No address'; }
+function agoText(d) { if (!d) return 'never visited'; const n = daysBetween(d, today()); return n < 14 ? n + (n === 1 ? ' day ago' : ' days ago') : n < 60 ? Math.round(n / 7) + ' weeks ago' : Math.round(n / 30) + ' months ago'; }
+function lastSchoolVisit(c) { let last = ''; for (const v of visitsOf(c.id)) if (v.purpose === 'School visit' && v.successful !== 'No' && v.date > last) last = v.date; return last; }
+function planPool(team, centre) {
+  const school = team === 'School';
+  const act = new Set(S.visits.filter(v => v.action && !v.actionDone && tmatch(visitTeam(v), team)).map(v => String(v.childId)));
+  const kids = S.children.filter(c => vcIn(c, team, centre) && (school ? FAMILY_SECTIONS.includes(c.section) && isCurrent(c) && dayType(c) && dayType(c) !== 'Not in school' : team === 'Family' ? needsVisits(c) : needsVisits(c) || (c.section === 'Luigi' && isCurrent(c))));
+  return kids.map(c => {
+    const vi = !school && needsVisits(c) ? visitInfo(c) : null, last = school ? lastSchoolVisit(c) : vi ? vi.last : lastHomeVisit(c);
+    return { c, last, never: !last, late: !!(vi && !vi.never && vi.late >= 0), follow: c.status === 'Follow-up', action: act.has(String(c.id)) };
+  }).sort((a, b) => (a.last || '').localeCompare(b.last || '') || (a.c.entryDate || '').localeCompare(b.c.entryDate || '') || fullName(a.c).localeCompare(fullName(b.c)));
+}
+const PLAN_F = [['', 'All', () => true], ['late', 'Late', x => x.late], ['never', 'Never visited', x => x.never], ['follow', 'Follow-up', x => x.follow], ['action', 'Action open', x => x.action]];
+function planPicker(m, team, centre) {
+  const q = route().q, pool = planPool(team, centre), pf = PLAN_F.some(f => f[0] === q.get('pf')) ? q.get('pf') : '';
+  const places = {}; for (const x of pool) places[planPlace(x.c)] = (places[planPlace(x.c)] || 0) + 1;
+  const cmp = places[q.get('pcmp')] ? q.get('pcmp') : '';
+  const base = pool.filter(x => !cmp || planPlace(x.c) === cmp), list = base.filter(PLAN_F.find(f => f[0] === pf)[2]);
+  const LIM = isPhone() ? 12 : 24, all = q.get('pall') === '1', shown = all ? list : list.slice(0, LIM);
+  const mine = id => plans().find(p => String(p.childId) === String(id) && p.month === m && tmatch(planTeam(p), team));
+  const tile = x => { const p = mine(x.c.id), st = p ? planStatus(p).k : '';
+    return `<button class="ptile${p ? ' in' : ''}${st && st !== 'planned' ? ' done' : ''}${x.late ? ' late' : x.never ? ' never' : ''}" data-pact="ptoggle" data-id="${esc(x.c.id)}" data-m="${m}" data-team="${team}" aria-pressed="${p ? 'true' : 'false'}">${avatar(x.c, 56)}<b>${esc(fullName(x.c))}</b><small>${esc(agoText(x.last))}${centre === 'all' ? ' · ' + esc(centreOf(x.c)) : ''}</small>${p ? '<i aria-hidden="true">✓</i>' : ''}</button>`; };
+  const centres = ['Luigi', 'Minsundu', 'Nkwazi'].filter(k => !(noLuigi(team) && k === 'Luigi'));
+  return `<div class="ppick" id="ppick">
+    <div class="pfil"><div class="seg" role="group" aria-label="Centre">${centres.map(k => `<a href="#" data-q="vc=${k}&pcmp=&pall=" class="${centre === k ? 'on' : ''}">${esc(CENTRE_LABEL[k])}</a>`).join('')}<a href="#" data-q="vc=all&pcmp=&pall=" class="${centre === 'all' ? 'on' : ''}">All centres</a></div>
+      <div class="seg" role="group" aria-label="Which children">${PLAN_F.filter(([k, l, f]) => !k || k === pf || base.some(f)).map(([k, l, f]) => `<a href="#" data-q="pf=${k}&pall=" class="${pf === k ? 'on' : ''}">${l} · ${base.filter(f).length}</a>`).join('')}</div>
+      <select class="in" data-filter="pcmp" aria-label="Compound" style="width:auto">${opt(Object.entries(places).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ v: k, l: k + ' · ' + n })), cmp, 'All compounds')}</select></div>
+    <p class="sub" style="margin:8px 0 0">Longest without a visit first. Tap a face: in the plan. Tap again: out. Red ring: late. Orange ring: never visited.</p>
+    ${shown.length ? `<div class="pgrid">${shown.map(tile).join('')}</div>` : '<p class="empty">No child here.</p>'}
+    ${list.length > LIM ? `<div style="margin-top:8px"><a href="#" class="btn sm" data-q="pall=${all ? '' : '1'}">${all ? 'Show fewer' : 'Show all ' + list.length}</a></div>` : ''}
+  </div>`;
+}
 function planCard(m, team, centre) {
   team = team || 'all'; centre = centre || 'all';
   const list = planFor(m, team, centre).map(p => ({ p, c: child(p.childId), st: planStatus(p) }));
   const n = k => list.filter(x => x.st.k === k).length;
-  const place = c => titleCase((c.familyAddress || c.compound || 'No address').split(/[,#\d(]/)[0].trim()) || 'No address';
+  const place = planPlace;
   const P = pendingData(), due = (team === 'all' || team === 'Family') ? P.due.filter(x => vcIn(x.c, 'Family', centre) && !plans().some(p => String(p.childId) === String(x.c.id) && p.month === m && planTeam(p) === 'Family')) : [];
   const chipOf = st => st.k === 'done' ? `<span class="chip c-green">Done ${esc(fmtDate(st.v.date))}</span>` : st.k === 'tried' ? `<span class="chip c-orange">Tried ${esc(fmtDate(st.v.date))}, nobody found</span>` : '<span class="chip">To do</span>';
   const past = m < thisMonth();
@@ -2683,8 +2731,10 @@ function planCard(m, team, centre) {
   const who = (team === 'all' ? '' : teamLabel(team) + ' · ') + (centre === 'all' ? '' : 'children of ' + CENTRE_LABEL[centre] + ' · ');
   return `<section class="card" id="plan"${centre !== 'all' ? ` style="border-top:4px solid ${CENTRE_COLOR[centre]}"` : ''}>
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><h2>Plan of visits · ${esc(who)}${esc(fmtMonth(m))}</h2>
-      <p class="sub" style="margin:2px 0 0">${list.length ? `${list.length} children planned: ${n('done')} done, ${n('tried')} tried, ${n('planned')} to do.` : 'Nobody planned yet.'} A recorded visit ticks the child off.</p></div>
+      <p class="sub" style="margin:2px 0 0">${list.length ? `${list.length} ${list.length === 1 ? 'child' : 'children'} planned: ${n('done')} done, ${n('tried')} tried, ${n('planned')} to do.` : 'Nobody planned yet.'} A recorded visit ticks the child off.</p></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${m !== addMonths(thisMonth(), 1) ? `<a class="btn sm" href="#" data-q="m=${addMonths(thisMonth(), 1)}">Go to ${esc(fmtMonth(addMonths(thisMonth(), 1)))}</a>` : ''}<button class="btn sm" data-pact="xlplan" data-m="${m}" data-team="${team}" data-centre="${centre}">Export in Excel</button></div></div>
+    ${past ? '' : planPicker(m, team, centre)}
+    ${list.length && !past ? '<p class="sec" style="margin:18px 0 0">In the plan · ' + list.length + '</p>' : ''}
     ${CENTRES.map(block).join('')}
     ${past ? '' : `<div style="margin-top:14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end">
       <label class="f">Add a child${centre === 'all' ? '' : ' of ' + esc(CENTRE_LABEL[centre])} to ${team === 'all' ? 'the plan' : 'the plan of ' + esc(teamLabel(team))}<input class="in" id="planq" data-m="${m}" data-team="${team}" data-centre="${centre}" placeholder="Name, nickname or ID" autocomplete="off"></label>
@@ -2751,6 +2801,13 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-pact]'); if (!b) return;
   const act = b.dataset.pact;
   if (act === 'plan') { const c = child(b.dataset.id), tm = b.dataset.team || teamFor(c); if (addPlan(b.dataset.id, b.dataset.m, tm)) { save(); toast(fullName(c) + ' is in the plan of ' + teamLabel(tm) + ' for ' + fmtMonth(b.dataset.m)); } const q = $('#planq'), keep = q ? q.value : ''; render(); const q2 = $('#planq'); if (keep && q2) { q2.value = keep; $('#planbox').innerHTML = planSearchHtml(keep, q2.dataset.m, q2.dataset.team, q2.dataset.centre); } }
+  else if (act === 'ptoggle') {
+    const c = child(b.dataset.id), tm = b.dataset.team, m = b.dataset.m; if (!c) return;
+    const p = plans().find(x => String(x.childId) === String(c.id) && x.month === m && tmatch(planTeam(x), tm));
+    if (p && planStatus(p).k !== 'planned') return toast('A visit is already recorded: it stays in the plan');
+    if (p) { S.plans = plans().filter(x => x.id !== p.id); syncMeta().rmPlans[p.id] = Date.now(); } else addPlan(c.id, m, tm === 'all' ? teamFor(c) : tm);
+    save(); render();
+  }
   else if (act === 'unplan') { S.plans = plans().filter(p => p.id !== b.dataset.id); syncMeta().rmPlans[b.dataset.id] = Date.now(); save(); render(); }
   else if (act === 'plandue') { let n = 0; const ce = b.dataset.centre || 'all'; for (const x of pendingData().due) if (vcIn(x.c, 'Family', ce) && addPlan(x.c.id, b.dataset.m, 'Family')) n++; save(); toast(n + ' children added to the plan of the Family Section'); render(); }
   else if (act === 'xlplan') {
