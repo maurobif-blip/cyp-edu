@@ -430,7 +430,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 2.6';
+const VERSION = 'alpha 2.7';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -1719,6 +1719,8 @@ function vData() {
       <input type="file" accept=".csv,text/csv" id="importfile" class="in" style="margin-top:10px"><div id="importmsg" style="margin-top:10px"></div></section>
     <section class="card${IS_DEMO ? ' hide' : ''}"><h2>Import a Luigi list (Excel)</h2><p class="sub">The monthly Luigi statistics file with the list of names (NAME, SEX, AGE, PLACE). Children already in the records under the same name and a similar age are not created twice: they are linked. The month is read from the title ("Luigi statistics for ..."). Use the most recent list.</p>
       <input type="file" accept=".xlsx" id="luigifile" class="in" style="margin-top:10px"><div id="luigimsg" style="margin-top:10px"></div></section>
+    <section class="card" style="grid-column:1/-1"><h2>Add photos from files</h2><p class="sub">Choose several pictures at once. The name of each file must be the name of the child, for example "Phiri James.jpg". The app shows which child it found, and you confirm before anything is saved. The pictures are made small.</p>
+      <input type="file" accept="image/*" multiple id="photosfile" class="in" style="margin-top:10px"><div id="photosmsg" style="margin-top:10px"></div></section>
     <section class="card"><h2>Backup</h2><p class="sub">Download a full copy of the data. Keep it on a USB key or Google Drive (not shared publicly: it contains children's personal data). ${S.meta.lastBackup ? 'Last backup: ' + esc(fmtDate(S.meta.lastBackup)) + '.' : 'No backup made yet.'}</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn pri" data-act="backup">Download backup</button><label class="btn">Restore a backup<input type="file" accept=".json,application/json" id="restorefile" class="hide"></label></div></section>
     <section class="card"><h2>Export in Excel</h2><p class="sub">Everything in one Excel file (one sheet per table), or one table at a time. Every list in the app has its own "Export in Excel" button: it exports what is on the screen, with the filters you chose.</p>
@@ -1985,6 +1987,7 @@ document.addEventListener('click', e => {
   else if (act === 'copytable') { const txt = tableToRows().map(r => r.join('\t')).join('\n'); copyText(txt); }
   else if (act === 'xlnames') { reportNamesXlsx(); }
   else if (fbAct(act, b)) return;
+  else if (act === 'photossave') { photosBatchSave(); }
   else if (act === 'mcell') { monthCellAct(b); }
   else if (act === 'csvtable') { downloadXlsx(b.dataset.name, [{ name: b.dataset.name, rows: tableToRows() }]); }
   else if (act === 'print') window.print();
@@ -3605,6 +3608,51 @@ function fbAct(act, b) {
   if (act === 'fbxl') { downloadXlsx('cyp-edu-comments-' + today(), [{ name: 'Comments', rows: [['Date', 'By', 'Page', 'Phone', 'Version', 'On the screen', 'Comment', 'Done']].concat(fbList().map(x => [x.date, x.by || '', x.page, x.phone ? 'yes' : '', x.v || '', x.text, x.note, x.done ? 'yes' : ''])), filter: true }]); return true; }
   return false;
 }
+
+/* ---------- photos from files: the file name is the name of the child ---------- */
+function photoCands(fileName) {
+  const base = String(fileName).replace(/\.[a-z0-9]+$/i, '').replace(/\d+\s*(yrs?|years?)?/gi, ' ').replace(/copy|img|photo/gi, ' ');
+  const words = nameKey(base).split(' ').filter(Boolean); if (!words.length) return { exact: [], near: [] };
+  const exact = [], near = [];
+  for (const c of S.children) {
+    const cw = nameKey(fullName(c)).split(' ').filter(Boolean); if (!cw.length) continue;
+    const common = words.filter(w => cw.includes(w)).length;
+    if (common === words.length && common === cw.length) exact.push(c);
+    else if (common >= 2 || (common === 1 && words.length === 1)) near.push({ c, common });
+    else if (common === Math.min(words.length, cw.length) && common >= 1 && Math.min(words.length, cw.length) >= 2) near.push({ c, common });
+  }
+  near.sort((x, y) => y.common - x.common || (y.c.status !== 'Closed') - (x.c.status !== 'Closed'));
+  return { exact, near: near.slice(0, 8).map(x => x.c) };
+}
+function photoSmall(file) {
+  return new Promise(res => { const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const k = Math.min(1, 280 / Math.max(img.width, img.height)), cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url); res(cv.toDataURL('image/jpeg', 0.7)); };
+    img.onerror = () => { URL.revokeObjectURL(url); res(''); }; img.src = url; });
+}
+function photosBatchHtml() {
+  const B = UI.photoBatch || []; if (!B.length) return '';
+  const lab = c => `${fullName(c)} · ${(SECTIONS[c.section] || {}).label || c.section} · ID ${c.id}${c.status === 'Closed' ? ' · closed' : ''}${photos()[c.id] ? ' · has a photo, it will be replaced' : ''}`;
+  const n = B.filter(x => x.pick).length;
+  return `<div class="tw"><table><thead><tr><th>Picture</th><th>File</th><th>Child</th></tr></thead><tbody>${B.map((x, i) => `<tr><td>${x.src ? `<img src="${x.src}" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover">` : 'Could not read'}</td><td>${esc(x.name)}</td><td>${x.src ? `<select class="in" data-photopick="${i}"><option value="">Do not add</option>${x.cands.map(c => `<option value="${esc(c.id)}"${String(x.pick) === String(c.id) ? ' selected' : ''}>${esc(lab(c))}</option>`).join('')}</select>${x.cands.length ? (x.sure ? '' : '<div class="sub">Not sure: choose the child, or leave "Do not add".</div>') : '<div class="sub">No child with this name.</div>'}` : ''}</td></tr>`).join('')}</tbody></table></div>
+  <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap"><button class="btn pri" data-act="photossave"${n ? '' : ' disabled'}>Save ${n} ${n === 1 ? 'photo' : 'photos'}</button><span class="sub">${B.length} files chosen</span></div>`;
+}
+async function photosBatchLoad(files) {
+  const msg = $('#photosmsg'); if (msg) msg.innerHTML = '<p class="sub">Reading the pictures...</p>';
+  const B = [];
+  for (const f of files) { const src = await photoSmall(f), k = photoCands(f.name), sure = k.exact.length === 1; B.push({ name: f.name, src, cands: k.exact.concat(k.near.filter(c => !k.exact.includes(c))), sure, pick: sure ? k.exact[0].id : '' }); }
+  B.sort((x, y) => (x.sure === y.sure ? 0 : x.sure ? 1 : -1) || x.name.localeCompare(y.name));
+  UI.photoBatch = B; if (msg) msg.innerHTML = photosBatchHtml();
+}
+function photosBatchSave() {
+  const B = (UI.photoBatch || []).filter(x => x.pick && x.src && child(x.pick)); if (!B.length) return;
+  for (const x of B) { const c = child(x.pick); photos()[c.id] = x.src; syncMeta().photos[c.id] = 1; }
+  UI.photoBatch = null; save(); toast(B.length + (B.length === 1 ? ' photo saved' : ' photos saved')); render();
+}
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (el.id === 'photosfile' && el.files && el.files.length) { photosBatchLoad(Array.from(el.files)); return; }
+  if (el.dataset && el.dataset.photopick != null && UI.photoBatch) { UI.photoBatch[Number(el.dataset.photopick)].pick = el.value; const msg = $('#photosmsg'); if (msg) msg.innerHTML = photosBatchHtml(); }
+});
 
 /* ====================================================================
    PIN for the staff
