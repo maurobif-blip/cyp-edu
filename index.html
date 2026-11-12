@@ -432,7 +432,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 3.0';
+const VERSION = 'alpha 3.1';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -4170,7 +4170,7 @@ document.addEventListener('click', async e => {
   else if (act === 'sharelink') { try { await navigator.share({ title: 'CYP EDU', text: 'CYP EDU, the records of the Education Department. Open this link once with a connection, then it also opens without.', url: staffLink(appUrl()) }); } catch (x) {} }
 });
 FORMS.appurl = function (o) { const u = String(o.appUrl || '').trim(); if (u && !/^https:\/\//.test(u)) return toast('The address must start with https://'); S.settings.appUrl = u; save(); toast('Saved'); render(); };
-function inviteText(link) { return 'CYP EDU, the app of the Education Department.\n\n1. Open this link on your phone, with internet:\n' + link + '\n\n2. Put it on the Home screen.\niPhone: Share button, then Add to Home Screen.\nAndroid: three dots, then Install app.\n\n3. Tap your name and type the PIN. The PIN comes in another message.\n\nDo not forward this link: it opens the records of the children.'; }
+function inviteText(link) { return ['CYP EDU, the app of the Education Department.', '', '1. Open this link on your phone or computer, with internet:', link, '', '2. Keep it on the phone or computer.', 'iPhone: Share button, then Add to Home Screen.', 'Android: three dots, then Install app.', 'Computer with Chrome or Edge: icon at the right of the address bar, then Install.', 'Mac with Safari: File, then Add to Dock.', '', '3. Tap your name and type the PIN. The PIN comes in another message.', '', 'Do not forward this link: it opens the records of the children.'].join('\n'); }
 function pinText() { return 'CYP EDU PIN: ' + pinValue(); }
 function staffLinkCard() {
   if (!USER.admin || !syncOn()) return '';
@@ -4178,7 +4178,7 @@ function staffLinkCard() {
   const send = (id, txt, mail) => `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn pri" data-wact="copytext" data-src="${id}">Copy</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">WhatsApp</a>${mail ? `<a class="btn" href="mailto:?subject=${encodeURIComponent('CYP EDU')}&body=${encodeURIComponent(txt)}">Email</a>` : ''}</div>`;
   return `<section class="card"><h2>Invite the staff</h2>
     ${link ? `<p class="sub" style="margin:4px 0 10px">Two messages: first the link, then the PIN. Staff only.</p>
-      <label class="f"><span>1. The link</span><textarea class="in" id="invmsg" rows="9" readonly onclick="this.select()">${esc(inviteText(link))}</textarea></label>${send('invmsg', inviteText(link), true)}
+      <label class="f"><span>1. The link</span><textarea class="in" id="invmsg" rows="13" readonly onclick="this.select()">${esc(inviteText(link))}</textarea></label>${send('invmsg', inviteText(link), true)}
       <label class="f" style="margin-top:14px"><span>2. The PIN</span><input class="in" id="invpin" readonly value="${esc(pinText())}" onclick="this.select()"></label>${send('invpin', pinText(), false)}`
       : `<p class="sub" style="margin:4px 0 10px">The app needs a web address first.</p>`}
     ${IS_WEB ? '' : `<form data-form="appurl" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin-top:12px"><label class="f"><span>Web address of the app</span><input class="in" name="appUrl" value="${esc(S.settings.appUrl || '')}" placeholder="https://..."></label><button class="btn">Save</button></form>`}</section>`;
