@@ -405,6 +405,18 @@ body.guest table.mreg td.mc{pointer-events:none}
 @media (max-width:760px){table.mreg td.mc{min-width:34px;height:36px;font-size:14px}}
 .bday{border-left:4px solid #CB912F;background:#FBF3DB;color:var(--ink)}
 .bday p{margin:0 0 4px}.bday p:last-child{margin:4px 0 0}
+/* comments on the app */
+#fbbtn{position:fixed;right:14px;bottom:16px;z-index:30;border:0;border-radius:22px;padding:10px 16px;font:600 13.5px Inter,system-ui,sans-serif;background:var(--ink);color:#FFFFFF;box-shadow:0 4px 14px rgba(0,0,0,.2);cursor:pointer}
+body.fbmode #fbbtn{background:#B3261E}
+body.fbmode{cursor:crosshair}
+body.fbmode .main *:hover,body.fbmode nav *:hover{outline:2px solid #B3261E;outline-offset:1px}
+#fbbar{position:fixed;left:0;right:0;top:0;z-index:31;background:#B3261E;color:#FFFFFF;text-align:center;padding:10px 12px;font-weight:600;font-size:14px}
+#fbbox{position:fixed;inset:0;z-index:40;background:rgba(15,15,15,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.fbcard{background:#FFFFFF;border-radius:10px;padding:18px;width:100%;max-width:460px;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+.fbq{margin:0 0 12px;padding:8px 10px;background:var(--fill);border-left:3px solid var(--line2);border-radius:4px;font-size:14px;overflow-wrap:anywhere}
+.fbq2{max-width:260px;color:var(--soft);overflow-wrap:anywhere}
+@media (max-width:760px){#fbbtn{bottom:74px;right:10px;padding:9px 14px}}
+@media print{#fbbtn,#fbbar,#fbbox{display:none}}
 
 </style>
 </head>
@@ -418,7 +430,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 2.5';
+const VERSION = 'alpha 2.6';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -1689,6 +1701,7 @@ function vStaff(r) {
     <form class="card" data-form="handover"><h2>Hand over children</h2><p class="sub">When someone leaves or goes on leave, the children they follow move to a colleague. The history keeps who did what.</p>
       <div class="fs two">${field('From', 'from', '', 'select', { options: opt(S.staff.map(s => ({ v: s.id, l: s.name + ' (' + S.children.filter(c => c.responsible === s.id && c.status !== 'Closed').length + ')' })), '', '') })}${field('To', 'to', '', 'select', { options: opt(activeStaff().map(s => ({ v: s.id, l: s.name })), '', '') })}</div><button class="btn pri" style="margin-top:12px">Move the children</button></form>
   </div>
+  ${fbAdminCard()}
   ${IS_DEMO ? '' : `<form class="card" data-form="pin"><h2>PIN for the staff</h2><p class="sub">One PIN for everyone in the staff. It is asked each time a staff name is chosen on the opening screen. Guest does not need it.</p>
     <div class="fs">${field('New PIN (4 to 8 digits)', 'pin', '', 'text', { attrs: ' inputmode="numeric" pattern="[0-9]{4,8}" autocomplete="off"', req: true })}</div><button class="btn" style="margin-top:12px">Change the PIN</button></form>`}
   <form class="card" data-form="settings"><h2>Home visit frequency</h2><p class="sub">Used for "Who needs a visit" on the Visits page. Days between two home visits.</p>
@@ -1850,6 +1863,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'help': body = vHelp(); active = ''; break;
       case 'more': body = vMore(); active = 'more'; break;
       case 'sync': body = vSync(); active = 'more'; break;
+      case 'feedback': body = vFeedback(r); active = 'staff'; break;
       case 'review': body = vReview(); active = 'pending'; break;
       case 'paths': body = vPaths(r); active = 'children'; break;
       default: body = vHome(r); active = 'home';
@@ -1858,6 +1872,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
   app.innerHTML = zm(shell(active, body));
   const s = $('#search'); if (s && UI.focusSearch) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); UI.focusSearch = false; }
   if (IS_DEMO && typeof tourDraw === 'function') setTimeout(tourDraw, 0);
+  fbDraw();
 }
 
 /* ---------- actions ---------- */
@@ -1969,6 +1984,7 @@ document.addEventListener('click', e => {
   else if (act === 'rstatus') { const m = b.dataset.m, k = b.dataset.k; S.reports[m] = S.reports[m] || {}; const st = S.reports[m][k] = S.reports[m][k] || {}; if (b.dataset.v === 'reset') delete S.reports[m][k]; else st[b.dataset.v] = { by: USER.id, date: today() }; save(); render(); }
   else if (act === 'copytable') { const txt = tableToRows().map(r => r.join('\t')).join('\n'); copyText(txt); }
   else if (act === 'xlnames') { reportNamesXlsx(); }
+  else if (fbAct(act, b)) return;
   else if (act === 'mcell') { monthCellAct(b); }
   else if (act === 'csvtable') { downloadXlsx(b.dataset.name, [{ name: b.dataset.name, rows: tableToRows() }]); }
   else if (act === 'print') window.print();
@@ -3527,6 +3543,69 @@ function reportNamesXlsx() {
   downloadXlsx(k + (aba ? '-ABA' : '') + '-with-names-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)), [{ name: 'Children', rows: [head].concat(body).concat([tot]), filter: body.length + 1 }]);
 }
 
+/* ---------- comments on the app: tap the word on the screen, write the comment ---------- */
+function fbCan() { return !!USER && !GUEST && (USER.admin || !!(S.settings && S.settings.feedbackAll)); }
+function fbList() { const all = S.feedback || [], done = new Set(all.filter(x => x.ref).map(x => x.ref)); return all.filter(x => !x.ref).map(x => Object.assign({}, x, { done: done.has(x.id) })).sort((x, y) => (y.ts || 0) - (x.ts || 0)); }
+function fbDraw() {
+  let b = document.getElementById('fbbtn');
+  if (!fbCan()) { if (b) b.remove(); const bar = document.getElementById('fbbar'); if (bar) bar.remove(); UI.fbMode = false; document.body.classList.remove('fbmode'); return; }
+  if (!b) { b = document.createElement('button'); b.id = 'fbbtn'; b.type = 'button'; b.addEventListener('click', e => { e.stopPropagation(); fbMode(!UI.fbMode); }); document.body.appendChild(b); }
+  b.textContent = UI.fbMode ? 'Cancel' : 'Comment'; b.title = 'Write a comment on a word or a part of this page';
+}
+function fbMode(on) {
+  UI.fbMode = on; document.body.classList.toggle('fbmode', on); fbDraw();
+  let bar = document.getElementById('fbbar');
+  if (on && !bar) { bar = document.createElement('div'); bar.id = 'fbbar'; bar.textContent = 'Tap the word or the place you want to comment.'; document.body.appendChild(bar); }
+  if (!on && bar) bar.remove();
+}
+function fbOpen(text) {
+  fbMode(false);
+  const old = document.getElementById('fbbox'); if (old) old.remove();
+  const box = document.createElement('div'); box.id = 'fbbox';
+  box.innerHTML = `<div class="fbcard" role="dialog" aria-label="Comment"><h2 style="margin:0 0 8px">Comment</h2><p class="sub" style="margin:0 0 4px">On the screen:</p><p class="fbq">${esc(text || '(no text here)')}</p>
+    <label class="sub" for="fbnote">Your comment. For a word: write the word you want in its place.</label><textarea class="in" id="fbnote" rows="3"></textarea>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn pri" type="button" id="fbsave">Save the comment</button><button class="btn" type="button" id="fbcancel">Cancel</button></div></div>`;
+  document.body.appendChild(box);
+  const page = location.hash || '#/home';
+  box.querySelector('#fbcancel').addEventListener('click', () => box.remove());
+  box.addEventListener('click', e => { if (e.target === box) box.remove(); });
+  box.querySelector('#fbsave').addEventListener('click', () => {
+    const note = box.querySelector('#fbnote').value.trim(); if (!note) { box.querySelector('#fbnote').focus(); return; }
+    S.feedback = S.feedback || []; S.feedback.push({ id: uid('fb'), ts: Date.now(), date: today(), by: USER ? USER.name : '', page, text: text || '', note, v: VERSION, phone: window.innerWidth <= 760 ? 1 : 0 });
+    save(); box.remove(); toast('Comment saved'); if (route().path === 'feedback' || route().path === 'staff') render();
+  });
+  setTimeout(() => { const t = box.querySelector('#fbnote'); if (t) t.focus(); }, 30);
+}
+document.addEventListener('click', e => {
+  if (!UI.fbMode) return;
+  if (e.target.closest && e.target.closest('#fbbtn, #fbbox')) return;
+  e.preventDefault(); e.stopPropagation();
+  let el = e.target, text = '';
+  for (let i = 0; i < 4 && el && el !== document.body; i++) { text = (el.innerText || el.value || el.placeholder || el.getAttribute('aria-label') || el.title || '').trim(); if (text) break; el = el.parentElement; }
+  fbOpen(text.replace(/\s+/g, ' ').slice(0, 160));
+}, true);
+function fbAdminCard() {
+  const L = fbList(), open = L.filter(x => !x.done).length;
+  return `<section class="card"><h2>Comments on the app</h2><p class="sub">To comment on a word or on a page: tap "Comment" at the bottom of the screen, then tap the word, then write. The comments arrive here from every phone and computer.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><a class="btn" href="#/feedback">Open the comments${open ? ` <span class="chip c-red">${open}</span>` : ''}</a>
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-act="fball" ${S.settings && S.settings.feedbackAll ? 'checked' : ''}> All staff can comment (now: ${S.settings && S.settings.feedbackAll ? 'everyone' : 'supervisors only'})</label></div></section>`;
+}
+function fbText(L) { return L.map(x => `[${x.date}${x.by ? ' · ' + x.by : ''} · ${x.page}${x.phone ? ' · phone' : ''} · ${x.v || ''}]\nOn the screen: ${x.text}\nComment: ${x.note}`).join('\n\n'); }
+function vFeedback(r) {
+  if (!USER.admin) return `<h1>Comments on the app</h1><p class="lead">Only supervisors see this page.</p>`;
+  const show = r.q.get('f') || 'open', all = fbList(), L = all.filter(x => show === 'all' || (show === 'done') === x.done);
+  return `<div class="top"><div><h1>Comments on the app</h1><p class="lead">${all.filter(x => !x.done).length} open · ${all.filter(x => x.done).length} done</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Which comments">${[['open', 'Open'], ['done', 'Done'], ['all', 'All']].map(([k, l]) => `<a href="#" data-q="f=${k}" class="${show === k ? 'on' : ''}">${l}</a>`).join('')}</div><button class="btn sm" data-act="fbcopy">Copy the open comments</button><button class="btn sm" data-act="fbxl">Export in Excel</button><a class="btn sm" href="#/staff">Back to Admin</a></div></div>
+  <div class="card">${L.length ? `<div class="tw"><table><thead><tr><th>Date</th><th>By</th><th>Page</th><th>On the screen</th><th>Comment</th><th></th></tr></thead><tbody>${L.map(x => `<tr><td>${esc(fmtDate(x.date))}</td><td>${esc(x.by || '')}</td><td><a href="${esc(x.page)}">${esc(x.page.replace(/^#\//, '').split('?')[0] || 'home')}</a>${x.phone ? ' <span class="sub">phone</span>' : ''}<div class="sub">${esc(x.v || '')}</div></td><td class="fbq2">${esc(x.text)}</td><td><b>${esc(x.note)}</b></td><td>${x.done ? '<span class="chip c-green">Done</span>' : `<button class="btn sm" data-act="fbdone" data-id="${esc(x.id)}">Done</button>`}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">No comments here.</p>'}</div>`;
+}
+function fbAct(act, b) {
+  if (act === 'fbdone') { S.feedback.push({ id: uid('fb'), ref: b.dataset.id, ts: Date.now(), date: today(), by: USER ? USER.name : '' }); save(); render(); return true; }
+  if (act === 'fball') { S.settings.feedbackAll = !!b.checked; S.meta.adminTs = Date.now(); if (S.meta.sync) syncMeta().adminDirty = Date.now(); save(); render(); return true; }
+  if (act === 'fbcopy') { const t = fbText(fbList().filter(x => !x.done)); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(() => toast('Copied'), () => toast('Could not copy: use Export in Excel')); else toast('Could not copy: use Export in Excel'); return true; }
+  if (act === 'fbxl') { downloadXlsx('cyp-edu-comments-' + today(), [{ name: 'Comments', rows: [['Date', 'By', 'Page', 'Phone', 'Version', 'On the screen', 'Comment', 'Done']].concat(fbList().map(x => [x.date, x.by || '', x.page, x.phone ? 'yes' : '', x.v || '', x.text, x.note, x.done ? 'yes' : ''])), filter: true }]); return true; }
+  return false;
+}
+
 /* ====================================================================
    PIN for the staff
    ==================================================================== */
@@ -3571,7 +3650,7 @@ FORMS.pin = function (o) {
    others recorded arrives by itself. No file to export.
    ==================================================================== */
 var _NOSTAMP = false, _SNAP = null, _ASNAP = null;
-const SYNC_KEYS = ['visits', 'sessions', 'events', 'moves', 'plans'];
+const SYNC_KEYS = ['visits', 'sessions', 'events', 'moves', 'plans', 'feedback'];
 function noStamp() { _NOSTAMP = true; setTimeout(() => { snapChildren(); _NOSTAMP = false; }, 0); }
 function childSig(c) { const t = c.updatedTs; c.updatedTs = undefined; const s = JSON.stringify(c); c.updatedTs = t; return s; }
 function adminSig() { return JSON.stringify([S.staff, S.settings, S.reports]); }
@@ -3620,7 +3699,7 @@ function buildChanges() {
   f.plansRemoved = Object.keys(m.rmPlans);
   f.done = Object.keys(m.done);
   if (m.adminDirty) f.admin = { ts: S.meta.adminTs || m.adminDirty, staff: S.staff, settings: S.settings, reports: S.reports };
-  f.count = { children: f.children.length, attendance: nAtt, sheets: f.sheets.length, visits: f.visits.length, sessions: f.sessions.length, events: f.events.length, moves: f.moves.length, plans: f.plans.length + f.plansRemoved.length, other: Object.keys(f.photos).length + f.done.length + (f.admin ? 1 : 0) };
+  f.count = { children: f.children.length, attendance: nAtt, sheets: f.sheets.length, visits: f.visits.length, sessions: f.sessions.length, events: f.events.length, moves: f.moves.length, plans: f.plans.length + f.plansRemoved.length, other: Object.keys(f.photos).length + f.done.length + (f.admin ? 1 : 0) + (f.feedback || []).length };
   f.empty = !Object.values(f.count).some(Boolean);
   return f;
 }
