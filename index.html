@@ -420,6 +420,7 @@ body.fbmode .main *:hover,body.fbmode nav *:hover{outline:2px solid #B3261E;outl
 .sub:empty,.lead:empty{display:none}
 .qrow.enr{grid-template-columns:1fr}.qrow.enr .qmain{min-height:52px;padding-bottom:0}.qrow.enr .qopts .btn{flex:0 1 auto;min-height:40px}
 .attctl{margin:0 0 10px}.secf{grid-column:1/-1}.secf .qchips{margin-top:4px}
+body.guest .actbox button{pointer-events:none}
 
 </style>
 </head>
@@ -433,7 +434,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 3.2';
+const VERSION = 'alpha 3.3';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -1421,6 +1422,7 @@ function vChild(r) {
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"><span class="chip">ID ${esc(c.id)}</span>${secChip(c.section)}${chip(c.status)}${c.residence ? `<span class="chip c-blue">${esc(c.residence)}</span>` : ''}${curAge(c) !== '' ? `<span class="chip">${c.dob ? '' : 'about '}${esc(curAge(c))} years</span>` : ''}${c.streetCat && c.section === 'Luigi' && isCurrent(c) ? `<span class="chip c-orange">${esc(STREET_CATS[c.streetCat])}</span>` : ''}${isAba(c) ? '<span class="chip c-green">ABA</span>' : ''}${c.relStreet === 'Yes' ? '<span class="chip c-orange">Relatives on the street</span>' : ''}${c.backStreet ? '<span class="chip c-red">Back on the street</span>' : ''}${absChip(c)}</div></div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="#/visit/new?child=${esc(c.id)}">Record a visit</a><a class="btn" href="#/child/${esc(c.id)}/status">Change status or section</a><a class="btn" href="#/child/${esc(c.id)}/edit">Edit</a></div></div>
   ${whereHtml(c)}
+  ${actBoxes(c)}
   ${c.sameAs && child(c.sameAs) ? `<div class="note">Probably the same child as <a href="#/child/${esc(c.sameAs)}">${esc(fullName(child(c.sameAs)))}, ID ${esc(c.sameAs)}</a> in ${esc(SECTIONS[child(c.sameAs).section].label)}: same name and a similar age. Check with the section before using two files.</div>` : ''}
   ${backAskHtml(c)}
   ${(c.toCheck || []).length ? `<div class="note"><b>To confirm with the Nkwazi team</b><ul style="margin:6px 0 8px 18px;padding:0">${c.toCheck.map(x => `<li>${esc(x)}</li>`).join('')}</ul><button class="btn sm" data-act="nkzchecked" data-id="${esc(c.id)}">Checked: remove this note</button></div>` : ''}
@@ -1434,7 +1436,7 @@ function vChild(r) {
       </section>
       <section class="card"><h2>Details</h2>
         <p class="sec" style="margin-top:12px">Age</p>${dl([['Date of birth', c.dob ? fmtDate(c.dob) : 'Not known'], ['Age today', ageText(c)]])}
-        <p class="sec" style="margin-top:12px">In the programme</p>${dl([['Phase', SECTIONS[c.section] ? 'Phase ' + SECTIONS[c.section].phase + ' · ' + SECTIONS[c.section].label : ''], ['Date of entry', entryText(c)], ['Came from', c.referredBy], ['Activities', (Array.isArray(c.activities) ? c.activities : []).join(', ')], ['Note at admission', c.admissionNote], ['No in the Nkwazi Data Tool', c.toolNo], ['Followed by', staffName(c.responsible)], ['Programmes', c.programmes], ['Support received', c.support], ['Street situation', STREET_CATS[c.streetCat] || ''], ['Relatives on the street', c.relStreet ? c.relStreet + (c.relStreetWho ? ' · ' + c.relStreetWho : '') : ''], ['Back on the street', c.backStreet ? backLabel(c.backStreet) + (c.backStreetDate ? ' · found again on ' + fmtDate(c.backStreetDate) : '') : ''], ['Where now', [c.whereNow && c.whereNow !== 'InCity' ? c.whereNow : '', c.streetPlace].filter(Boolean).join(', ')], ['Taken to another place on', fmtDate(c.transferDate)], ['Connected (A to B) on', fmtDate(c.connectionDate)], ['Reintegrated on', fmtDate(c.reintegrationDate)], ['File closed', c.closeDate ? fmtDate(c.closeDate) + ' · ' + (c.closeReason || '') : '']])}
+        <p class="sec" style="margin-top:12px">In the programme</p>${dl([['Phase', SECTIONS[c.section] ? 'Phase ' + SECTIONS[c.section].phase + ' · ' + SECTIONS[c.section].label : ''], ['Date of entry', entryText(c)], ['Came from', c.referredBy], ['Note at admission', c.admissionNote], ['No in the Nkwazi Data Tool', c.toolNo], ['Followed by', staffName(c.responsible)], ['Programmes', c.programmes], ['Support received', c.support], ['Street situation', STREET_CATS[c.streetCat] || ''], ['Relatives on the street', c.relStreet ? c.relStreet + (c.relStreetWho ? ' · ' + c.relStreetWho : '') : ''], ['Back on the street', c.backStreet ? backLabel(c.backStreet) + (c.backStreetDate ? ' · found again on ' + fmtDate(c.backStreetDate) : '') : ''], ['Where now', [c.whereNow && c.whereNow !== 'InCity' ? c.whereNow : '', c.streetPlace].filter(Boolean).join(', ')], ['Taken to another place on', fmtDate(c.transferDate)], ['Connected (A to B) on', fmtDate(c.connectionDate)], ['Reintegrated on', fmtDate(c.reintegrationDate)], ['File closed', c.closeDate ? fmtDate(c.closeDate) + ' · ' + (c.closeReason || '') : '']])}
         <p class="sec" style="margin-top:14px">Family</p>${dl([['Compound', c.compound], ['Family address', c.familyAddress], ['Contact', c.contact], ['Guardian', [c.guardianName, c.guardianRelation].filter(Boolean).join(', ')], ['Father', c.father], ['Mother', c.mother], ['Other relatives', c.otherRelatives], ['Family background', c.familyBackground], ['Languages', c.languages]])}
         <p class="sec" style="margin-top:14px">School</p>${dl([['School type', c.schoolType ? c.schoolType + (c.schoolTypeToCheck ? ' (from the Nkwazi file: GRZ or private to confirm)' : '') : ''], ['School', c.schoolName], ['Grade', c.grade], ['Class (stream)', c.stream], ['Skill', c.skill], ['Education at entry', c.educationAtEntry]])}
         <p class="sec" style="margin-top:14px">Health and notes</p>${dl([['Medical', c.medical], ['Disabilities', c.disabilities], ['Objectives', c.objectives], ['Notes', c.notes]])}
@@ -3071,7 +3073,7 @@ function vMore() {
     <a class="mitem" href="#/sync"><span><b>Shared database</b><small>${syncOn() ? (SY.state === 'off' ? 'No connection: saved here, sent later' : 'Connected: sent and received by itself') : 'Not connected yet'}</small></span>${syncOn() && pendingCount() ? '<span class="chip c-blue">Sending</span>' : ''}<i aria-hidden="true">›</i></a>
     ${item('#/counseling', 'Counseling', 'Record a session, sessions of the month')}
     ${item('#/reports', 'Reports', 'Tables of each section')}
-    ${USER.admin || staffAreas(USER).includes('Sports') ? item('#/activities', 'Activities', 'Sports and skills training · draft') : ''}
+    ${USER.admin || staffAreas(USER).includes('Sports') ? item('#/activities', 'Activities', 'Sports and VET training · draft') : ''}
     ${USER.admin ? item('#/logframe', 'Logframe', 'Indicators · draft') : ''}
     ${USER.admin ? item('#/staff', 'Admin', 'People, areas, PIN, backup') : ''}
     ${item('#/help', 'How it works', 'And what we want to know from you')}
@@ -3696,7 +3698,7 @@ ${heads.map((h, i) => `<h2>${i + 3}. ${h}</h2><p>&nbsp;</p><p>&nbsp;</p>`).join(
 
 /* ---------- Activities: sports and skills training (draft) ----------
    Enrolment is kept in the child's file (c.activities). Attendance is a mark per day, child and discipline. */
-const ACT_DEFAULT = { Sports: ['Football', 'Basketball', 'Golf', 'Tennis', 'Swimming', 'Volleyball'], 'Skills training': ['Carpentry', 'Agriculture', 'Mechanics', 'Handicraft'] };
+const ACT_DEFAULT = { Sports: ['Football', 'Basketball', 'Golf', 'Tennis', 'Swimming', 'Volleyball'], 'VET training': ['Carpentry', 'Agriculture', 'Mechanics', 'Handicraft'] };
 function actGroups() { return (S.settings && S.settings.activities) || ACT_DEFAULT; }
 function actAll() { return [].concat.apply([], Object.values(actGroups())); }
 function actNow(q) { return q.get('a') || actAll()[0]; }
@@ -3721,7 +3723,7 @@ function actEnrolList() {
 function vActivities(r) {
   const q = r.q, G = actGroups(), tab = q.get('t') === 'enrol' ? 'enrol' : 'att', a = actNow(q), d = q.get('d') || today(), day = S.attendance[d] || {}, suf = '@act:' + a, m = d.slice(0, 7);
   const open = S.children.filter(c => c.status !== 'Closed'), enr = x => open.filter(c => actOf(c).includes(x)).length;
-  const head = `<div class="top"><div><h1>Activities <span class="chip c-orange">Draft</span></h1><p class="lead">Sports and skills training.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Attendance or enrolment"><a href="#" data-q="t=" class="${tab === 'att' ? 'on' : ''}">Attendance</a><a href="#" data-q="t=enrol" class="${tab === 'enrol' ? 'on' : ''}">Enrolment</a></div>${tab === 'att' ? `<input class="in" type="date" id="actdate" value="${d}" max="${today()}" style="width:auto" aria-label="Day">` : ''}<button class="btn sm" data-act="actxl">Export in Excel</button></div></div>`;
+  const head = `<div class="top"><div><h1>Activities <span class="chip c-orange">Draft</span></h1><p class="lead">Sports and VET training.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Attendance or enrolment"><a href="#" data-q="t=" class="${tab === 'att' ? 'on' : ''}">Attendance</a><a href="#" data-q="t=enrol" class="${tab === 'enrol' ? 'on' : ''}">Enrolment</a></div>${tab === 'att' ? `<input class="in" type="date" id="actdate" value="${d}" max="${today()}" style="width:auto" aria-label="Day">` : ''}<button class="btn sm" data-act="actxl">Export in Excel</button></div></div>`;
   const search = `<input class="in qsearch" id="actsearch" type="search" autocomplete="off" placeholder="${tab === 'att' ? 'Type a name, tap it' : 'Type a name'}" aria-label="Find a name" value="${esc(UI.actq || '')}">`;
   if (tab === 'enrol') return head + `<div class="qtop">${search}<div class="qcount"><span>Tap a discipline to enrol. Tap again to remove.</span><span><b>${open.filter(c => actOf(c).length).length}</b> children enrolled</span></div></div>
   <div class="card" style="padding:0 8px"><div id="actlist">${actEnrolList()}</div></div>`;
@@ -3740,7 +3742,11 @@ function actMark(b) {
 }
 function actEnrol(b) {
   if (GUEST) return; const c = child(b.dataset.c); if (!c) return; actEnrolSet(c, b.dataset.a, !actOf(c).includes(b.dataset.a)); save();
-  const t = $('#actlist'); if (t) t.innerHTML = actEnrolList();
+  const t = $('#actlist'); if (t && route().path === 'activities') t.innerHTML = actEnrolList(); else render();
+}
+/* in the file of the child: two small boxes to enrol in sports and in VET training */
+function actBoxes(c) {
+  return `<div class="grid g2 actbox" style="margin-bottom:12px">${Object.entries(actGroups()).map(([g, L]) => `<section class="card" style="padding:12px 14px"><h3 style="margin:0 0 8px">${esc(g)}</h3><div style="display:flex;flex-wrap:wrap;gap:6px">${L.map(x => `<button class="btn sm${actOf(c).includes(x) ? ' pri' : ''}" data-act="actenrol" data-c="${esc(c.id)}" data-a="${esc(x)}" aria-pressed="${actOf(c).includes(x)}">${actOf(c).includes(x) ? '✓ ' : ''}${esc(x)}</button>`).join('')}</div></section>`).join('')}</div>`;
 }
 function actXlsx() {
   const q = route().q, a = actNow(q), all = actAll();
