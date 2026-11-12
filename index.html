@@ -418,7 +418,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 2.4';
+const VERSION = 'alpha 2.5';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -431,7 +431,7 @@ const STATUSES = ['Active', 'Semi-active', 'Follow-up', 'Closed'];
 const STATUS_LABEL = { 'Active': 'Active', 'Semi-active': 'Semi-active', 'Follow-up': 'Reintegrated, in 2-year follow-up', 'Closed': 'File closed' };
 const STATUS_CHIP = { 'Active': 'c-green', 'Semi-active': 'c-yellow', 'Follow-up': 'c-purple', 'Closed': '' };
 const CLOSE_REASONS = ['2-year follow-up completed', 'Left the programme, no longer comes', 'Transferred to another partner', 'Moved to another Cicetekelo centre', 'Went back to the family', 'Moved to another town', 'Returned to Social Welfare', 'Ran away / lost contact', 'Stopped school', 'Completed school', 'Died', 'Aged out of the programme', 'Other'];
-const SCHOOL_TYPES = ['Nkwazi community school', 'Minsundu school', 'Sandra Centre', 'GRZ primary', 'GRZ secondary', 'Private school', 'College / skills training', 'Not in school'];
+const SCHOOL_TYPES = ['Nkwazi community school', 'Minsundu school', 'Literacy class (Minsundu)', 'Luigi Special School', 'GRZ primary', 'GRZ secondary', 'Private school', 'College / skills training', 'Not in school'];
 const VISIT_PURPOSES = ['Family tracing', 'Assessment', 'Follow-up', 'Emergency', 'School visit'];
 const VISIT_WHERE = ['Home', 'School', 'Phone', 'Other'];
 const EVENT_TYPES = ['Visited family', 'Bonding with family', 'Sick, medical attention', 'Sneaked out', 'Came back'];
@@ -1366,7 +1366,7 @@ function vChildForm(c) {
     </fieldset></div>
     ${isNew ? '<details class="more"><summary>More details: school, health, notes. They can be added later.</summary><div style="display:flex;flex-direction:column;gap:18px;margin-top:14px">' : ''}
     <div><p class="sec">School</p><fieldset class="fs">
-      ${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: 'The school or centre where the child spends the day. Nkwazi community school and Minsundu children school put the child on the attendance list of that centre.' })}${field('School name', 'schoolName', c.schoolName)}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
+      ${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: 'The school or centre where the child spends the day. Nkwazi community school, Minsundu community school and the literacy class put the child on the attendance list of that centre.' })}${field('School name', 'schoolName', c.schoolName)}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
       ${field('Skill or trade', 'skill', c.skill)}${field('Education at entry', 'educationAtEntry', c.educationAtEntry, 'textarea', { wide: true, rows: 2 })}
     </fieldset></div>
     <div><p class="sec">Health and notes</p><fieldset class="fs">
@@ -3396,21 +3396,24 @@ function attMonthTable(q) {
 /* ---------- section, where the child sleeps, where the child comes by day: three separate things ---------- */
 const DAY_CENTRE = { Luigi: 'Luigi Drop-in', Minsundu: 'Minsundu Centre', Nkwazi: 'Nkwazi Centre' };
 const ATT_L = { P: 'Present', H: 'Home leave', A: 'Absent', S: 'Sick', E: 'Permission' };
-const DAY_LABEL = { 'Minsundu school': 'Minsundu children school', 'Sandra Centre': 'Sandra Centre (inclusive school)', 'GRZ primary': 'GRZ school, primary', 'GRZ secondary': 'GRZ school, secondary' };
+const DAY_LABEL = { 'Minsundu school': 'Minsundu community school', 'Literacy class (Minsundu)': 'Literacy class at Minsundu', 'GRZ primary': 'GRZ school, primary', 'GRZ secondary': 'GRZ school, secondary' };
 function dayLabel(t) { return DAY_LABEL[t] || t || ''; }
 function dayOpts() { return SCHOOL_TYPES.map(t => ({ v: t, l: dayLabel(t) })); }
 /* where the child goes by day: the school type of the file; older files may only have the school name or the first "also at" field */
 function dayType(c) {
-  if (c.schoolType) return c.schoolType;
+  if (c.schoolType) return c.schoolType === 'Sandra Centre' ? 'Luigi Special School' : c.schoolType;
   if (c.alsoAt === 'Nkwazi') return 'Nkwazi community school';
   if (c.alsoAt === 'Minsundu') return 'Minsundu school';
   if (c.alsoAt !== 'none' && centreOf(c) === 'Minsundu' && /^\s*nkwa[sz]i(\s+community(\s+school)?)?\s*$/i.test(c.schoolName || '')) return 'Nkwazi community school';
+  /* names used in the Minsundu register: proposals until somebody confirms them in Edit */
+  if (centreOf(c) === 'Minsundu' && /^\s*ch?icetekelo\s+com/i.test(c.schoolName || '')) return 'Minsundu school';
+  if (/luigi\s+special/i.test(c.schoolName || '')) return 'Luigi Special School';
   return '';
 }
 function alsoAt(c) {
   const h = centreOf(c), t = dayType(c);
   if (t === 'Nkwazi community school' && h !== 'Nkwazi') return 'Nkwazi';
-  if (t === 'Minsundu school' && h !== 'Minsundu') return 'Minsundu';
+  if ((t === 'Minsundu school' || t === 'Literacy class (Minsundu)') && h !== 'Minsundu') return 'Minsundu';
   return '';
 }
 function attCentres(c) { const h = centreOf(c), o = alsoAt(c); return o ? [h, o] : [h]; }
@@ -3425,7 +3428,7 @@ function sleepsText(c) {
 function guestLine(c, centre) { return centre !== centreOf(c) ? ` · followed by ${esc(c.section === 'Luigi' ? 'Luigi' : c.section)}, ${c.residence === 'Resident' ? 'sleeps at Minsundu' : 'sleeps at home'}` : c.residence === 'Resident' && centre === 'Nkwazi' ? ' · sleeps at Minsundu' : ''; }
 function whereHtml(c) {
   const sec = SECTIONS[c.section] || {}, t = dayType(c), auto = t && !c.schoolType;
-  const day = t ? dayLabel(t) + (c.schoolName && !/community school|Minsundu school|Sandra|Not in school/.test(t) ? ' · ' + c.schoolName : '') : c.section === 'Luigi' ? 'Luigi Drop-in' : 'Not written';
+  const day = t ? dayLabel(t) + (c.schoolName && !/community school|Minsundu school|Literacy class|Luigi Special|Not in school/.test(t) ? ' · ' + c.schoolName : '') : c.section === 'Luigi' ? 'Luigi Drop-in' : 'Not written';
   const lists = attCentres(c).filter(k => k !== 'Luigi');
   const cell = (q, a, s) => `<div class="w3"><span>${q}</span><b>${esc(a)}</b>${s ? `<small>${s}</small>` : ''}</div>`;
   return `<div class="where3">${cell('Section', sec.label || '', 'Phase ' + sec.phase + ' · the team that follows the child')}${cell('Sleeps', sleepsText(c), '')}${cell('By day goes to', day, (lists.length ? 'Attendance list: ' + lists.join(' and ') : '') + (auto ? '. Proposed by the app: check it in Edit.' : !t && c.section !== 'Luigi' ? '. Choose the school in Edit.' : ''))}</div>`;
@@ -3433,8 +3436,8 @@ function whereHtml(c) {
 function secExplain() {
   const cell = (q, t) => `<div class="w3"><span>${q}</span><small style="font-size:13.5px;color:var(--soft)">${t}</small></div>`;
   return `<section class="card" id="sections"><h2>Section, where the child sleeps, where the child goes by day</h2><p style="margin:8px 0 10px">These are three different things. The app keeps them apart.</p>
-  <div class="where3">${cell('Section', 'The team that follows the child: Luigi, UCC, Nkwazi or Youth. Each child has one section. Reports count the child under this section.')}${cell('Sleeps', 'Resident: sleeps at Minsundu Centre. Non-resident: sleeps at home.')}${cell('By day goes to', 'The school or centre where the child spends the day: Nkwazi community school, Minsundu children school, Sandra Centre, a GRZ school, a private school, college or skills training.')}</div>
-  <ul style="margin:0;padding-left:18px;line-height:1.6"><li>A child of UCC sleeps at Minsundu and goes to Nkwazi community school: section UCC, resident, on the attendance list of Minsundu and of Nkwazi.</li><li>A child of UCC sleeps at Minsundu and goes to Sandra Centre: section UCC, resident, on the attendance list of Minsundu.</li><li>A child of Youth sleeps at home and comes to Minsundu by day: section Youth, non-resident, on the attendance list of Minsundu.</li><li>UCC is Phase 2: the children at Minsundu who prepare to go to Nkwazi. Their attendance is under Attendance, Minsundu, UCC.</li></ul></section>`;
+  <div class="where3">${cell('Section', 'The team that follows the child: Luigi, UCC, Nkwazi or Youth. Each child has one section. Reports count the child under this section.')}${cell('Sleeps', 'Resident: sleeps at Minsundu Centre. Non-resident: sleeps at home.')}${cell('By day goes to', 'The school or centre where the child spends the day: Nkwazi community school, Minsundu community school, the literacy class at Minsundu, Luigi Special School, a GRZ school, a private school, college or skills training.')}</div>
+  <ul style="margin:0;padding-left:18px;line-height:1.6"><li>A child of UCC sleeps at Minsundu and goes to Nkwazi community school: section UCC, resident, on the attendance list of Minsundu and of Nkwazi.</li><li>A child of UCC sleeps at Minsundu and goes to Luigi Special School: section UCC, resident, on the attendance list of Minsundu.</li><li>A child of Youth sleeps at home and comes to Minsundu by day: section Youth, non-resident, on the attendance list of Minsundu.</li><li>UCC is Phase 2: the children at Minsundu who prepare to go to Nkwazi. Their attendance is under Attendance, Minsundu, UCC.</li></ul></section>`;
 }
 function attWho(centre) {
   const g = S.children.filter(c => isCurrent(c) && attCentres(c).includes(centre) && centreOf(c) !== centre).length;
