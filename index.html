@@ -418,6 +418,7 @@ body.fbmode .main *:hover,body.fbmode nav *:hover{outline:2px solid #B3261E;outl
 @media (max-width:760px){#fbbtn{bottom:74px;right:10px;padding:9px 14px}}
 @media print{#fbbtn,#fbbar,#fbbox{display:none}}
 .sub:empty,.lead:empty{display:none}
+.qrow.enr{grid-template-columns:1fr}.qrow.enr .qmain{min-height:52px;padding-bottom:0}.qrow.enr .qopts .btn{flex:0 1 auto;min-height:40px}
 
 </style>
 </head>
@@ -431,7 +432,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 2.9';
+const VERSION = 'alpha 3.0';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -1248,6 +1249,7 @@ function vHome(r) {
   const bar = (n, d, col) => `<div class="bar" style="margin:10px 0 4px"><div style="width:${d ? Math.min(100, pct(n, d)) : 0}%;background:${col}"></div></div>`;
   return `<div class="top"><div><h1>${esc(fmtMonth(m))}</h1><p class="lead"></p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Children shown">${[['all', 'All'], ['res', 'Residents'], ['non', 'Non-residents']].map(([k, l]) => `<a href="#" data-q="f=${k}" class="${filt === k ? 'on' : ''}">${l}</a>`).join('')}</div>${monthPicker(m)}</div></div>
+  ${installCard(true)}
   ${centreGuide()}
   ${homeBirthdays()}
   ${homeTodo()}
@@ -1429,7 +1431,7 @@ function vChild(r) {
       </section>
       <section class="card"><h2>Details</h2>
         <p class="sec" style="margin-top:12px">Age</p>${dl([['Date of birth', c.dob ? fmtDate(c.dob) : 'Not known'], ['Age today', ageText(c)]])}
-        <p class="sec" style="margin-top:12px">In the programme</p>${dl([['Phase', SECTIONS[c.section] ? 'Phase ' + SECTIONS[c.section].phase + ' · ' + SECTIONS[c.section].label : ''], ['Date of entry', entryText(c)], ['Came from', c.referredBy], ['Note at admission', c.admissionNote], ['No in the Nkwazi Data Tool', c.toolNo], ['Followed by', staffName(c.responsible)], ['Programmes', c.programmes], ['Support received', c.support], ['Street situation', STREET_CATS[c.streetCat] || ''], ['Relatives on the street', c.relStreet ? c.relStreet + (c.relStreetWho ? ' · ' + c.relStreetWho : '') : ''], ['Back on the street', c.backStreet ? backLabel(c.backStreet) + (c.backStreetDate ? ' · found again on ' + fmtDate(c.backStreetDate) : '') : ''], ['Where now', [c.whereNow && c.whereNow !== 'InCity' ? c.whereNow : '', c.streetPlace].filter(Boolean).join(', ')], ['Taken to another place on', fmtDate(c.transferDate)], ['Connected (A to B) on', fmtDate(c.connectionDate)], ['Reintegrated on', fmtDate(c.reintegrationDate)], ['File closed', c.closeDate ? fmtDate(c.closeDate) + ' · ' + (c.closeReason || '') : '']])}
+        <p class="sec" style="margin-top:12px">In the programme</p>${dl([['Phase', SECTIONS[c.section] ? 'Phase ' + SECTIONS[c.section].phase + ' · ' + SECTIONS[c.section].label : ''], ['Date of entry', entryText(c)], ['Came from', c.referredBy], ['Activities', (Array.isArray(c.activities) ? c.activities : []).join(', ')], ['Note at admission', c.admissionNote], ['No in the Nkwazi Data Tool', c.toolNo], ['Followed by', staffName(c.responsible)], ['Programmes', c.programmes], ['Support received', c.support], ['Street situation', STREET_CATS[c.streetCat] || ''], ['Relatives on the street', c.relStreet ? c.relStreet + (c.relStreetWho ? ' · ' + c.relStreetWho : '') : ''], ['Back on the street', c.backStreet ? backLabel(c.backStreet) + (c.backStreetDate ? ' · found again on ' + fmtDate(c.backStreetDate) : '') : ''], ['Where now', [c.whereNow && c.whereNow !== 'InCity' ? c.whereNow : '', c.streetPlace].filter(Boolean).join(', ')], ['Taken to another place on', fmtDate(c.transferDate)], ['Connected (A to B) on', fmtDate(c.connectionDate)], ['Reintegrated on', fmtDate(c.reintegrationDate)], ['File closed', c.closeDate ? fmtDate(c.closeDate) + ' · ' + (c.closeReason || '') : '']])}
         <p class="sec" style="margin-top:14px">Family</p>${dl([['Compound', c.compound], ['Family address', c.familyAddress], ['Contact', c.contact], ['Guardian', [c.guardianName, c.guardianRelation].filter(Boolean).join(', ')], ['Father', c.father], ['Mother', c.mother], ['Other relatives', c.otherRelatives], ['Family background', c.familyBackground], ['Languages', c.languages]])}
         <p class="sec" style="margin-top:14px">School</p>${dl([['School type', c.schoolType ? c.schoolType + (c.schoolTypeToCheck ? ' (from the Nkwazi file: GRZ or private to confirm)' : '') : ''], ['School', c.schoolName], ['Grade', c.grade], ['Class (stream)', c.stream], ['Skill', c.skill], ['Education at entry', c.educationAtEntry]])}
         <p class="sec" style="margin-top:14px">Health and notes</p>${dl([['Medical', c.medical], ['Disabilities', c.disabilities], ['Objectives', c.objectives], ['Notes', c.notes]])}
@@ -1993,6 +1995,7 @@ document.addEventListener('click', e => {
   else if (act === 'photossave') { photosBatchSave(); }
   else if (act === 'wordreport') { wordReport(b); }
   else if (act === 'actmark') { actMark(b); }
+  else if (act === 'actenrol') { actEnrol(b); }
   else if (act === 'actxl') { actXlsx(); }
   else if (act === 'mcell') { monthCellAct(b); }
   else if (act === 'csvtable') { downloadXlsx(b.dataset.name, [{ name: b.dataset.name, rows: tableToRows() }]); }
@@ -3685,43 +3688,65 @@ ${heads.map((h, i) => `<h2>${i + 3}. ${h}</h2><p>&nbsp;</p><p>&nbsp;</p>`).join(
   toast('Report downloaded');
 }
 
-/* ---------- Activities: sports and skills training (draft) ---------- */
-const ACT_DEFAULT = { Sports: ['Football', 'Basketball', 'Golf', 'Tennis', 'Swimming', 'Volleyball'], 'Skills training': ['Carpentry', 'Agriculture', 'Mechanics'] };
+/* ---------- Activities: sports and skills training (draft) ----------
+   Enrolment is kept in the child's file (c.activities). Attendance is a mark per day, child and discipline. */
+const ACT_DEFAULT = { Sports: ['Football', 'Basketball', 'Golf', 'Tennis', 'Swimming', 'Volleyball'], 'Skills training': ['Carpentry', 'Agriculture', 'Mechanics', 'Handicraft'] };
 function actGroups() { return (S.settings && S.settings.activities) || ACT_DEFAULT; }
-function actNow(q) { return q.get('a') || Object.values(actGroups())[0][0]; }
+function actAll() { return [].concat.apply([], Object.values(actGroups())); }
+function actNow(q) { return q.get('a') || actAll()[0]; }
+function actOf(c) { return Array.isArray(c.activities) ? c.activities : []; }
 function actIds(a, from, to) { const suf = '@act:' + a, ids = new Set(); for (const day of Object.keys(S.attendance)) if (day >= from && day <= to) for (const k of Object.keys(S.attendance[day])) if (k.endsWith(suf)) ids.add(k.slice(0, -suf.length)); return Array.from(ids); }
+function actFind(term) { return S.children.filter(c => c.status !== 'Closed' && (fullName(c) + ' ' + (c.nickname || '')).toLowerCase().includes(term)).slice(0, 30); }
+function actRowHead(c) { return `${avatar(c, 44)}<span class="qn"><b>${esc(fullName(c))}</b><small>${esc(c.section + ' · ID ' + c.id)}</small></span>`; }
 function actList(q) {
   const a = actNow(q), d = q.get('d') || today(), day = S.attendance[d] || {}, term = (UI.actq || '').trim().toLowerCase();
-  let rows = actIds(a, addDays(d, -90), d).map(id => [id, child(id)]).filter(x => x[1]);
-  if (term.length >= 2) rows = S.children.filter(c => c.status !== 'Closed' && (fullName(c) + ' ' + (c.nickname || '')).toLowerCase().includes(term)).slice(0, 30).map(c => [c.id, c]);
-  rows.sort((x, y) => fullName(x[1]).localeCompare(fullName(y[1])));
-  if (!rows.length) return `<p class="empty">${term.length >= 2 ? 'No child with this name.' : 'Nobody on this list yet. Type a name above.'}</p>`;
-  return rows.map(([id, c]) => { const k = id + '@act:' + a, v = day[k]; return `<div class="qrow"><button class="qmain" data-act="actmark" data-d="${d}" data-id="${esc(k)}">${avatar(c, 44)}<span class="qn"><b>${esc(fullName(c))}</b><small>${esc(c.section + ' · ID ' + c.id)}</small></span>${v ? '<span class="qmark P">Present</span>' : '<span class="qtick">Present</span>'}</button></div>`; }).join('');
+  let kids = term.length >= 2 ? actFind(term) : S.children.filter(c => c.status !== 'Closed' && actOf(c).includes(a));
+  kids = kids.slice().sort((x, y) => fullName(x).localeCompare(fullName(y)));
+  if (!kids.length) return `<p class="empty">${term.length >= 2 ? 'No child with this name.' : 'Nobody enrolled yet. Type a name above, or use Enrolment.'}</p>`;
+  return kids.map(c => { const k = c.id + '@act:' + a, v = day[k]; return `<div class="qrow"><button class="qmain" data-act="actmark" data-d="${d}" data-id="${esc(k)}" data-c="${esc(c.id)}" data-a="${esc(a)}">${actRowHead(c)}${v ? '<span class="qmark P">Present</span>' : '<span class="qtick">Present</span>'}</button></div>`; }).join('');
+}
+function actEnrolList() {
+  const term = (UI.actq || '').trim().toLowerCase(), G = actGroups();
+  let kids = term.length >= 2 ? actFind(term) : S.children.filter(c => c.status !== 'Closed' && actOf(c).length);
+  kids = kids.slice().sort((x, y) => fullName(x).localeCompare(fullName(y)));
+  if (!kids.length) return `<p class="empty">${term.length >= 2 ? 'No child with this name.' : 'Nobody enrolled yet. Type a name above.'}</p>`;
+  return kids.map(c => `<div class="qrow enr"><div class="qmain" style="cursor:default">${actRowHead(c)}</div><div class="qopts">${Object.entries(G).map(([g, L]) => L.map(x => `<button class="btn sm${actOf(c).includes(x) ? ' pri' : ''}" data-act="actenrol" data-c="${esc(c.id)}" data-a="${esc(x)}" aria-pressed="${actOf(c).includes(x)}">${actOf(c).includes(x) ? '✓ ' : ''}${esc(x)}</button>`).join('')).join('')}</div></div>`).join('');
 }
 function vActivities(r) {
-  const q = r.q, G = actGroups(), a = actNow(q), d = q.get('d') || today(), day = S.attendance[d] || {}, suf = '@act:' + a, m = d.slice(0, 7);
+  const q = r.q, G = actGroups(), tab = q.get('t') === 'enrol' ? 'enrol' : 'att', a = actNow(q), d = q.get('d') || today(), day = S.attendance[d] || {}, suf = '@act:' + a, m = d.slice(0, 7);
+  const open = S.children.filter(c => c.status !== 'Closed'), enr = x => open.filter(c => actOf(c).includes(x)).length;
+  const head = `<div class="top"><div><h1>Activities <span class="chip c-orange">Draft</span></h1><p class="lead">Sports and skills training.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Attendance or enrolment"><a href="#" data-q="t=" class="${tab === 'att' ? 'on' : ''}">Attendance</a><a href="#" data-q="t=enrol" class="${tab === 'enrol' ? 'on' : ''}">Enrolment</a></div>${tab === 'att' ? `<input class="in" type="date" id="actdate" value="${d}" max="${today()}" style="width:auto" aria-label="Day">` : ''}<button class="btn sm" data-act="actxl">Export in Excel</button></div></div>`;
+  const search = `<input class="in qsearch" id="actsearch" type="search" autocomplete="off" placeholder="${tab === 'att' ? 'Type a name, tap it' : 'Type a name'}" aria-label="Find a name" value="${esc(UI.actq || '')}">`;
+  if (tab === 'enrol') return head + `<div class="qtop">${search}<div class="qcount"><span>Tap a discipline to enrol. Tap again to remove.</span><span><b>${open.filter(c => actOf(c).length).length}</b> children enrolled</span></div></div>
+  <div class="card" style="padding:0 8px"><div id="actlist">${actEnrolList()}</div></div>`;
   const n = Object.keys(day).filter(k => k.endsWith(suf)).length;
   const days = Object.keys(S.attendance).filter(x => x.slice(0, 7) === m && Object.keys(S.attendance[x]).some(k => k.endsWith(suf))).length;
   const mk = uniq(actIds(a, m + '-01', monthEnd(m)).map(id => child(id)).filter(Boolean));
-  return `<div class="top"><div><h1>Activities <span class="chip c-orange">Draft</span></h1><p class="lead">Sports and skills training. Draft, to try with coaches and instructors.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><input class="in" type="date" id="actdate" value="${d}" max="${today()}" style="width:auto" aria-label="Day"><button class="btn sm" data-act="actxl">Export in Excel</button></div></div>
-  ${Object.entries(G).map(([g, L]) => `<p class="sec" style="margin:6px 0 4px">${esc(g)}</p><div class="qchips">${L.map(x => `<a href="#" data-q="a=${esc(x)}" class="${x === a ? 'on' : ''}">${esc(x)}</a>`).join('')}</div>`).join('')}
-  <div class="qtop"><input class="in qsearch" id="actsearch" type="search" autocomplete="off" placeholder="Type a name, tap it" aria-label="Find a name" value="${esc(UI.actq || '')}">
-    <div class="qcount"><span><b>${esc(a)}</b> · ${esc(fmtDate(d))} · <b>${n}</b> present</span><span>${esc(fmtMonth(m))}: ${days} ${days === 1 ? 'day' : 'days'} · ${mk.length} children (F ${mk.filter(c => c.sex === 'F').length}, M ${mk.filter(c => c.sex === 'M').length})</span></div></div>
+  return head + Object.entries(G).map(([g, L]) => `<p class="sec" style="margin:6px 0 4px">${esc(g)}</p><div class="qchips">${L.map(x => `<a href="#" data-q="a=${esc(x)}" class="${x === a ? 'on' : ''}">${esc(x)} · ${enr(x)}</a>`).join('')}</div>`).join('') + `
+  <div class="qtop">${search}<div class="qcount"><span><b>${esc(a)}</b> · ${esc(fmtDate(d))} · <b>${n}</b> present of ${enr(a)} enrolled</span><span>${esc(fmtMonth(m))}: ${days} ${days === 1 ? 'day' : 'days'} · ${mk.length} children (F ${mk.filter(c => c.sex === 'F').length}, M ${mk.filter(c => c.sex === 'M').length})</span></div></div>
   <div class="card" style="padding:0 8px"><div id="actlist">${actList(q)}</div></div>`;
 }
+function actEnrolSet(c, a, on) { const L = actOf(c).filter(x => x !== a); if (on) L.push(a); c.activities = L; c.updatedAt = today(); }
 function actMark(b) {
-  if (GUEST) return; const d = b.dataset.d, id = b.dataset.id; S.attendance[d] = S.attendance[d] || {}; touchAtt(d, id);
-  if (S.attendance[d][id]) delete S.attendance[d][id]; else S.attendance[d][id] = 'P';
+  if (GUEST) return; const d = b.dataset.d, id = b.dataset.id, c = child(b.dataset.c); S.attendance[d] = S.attendance[d] || {}; touchAtt(d, id);
+  if (S.attendance[d][id]) delete S.attendance[d][id]; else { S.attendance[d][id] = 'P'; if (c && !actOf(c).includes(b.dataset.a)) actEnrolSet(c, b.dataset.a, true); }
   const had = !!(UI.actq || ''); UI.actq = ''; save(); render(); if (had) { const s = $('#actsearch'); if (s) s.focus(); }
 }
+function actEnrol(b) {
+  if (GUEST) return; const c = child(b.dataset.c); if (!c) return; actEnrolSet(c, b.dataset.a, !actOf(c).includes(b.dataset.a)); save();
+  const t = $('#actlist'); if (t) t.innerHTML = actEnrolList();
+}
 function actXlsx() {
-  const q = route().q, a = actNow(q), m = (q.get('d') || today()).slice(0, 7), suf = '@act:' + a;
+  const q = route().q, a = actNow(q), all = actAll();
+  if (q.get('t') === 'enrol') { const kids = S.children.filter(c => c.status !== 'Closed' && actOf(c).length).sort((x, y) => fullName(x).localeCompare(fullName(y))); return downloadXlsx('activities-enrolment-' + today(), [{ name: 'Enrolment', rows: [['ID', 'Name', 'Sex', 'Age', 'Section'].concat(all)].concat(kids.map(c => [c.id, fullName(c), c.sex || '', curAge(c), (SECTIONS[c.section] || {}).label || ''].concat(all.map(x => actOf(c).includes(x) ? 1 : '')))), filter: true }]); }
+  const m = (q.get('d') || today()).slice(0, 7), suf = '@act:' + a;
   const days = Object.keys(S.attendance).filter(x => x.slice(0, 7) === m && Object.keys(S.attendance[x]).some(k => k.endsWith(suf))).sort();
-  const kids = actIds(a, m + '-01', monthEnd(m)).map(id => [id, child(id)]).filter(x => x[1]).sort((x, y) => fullName(x[1]).localeCompare(fullName(y[1])));
+  const ids = new Set(actIds(a, m + '-01', monthEnd(m))); S.children.forEach(c => { if (c.status !== 'Closed' && actOf(c).includes(a)) ids.add(String(c.id)); });
+  const kids = Array.from(ids).map(id => [id, child(id)]).filter(x => x[1]).sort((x, y) => fullName(x[1]).localeCompare(fullName(y[1])));
   const rows = [['ID', 'Name', 'Sex', 'Age', 'Section'].concat(days).concat(['Days present'])].concat(kids.map(([id, c]) => { const v = days.map(x => S.attendance[x][id + suf] ? 1 : ''); return [c.id, fullName(c), c.sex || '', curAge(c), (SECTIONS[c.section] || {}).label || ''].concat(v).concat([v.filter(Boolean).length]); }));
   downloadXlsx('activity-' + a + '-' + m, [{ name: a.slice(0, 28), rows, filter: true }]);
 }
-document.addEventListener('input', e => { if (e.target.id === 'actsearch') { UI.actq = e.target.value; const t = $('#actlist'); if (t) t.innerHTML = actList(route().q); } });
+document.addEventListener('input', e => { if (e.target.id === 'actsearch') { UI.actq = e.target.value; const t = $('#actlist'); if (t) t.innerHTML = route().q.get('t') === 'enrol' ? actEnrolList() : actList(route().q); } });
 document.addEventListener('change', e => { if (e.target.id === 'actdate' && e.target.value) location.hash = '#/activities?a=' + encodeURIComponent(actNow(route().q)) + '&d=' + e.target.value; });
 
 /* ---------- Logframe v0.5: what the app can already count (draft, supervisors only) ---------- */
@@ -3738,7 +3763,7 @@ function vLogframe(r) {
   const res = S.children.filter(c => centreOf(c) === 'Minsundu' && c.residence === 'Resident' && inCareOn(c, me));
   const rein = S.children.filter(c => inRange(c.reintegrationDate, a, b)), r24 = S.children.filter(c => c.reintegrationDate && c.reintegrationDate >= addDays(today(), -730));
   const pupils = S.children.filter(c => isCurrent(c) && dayType(c) && dayType(c) !== 'Not in school'), byType = {}; pupils.forEach(c => { const t = dayLabel(dayType(c)); byType[t] = (byType[t] || 0) + 1; });
-  const sp = new Set(), sports = actGroups().Sports || [];
+  const sp = new Set(), sports = actGroups().Sports || []; S.children.forEach(c => { if (c.status !== 'Closed' && actOf(c).some(x => sports.includes(x))) sp.add(String(c.id)); });
   for (const d of Object.keys(S.attendance)) if (inRange(d, a, b)) for (const k of Object.keys(S.attendance[d])) { const i = k.indexOf('@act:'); if (i > 0 && sports.includes(k.slice(i + 5))) sp.add(k.slice(0, i)); }
   const val = L => `<b>${L.length}</b> <span class="sub">F ${L.filter(c => c.sex === 'F').length} · M ${L.filter(c => c.sex === 'M').length}</span>`;
   const NA = '<span class="sub">Not in the app</span>', NY = '<span class="sub">Not recorded yet</span>', PS = '<span class="sub">Public statistics</span>';
@@ -3751,7 +3776,7 @@ function vLogframe(r) {
     ['OP1.3.1', 'Children reintegrated', Q.label, val(rein)],
     ['OP1.4.1', 'Pupils supported in school', 'Today', val(pupils) + `<div class="sub">${Object.entries(byType).map(([t, n]) => esc(t) + ' ' + n).join(' · ')}</div>`],
     ['OP1.5.1', 'Clinic consultations', 'Month', NA], ['OP1.5.2', 'Meals served per day', 'Month', NA],
-    ['OP1.6.1', 'Children and youth in coached sport', Q.label, val(kidsOf(sp)) + ' <span class="sub">· from Activities (draft)</span>'],
+    ['OP1.6.1', 'Children and youth in coached sport', Q.label, val(kidsOf(sp)) + ' <span class="sub">· enrolled or present, from Activities (draft)</span>'],
     ['OP1.7.1', 'Trainees passing the TEVETA exam (%)', 'Year', NA],
     ['SO2.1', 'Graduates in work (%)', 'Year', NA], ['SO2.2', 'Muchinga businesses still active (%)', 'Quarter', NA],
     ['OP2.1.1', 'Youth working or on placement', 'Quarter', NA], ['OP2.2.1', 'Graduates placed with external employers', 'Quarter', NA],
@@ -4107,11 +4132,20 @@ function linkFromHash() {
 function staffLink(appUrl) { const c = syncCfg(); if (!c || !appUrl) return ''; return String(appUrl).trim().replace(/#.*$/, '') + '#c=' + b64u(JSON.stringify({ u: c.url, k: c.key })); }
 function appUrl() { return IS_WEB ? location.origin + location.pathname : ((S.settings && S.settings.appUrl) || ''); }
 function isInstalled() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
-function installCard() {
+function installHow() {
+  const ua = navigator.userAgent || '', ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (ios) return 'Tap the Share button (square with an arrow up), then <b>Add to Home Screen</b>.';
+  if (/Android/.test(ua)) return 'Tap the three dots at the top, then <b>Add to Home screen</b> or <b>Install app</b>.';
+  if (/Firefox/.test(ua)) return 'Firefox cannot install it. Open this page in Chrome or Edge.';
+  if (/Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua)) return 'In the menu at the top: <b>File</b>, then <b>Add to Dock</b>.';
+  return 'Click the small screen icon at the right of the address bar, then <b>Install</b>.';
+}
+function installCard(home) {
   if (!IS_WEB || isInstalled()) return '';
-  return `<section class="card soft" id="installcard"><h2>Keep CYP EDU on this ${isPhone() ? 'phone' : 'computer'}</h2>
-    <p class="sub" style="margin:4px 0 10px">It gets its own icon and opens like an app, also without a connection.</p>
-    ${_installEvt ? '<button class="btn pri" data-wact="install" style="width:100%">Install CYP EDU</button>' : '<p class="sub" style="margin:0">Open the menu of the browser (the three dots, or the share button on an iPhone) and choose <b>Add to Home screen</b> or <b>Install app</b>.</p>'}</section>`;
+  if (home && lsGet('cyp-install-hide') === '1') return '';
+  return `<section class="card soft" id="installcard"${home ? ' data-home="1"' : ''}><h2>Put CYP EDU on this ${isPhone() ? 'phone' : 'computer'}</h2>
+    ${_installEvt ? '<button class="btn pri" data-wact="install" style="width:100%;margin-top:8px">Install CYP EDU</button>' : `<p style="margin:6px 0 0">${installHow()}</p>`}
+    ${home ? '<button class="btn sm" data-wact="installhide" style="margin-top:10px">Not now</button>' : ''}</section>`;
 }
 function offlineLine() { if (!IS_WEB) return ''; return `<div class="row"><span>Opens without a connection on this ${isPhone() ? 'phone' : 'computer'}</span><b>${UI.offlineReady ? 'yes' : 'not yet: keep the app open a moment with a connection'}</b></div>`; }
 /* first screen of a phone that has nothing yet */
@@ -4128,23 +4162,28 @@ function vConnect() {
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-wact]'); if (!b) return;
   const act = b.dataset.wact;
+  if (act === 'copytext') { const el = document.getElementById(b.dataset.src), t = el ? el.value : ''; try { await navigator.clipboard.writeText(t); toast('Copied'); } catch (x) { if (el) { el.select(); document.execCommand('copy'); toast('Copied'); } } return; }
+  if (act === 'installhide') { lsSet('cyp-install-hide', '1'); render(); return; }
   if (act === 'install' && _installEvt) { _installEvt.prompt(); try { await _installEvt.userChoice; } catch (x) {} _installEvt = null; render(); }
   else if (act === 'retry') { UI.syncPing = null; UI.syncMsg = ''; render(); syncAuto(); }
   else if (act === 'copylink') { const t = staffLink(appUrl()); try { await navigator.clipboard.writeText(t); toast('Link copied'); } catch (x) { const i = document.getElementById('stafflink'); if (i) { i.select(); document.execCommand('copy'); toast('Link copied'); } } }
   else if (act === 'sharelink') { try { await navigator.share({ title: 'CYP EDU', text: 'CYP EDU, the records of the Education Department. Open this link once with a connection, then it also opens without.', url: staffLink(appUrl()) }); } catch (x) {} }
 });
 FORMS.appurl = function (o) { const u = String(o.appUrl || '').trim(); if (u && !/^https:\/\//.test(u)) return toast('The address must start with https://'); S.settings.appUrl = u; save(); toast('Saved'); render(); };
+function inviteText(link) { return 'CYP EDU, the app of the Education Department.\n\n1. Open this link on your phone, with internet:\n' + link + '\n\n2. Put it on the Home screen.\niPhone: Share button, then Add to Home Screen.\nAndroid: three dots, then Install app.\n\n3. Tap your name and type the PIN. The PIN comes in another message.\n\nDo not forward this link: it opens the records of the children.'; }
+function pinText() { return 'CYP EDU PIN: ' + pinValue(); }
 function staffLinkCard() {
   if (!USER.admin || !syncOn()) return '';
   const url = appUrl(), link = staffLink(url);
-  return `<section class="card"><h2>Link for the phones of the staff</h2>
-    ${link ? `<p class="sub" style="margin:4px 0 10px">Send this link to each member of staff. Opened once with a connection, the app stays on the phone and opens also without a connection. Whoever has the link and the PIN sees the records: send it only to the staff.</p>
-      <input class="in" id="stafflink" readonly value="${esc(link)}" onclick="this.select()">
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn pri" data-wact="copylink">Copy the link</button>${navigator.share ? '<button class="btn" data-wact="sharelink">Send it</button>' : ''}</div>`
-      : `<p class="sub" style="margin:4px 0 10px">The app needs a web address, so that the phones can install it and open it without a connection. Write it here once it exists.</p>`}
+  const send = (id, txt, mail) => `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn pri" data-wact="copytext" data-src="${id}">Copy</button><a class="btn" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(txt)}">WhatsApp</a>${mail ? `<a class="btn" href="mailto:?subject=${encodeURIComponent('CYP EDU')}&body=${encodeURIComponent(txt)}">Email</a>` : ''}</div>`;
+  return `<section class="card"><h2>Invite the staff</h2>
+    ${link ? `<p class="sub" style="margin:4px 0 10px">Two messages: first the link, then the PIN. Staff only.</p>
+      <label class="f"><span>1. The link</span><textarea class="in" id="invmsg" rows="9" readonly onclick="this.select()">${esc(inviteText(link))}</textarea></label>${send('invmsg', inviteText(link), true)}
+      <label class="f" style="margin-top:14px"><span>2. The PIN</span><input class="in" id="invpin" readonly value="${esc(pinText())}" onclick="this.select()"></label>${send('invpin', pinText(), false)}`
+      : `<p class="sub" style="margin:4px 0 10px">The app needs a web address first.</p>`}
     ${IS_WEB ? '' : `<form data-form="appurl" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin-top:12px"><label class="f"><span>Web address of the app</span><input class="in" name="appUrl" value="${esc(S.settings.appUrl || '')}" placeholder="https://..."></label><button class="btn">Save</button></form>`}</section>`;
 }
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _installEvt = e; const c = document.getElementById('installcard'); if (c) c.outerHTML = installCard(); });
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _installEvt = e; const c = document.getElementById('installcard'); if (c) c.outerHTML = installCard(c.dataset.home === '1'); });
 window.addEventListener('appinstalled', () => { _installEvt = null; if (USER) render(); });
 if (IS_WEB && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
