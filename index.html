@@ -417,6 +417,7 @@ body.fbmode .main *:hover,body.fbmode nav *:hover{outline:2px solid #B3261E;outl
 .fbq2{max-width:260px;color:var(--soft);overflow-wrap:anywhere}
 @media (max-width:760px){#fbbtn{bottom:74px;right:10px;padding:9px 14px}}
 @media print{#fbbtn,#fbbar,#fbbox{display:none}}
+.sub:empty,.lead:empty{display:none}
 
 </style>
 </head>
@@ -430,7 +431,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 2.8';
+const VERSION = 'alpha 2.9';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -569,7 +570,7 @@ function curAge(c) {
 function ageText(c) {
   const a = curAge(c); if (a === '') return 'Not known';
   if (c.dob) return a + ' years';
-  return a + ' years, about. Date of birth not known' + (c.ageAsOf ? ': the age ' + c.age + ' was written on ' + fmtDate(c.ageAsOf) + ' and one year is added every 12 months' : '');
+  return 'about ' + a + ' years (no date of birth)';
 }
 function centreOf(c) { return (SECTIONS[c.section] || {}).centre || ''; }
 function isCurrent(c) { return c.status === 'Active' || c.status === 'Semi-active'; }
@@ -1165,11 +1166,11 @@ function setQuery(changes) {
 }
 
 /* ---------- layout ---------- */
-const NAV = [['home', 'Home'], ['pending', 'To do'], ['children', 'Children'], ['attendance', 'Attendance'], ['visits', 'Visits'], ['counseling', 'Counseling'], ['reports', 'Reports'], ['staff', 'Admin', true]];
+const NAV = [['home', 'Home'], ['pending', 'To do'], ['children', 'Children'], ['attendance', 'Attendance'], ['visits', 'Visits'], ['counseling', 'Counseling'], ['reports', 'Reports'], ['activities', 'Activities'], ['logframe', 'Logframe', true], ['staff', 'Admin', true]];
 function shell(active, body) {
   const pc = todoCount();
   const sup = USER && USER.admin;
-  const nav = NAV.filter(n => (!n[2] && (n[0] !== 'pending' || sup)) || (n[2] && sup)).map(([k, l]) => `<a href="#/${k}" class="${active === k ? 'on' : ''}">${l}${k === (sup ? 'pending' : 'home') && pc ? ` <span class="chip c-red">${pc}</span>` : ''}</a>`).join('');
+  const nav = NAV.filter(n => (!n[2] && (n[0] !== 'pending' || sup) && (n[0] !== 'activities' || sup || (USER && staffAreas(USER).includes('Sports')))) || (n[2] && sup)).map(([k, l]) => `<a href="#/${k}" class="${active === k ? 'on' : ''}">${l}${k === (sup ? 'pending' : 'home') && pc ? ` <span class="chip c-red">${pc}</span>` : ''}</a>`).join('');
   return `${IS_DEMO ? demoBar() : ''}${GUEST ? guestBar() : ''}<header class="hd">
     <a class="brand" href="#/home" aria-label="CYP EDU, home"><img src="${LOGO}" alt="">${logoSvg(26)}<span class="bsub">Cicetekelo Youth Project · Education Department records · Association Pope John XXIII</span></a>
     <div class="who">
@@ -1201,9 +1202,9 @@ function vLogin() {
   return `<div class="login">
     <img src="${LOGO}" alt="Cicetekelo Youth Project logo" style="width:72px">${logoSvg(46)}
     ${IS_DEMO ? '<div class="demobar" style="border-radius:8px">Demo version with invented children. Choose any name to try it, then click "Start the guided tour" at the top of the page.</div>' : ''}
-    <div><h1>Who is using this ${isPhone() ? 'phone' : 'computer'}?</h1><p class="lead">CYP EDU ${VERSION} · Cicetekelo Youth Project, Education Department. Everything you record is saved under your name.</p></div>
+    <div><h1>Who is using this ${isPhone() ? 'phone' : 'computer'}?</h1><p class="lead">CYP EDU ${VERSION} · Cicetekelo Youth Project, Education Department. Tap your name.</p></div>
     <div style="width:100%"><button class="stile gtile" data-act="guest"><span class="av">G</span>Guest<small>For visitors. Names, photos and personal details of the children are hidden. View only.</small></button>${loginTiles()}</div>
-    <p class="sub" style="max-width:560px">Alpha version: there is no PIN yet. Names come from the organigram and the section reports; an administrator can add or remove people on the Admin page.</p>
+    <p class="sub" style="max-width:560px"></p>
   </div>`;
 }
 
@@ -1245,7 +1246,7 @@ function vHome(r) {
   const lnew = luigiKids.filter(c => inRange(firstSeen[c.id], a, b)).length;
   const toMins = movesIn('section', a, b, x => x.from === 'Luigi' && (x.to === 'UCC' || x.to === 'Youth')).length;
   const bar = (n, d, col) => `<div class="bar" style="margin:10px 0 4px"><div style="width:${d ? Math.min(100, pct(n, d)) : 0}%;background:${col}"></div></div>`;
-  return `<div class="top"><div><h1>${esc(fmtMonth(m))}</h1><p class="lead">Children and youth in the programme, and this month's plans.</p></div>
+  return `<div class="top"><div><h1>${esc(fmtMonth(m))}</h1><p class="lead"></p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Children shown">${[['all', 'All'], ['res', 'Residents'], ['non', 'Non-residents']].map(([k, l]) => `<a href="#" data-q="f=${k}" class="${filt === k ? 'on' : ''}">${l}</a>`).join('')}</div>${monthPicker(m)}</div></div>
   ${centreGuide()}
   ${homeBirthdays()}
@@ -1260,7 +1261,7 @@ function vHome(r) {
       <a class="tile" href="#/children?status=Follow-up"><span class="key"><span class="sw" style="background:#D3D1CB"></span>Reintegrated, in 2-year follow-up</span><b>${follow}</b><span>${sexText(followList)}</span></a>
       <a class="tile" href="#/children?status=Closed"><span class="key"><span class="sw" style="background:#E9E9E7"></span>Files closed in ${esc(fmtMonth(m))}</span><b>${closed}</b></a>
     </div>
-    <p class="sub" style="margin:10px 0 0">One record per child: a child counts once, in the section where he or she is now. Luigi counts the children met at outreach or drop-in in the last 3 months (${S.children.filter(c => c.section === 'Luigi' && isCurrent(c)).length} Luigi children on record in all).</p>
+    <p class="sub" style="margin:10px 0 0"></p>
   </section>
   <section><p class="sec">Plans and progress in ${esc(fmtMonth(m))}</p>
   <div class="grid g3">
@@ -1286,7 +1287,7 @@ function vHome(r) {
       <div class="row"><span>Home visits by Luigi: done / in the plan</span><b>${lvs.length} / ${planFor(m, 'Luigi').length}</b></div>
     </div>
   </div></section>
-  <p class="sub" style="margin:0">Detailed tables are on the Reports page. What is still open, section by section, is on the To do page.</p>`;
+  <p class="sub" style="margin:0"></p>`;
 }
 
 function filteredChildren(q) {
@@ -1352,18 +1353,18 @@ function vChildForm(c) {
     <div><p class="sec">Identity</p><fieldset class="fs">
       ${field('First name', 'name', c.name, 'text', { req: true })}${field('Surname', 'surname', c.surname)}${field('Nickname', 'nickname', c.nickname)}
       ${field('Sex', 'sex', '', 'select', { req: true, options: opt([{ v: 'M', l: 'Male' }, { v: 'F', l: 'Female' }], c.sex, '') })}
-      ${field('Date of birth', 'dob', c.dob, 'date', { hint: 'With the date of birth the age changes by itself on the birthday. If not known, give the age.', attrs: ' max="' + today() + '"' })}${field('Age, if the date of birth is not known', 'age', c.dob ? '' : curAge(c), 'number', { attrs: ' min="0" max="40"', hint: 'The app adds one year every 12 months from the day the age is written.' })}
+      ${field('Date of birth', 'dob', c.dob, 'date', { hint: 'The age changes by itself on the birthday.', attrs: ' max="' + today() + '"' })}${field('Age, if the date of birth is not known', 'age', c.dob ? '' : curAge(c), 'number', { attrs: ' min="0" max="40"', hint: '' })}
       ${field('Languages', 'languages', c.languages)}
-      <label class="f"><span>Photo</span><span style="display:flex;gap:10px;align-items:center"><span id="photoprev">${c.id && photoOf(c) ? `<img src="${photoOf(c)}" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover">` : ''}</span><input type="file" accept="image/*" id="photofile" class="in"></span><span class="sub" style="font-weight:400">Made small automatically. Kept only in this app.</span></label>
+      <label class="f"><span>Photo</span><span style="display:flex;gap:10px;align-items:center"><span id="photoprev">${c.id && photoOf(c) ? `<img src="${photoOf(c)}" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover">` : ''}</span><input type="file" accept="image/*" id="photofile" class="in"></span><span class="sub" style="font-weight:400"></span></label>
     </fieldset>${isNew ? `<div id="dupbox" style="margin-top:10px">${c.name ? knownHtml([c.name, c.surname].join(' '), 'form') : ''}</div>` : ''}</div>
     <div><p class="sec">Street situation (Luigi)</p><fieldset class="fs">
       ${field('Situation', 'streetCat', '', 'select', { options: opt([{ v: 'A', l: STREET_CATS.A }, { v: 'B', l: STREET_CATS.B }], c.streetCat, 'Not a street child / not known') })}
       ${field('Where he or she stays now', 'streetPlace', c.streetPlace, 'text', { hint: 'Street spot, market, facility...' })}${field('Connected (from A to B) on', 'connectionDate', c.connectionDate, 'date')}
       ${field('Relatives on the street', 'relStreet', '', 'select', { options: opt(['Yes', 'No'], c.relStreet, 'Not known') })}${field('Which relatives', 'relStreetWho', c.relStreetWho, 'text', { hint: 'Mother, older brother...' })}<span></span>
-      ${field('Back on the street after a service', 'backStreet', '', 'select', { options: opt(BACK_OPTS.map(([k, l]) => ({ v: k, l })), c.backStreet, 'No / not known'), hint: 'Was in a centre, a facility or back home, and is found on the street again' })}${field('Found on the street again on', 'backStreetDate', c.backStreetDate, 'date')}
+      ${field('Back on the street after a service', 'backStreet', '', 'select', { options: opt(BACK_OPTS.map(([k, l]) => ({ v: k, l })), c.backStreet, 'No / not known'), hint: '' })}${field('Found on the street again on', 'backStreetDate', c.backStreetDate, 'date')}
     </fieldset></div>
     <div><p class="sec">In the programme</p><fieldset class="fs">
-      ${field('Section', 'section', '', 'select', { req: true, options: opt(SECTION_KEYS.map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label })), c.section), hint: 'The team that follows the child. It does not say where the child sleeps or where the child goes by day.' })}
+      ${field('Section', 'section', '', 'select', { req: true, options: opt(SECTION_KEYS.map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label })), c.section), hint: '' })}
       ${field('Where the child sleeps', 'residence', '', 'select', { options: opt([{ v: 'Resident', l: 'Resident: sleeps at Minsundu Centre' }, { v: 'Non-resident', l: 'Non-resident: sleeps at home' }], c.residence) })}
       ${field('Date of entry', 'entryDate', c.entryDate, 'date', { req: isNew })}${isNew ? '' : field('Year of entry, if the date is not known', 'entryYear', c.entryYear, 'text', { attrs: ' inputmode="numeric" pattern="[0-9]{4}" maxlength="4"' })}
       ${field('Came from (referred by)', 'referredBy', c.referredBy, 'text', { hint: 'Luigi, Minsundu, community school recruitment, stakeholder, Social Welfare...', attrs: ' list="srclist"' })}<datalist id="srclist">${NKZ_SOURCES.concat(['District Social Welfare Office']).map(x => `<option value="${esc(x)}">`).join('')}</datalist>
@@ -1378,7 +1379,7 @@ function vChildForm(c) {
     </fieldset></div>
     ${isNew ? '<details class="more"><summary>More details: school, health, notes. They can be added later.</summary><div style="display:flex;flex-direction:column;gap:18px;margin-top:14px">' : ''}
     <div><p class="sec">School</p><fieldset class="fs">
-      ${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: 'The school or centre where the child spends the day. Nkwazi community school, Minsundu community school and the literacy class put the child on the attendance list of that centre.' })}${field('School name', 'schoolName', c.schoolName)}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
+      ${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('School name', 'schoolName', c.schoolName)}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
       ${field('Skill or trade', 'skill', c.skill)}${field('Education at entry', 'educationAtEntry', c.educationAtEntry, 'textarea', { wide: true, rows: 2 })}
     </fieldset></div>
     <div><p class="sec">Health and notes</p><fieldset class="fs">
@@ -1462,17 +1463,17 @@ function vStatus(c) {
   const closed = c.status === 'Closed';
   return `<div class="top"><div><h1>${esc(fullName(c))}</h1><p class="lead">Now: ${esc(SECTIONS[c.section].label)} · ${esc(STATUS_LABEL[c.status])} · ${esc(c.residence || '')}</p></div><a class="btn" href="#/child/${esc(c.id)}">Back</a></div>
   <div class="grid g2" style="align-items:start">
-    ${closed ? `<form class="card" data-form="reopen"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Reopen the file</h2><p class="sub">The child comes back into the programme. Everything recorded before stays in the history.</p>
+    ${closed ? `<form class="card" data-form="reopen"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Reopen the file</h2><p class="sub"></p>
       <div class="fs two">${field('Date', 'date', today(), 'date', { req: true })}${field('Section', 'section', '', 'select', { options: opt(SECTION_KEYS.map(k => ({ v: k, l: SECTIONS[k].label })), c.section) })}${field('Note', 'note', '', 'text', { wide: true })}</div><button class="btn pri" style="margin-top:12px">Reopen</button></form>` : `
-    ${c.section === 'Luigi' || c.streetCat ? `<form class="card" data-form="street"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Street situation</h2><p class="sub">Now: <b>${esc(c.streetCat ? STREET_CATS[c.streetCat] : 'not on the street, or not known')}</b>. Change it here when the child stops sleeping on the street, or goes back. The change is written in the history.</p>
+    ${c.section === 'Luigi' || c.streetCat ? `<form class="card" data-form="street"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Street situation</h2><p class="sub">Now: <b>${esc(c.streetCat ? STREET_CATS[c.streetCat] : 'not on the street, or not known')}</b></p>
       <div class="fs two">${field('Situation now', 'cat', '', 'select', { options: opt([{ v: 'A', l: STREET_CATS.A }, { v: 'B', l: STREET_CATS.B }, { v: 'none', l: 'Not on the street any more' }], c.streetCat || 'none') })}${field('Date', 'date', today(), 'date', { req: true })}</div><button class="btn" style="margin-top:12px">Save</button></form>` : ''}
-    <form class="card" data-form="move"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Move to another section</h2><p class="sub">For example from Luigi to Minsundu, or from UCC to the Youth Centre.</p>
-      <div class="fs two">${field('New section', 'to', '', 'select', { options: opt(SECTION_KEYS.filter(k => k !== c.section).map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label }))) })}${field('Date', 'date', today(), 'date', { req: true })}${field('Where the child sleeps', 'residence', '', 'select', { options: opt([{ v: 'Resident', l: 'Resident: sleeps at Minsundu Centre' }, { v: 'Non-resident', l: 'Non-resident: sleeps at home' }], c.residence) })}${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: 'Example: moves to UCC, sleeps at Minsundu, goes to Nkwazi community school.' })}${field('Note', 'note', '')}</div><button class="btn pri" style="margin-top:12px">Move</button></form>
-    <form class="card" data-form="activity"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Active or semi-active</h2><p class="sub">Semi-active: still in the programme but not attending regularly.</p>
+    <form class="card" data-form="move"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Move to another section</h2><p class="sub"></p>
+      <div class="fs two">${field('New section', 'to', '', 'select', { options: opt(SECTION_KEYS.filter(k => k !== c.section).map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label }))) })}${field('Date', 'date', today(), 'date', { req: true })}${field('Where the child sleeps', 'residence', '', 'select', { options: opt([{ v: 'Resident', l: 'Resident: sleeps at Minsundu Centre' }, { v: 'Non-resident', l: 'Non-resident: sleeps at home' }], c.residence) })}${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('Note', 'note', '')}</div><button class="btn pri" style="margin-top:12px">Move</button></form>
+    <form class="card" data-form="activity"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Active or semi-active</h2><p class="sub"></p>
       <div class="fs two">${field('Status', 'status', '', 'select', { options: opt(['Active', 'Semi-active'], c.status === 'Semi-active' ? 'Semi-active' : 'Active') })}${field('Date', 'date', today(), 'date')}</div><button class="btn" style="margin-top:12px">Save</button></form>
-    ${c.status !== 'Follow-up' ? `<form class="card" data-form="reintegrate"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Reintegrated with the family</h2><p class="sub">The child goes home. The file stays open for the 2-year follow-up; home visits continue every ${S.settings.interval['Follow-up']} days.</p>
+    ${c.status !== 'Follow-up' ? `<form class="card" data-form="reintegrate"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Reintegrated with the family</h2><p class="sub"></p>
       <div class="fs two">${field('Date', 'date', today(), 'date', { req: true })}${field('Note', 'note', '')}</div><button class="btn pri" style="margin-top:12px">Record reintegration</button></form>` : ''}
-    <form class="card" data-form="close"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Close the file</h2><p class="sub">The file is closed and kept. It can be reopened at any time.</p>
+    <form class="card" data-form="close"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Close the file</h2><p class="sub">You can open it again later.</p>
       <div class="fs two">${field('Reason', 'reason', '', 'select', { req: true, options: opt(CLOSE_REASONS, c.status === 'Follow-up' ? CLOSE_REASONS[0] : '', '') })}${field('Date', 'date', today(), 'date', { req: true })}${field('Note', 'note', '', 'text', { wide: true })}</div><button class="btn danger" style="margin-top:12px">Close the file</button></form>`}
   </div>`;
 }
@@ -1481,10 +1482,10 @@ function vVisitForm(r) {
   const cid = r.q.get('child'); const c = cid ? child(cid) : null;
   const opts = S.children.filter(x => x.status !== 'Closed').sort((a, b) => fullName(a).localeCompare(fullName(b))).map(x => ({ v: x.id, l: fullName(x) + (x.nickname ? ' "' + x.nickname + '"' : '') + ' · ' + centreOf(x) + ' · ' + x.id }));
   const tq = r.q.get('t'), team = TEAM_KEYS.includes(tq) ? tq : (myTeam() || (c ? teamFor(c) : '')), school = team === 'School';
-  return `<div class="top"><div><h1>Record a visit</h1><p class="lead">Home, school or phone visit. Saved on this computer.</p></div></div>
+  return `<div class="top"><div><h1>Record a visit</h1><p class="lead"></p></div></div>
   <form class="card" data-form="visit" style="display:flex;flex-direction:column;gap:14px;max-width:820px">
     <div class="fs two">
-      ${field('Which section made the visit?', 'team', '', 'select', { req: true, wide: true, options: opt(VISIT_TEAMS.map(([k, l]) => ({ v: k, l })), team, 'Choose the section'), hint: 'Each section has its own plan and its own list of visits' })}
+      ${field('Which section made the visit?', 'team', '', 'select', { req: true, wide: true, options: opt(VISIT_TEAMS.map(([k, l]) => ({ v: k, l })), team, 'Choose the section'), hint: '' })}
       ${childPick('childId', c ? c.id : '', 'Child *')}
       ${field('Date', 'date', today(), 'date', { req: true })}
       ${field('Purpose', 'purpose', '', 'select', { req: true, options: opt(VISIT_PURPOSES, school ? 'School visit' : c && c.status === 'Follow-up' ? 'Follow-up' : '', 'Choose') })}
@@ -1495,7 +1496,7 @@ function vVisitForm(r) {
       ${field('School or place', 'place', '', 'text', { hint: 'For school visits: the school name' })}
       ${field('Follow-up only: is the child still living at home?', 'stillHome', '', 'select', { options: opt(['Yes', 'No'], '', 'Not a follow-up visit'), hint: 'Feeds logframe SO1.1' })}
       ${field('What did you find?', 'findings', '', 'textarea', { wide: true, rows: 4 })}
-      ${field('Follow-up action', 'action', '', 'text', { wide: true, hint: 'It stays under "Actions still open" on the Visits page until marked done' })}
+      ${field('Follow-up action', 'action', '', 'text', { wide: true, hint: 'Stays in Visits, Actions still open, until done.' })}
     </div>
     <div style="display:flex;gap:10px"><button class="btn pri">Save visit</button><a class="btn" href="${c ? '#/child/' + esc(c.id) : '#/visits'}">Cancel</a></div>
   </form>`;
@@ -1538,7 +1539,7 @@ function vVisits(r) {
   </div>
   <div class="card" style="padding:6px 8px">${vs.length ? `<div class="tw"><table class="vtab"><thead><tr><th>Date</th><th class="mh">Section</th><th class="mh">Centre</th><th>Child</th><th>Purpose</th><th class="mh">Where</th><th>Found</th><th class="mh">By</th><th class="mh">Findings</th></tr></thead><tbody>${vs.map(v => { const c = child(v.childId); return `<tr><td>${esc(fmtDate(v.date))}</td><td class="mh">${esc(teamLabel(visitTeam(v)))}</td><td class="mh">${c ? centreChip(c) : ''}</td><td>${c ? childLink(c) : esc(v.childId)}${c && isAba(c) ? ' <span class="chip c-green">ABA</span>' : ''}<div class="sub mo">${esc(teamLabel(visitTeam(v)))} · ${esc(staffName(v.by))}</div></td><td>${esc(v.purpose)}</td><td class="mh">${esc(v.where || '')}${v.place ? ' · ' + esc(v.place) : ''}</td><td>${v.successful === 'No' ? '<span class="chip c-red">No</span>' : 'Yes'}</td><td class="mh">${esc(staffName(v.by))}</td><td class="mh">${esc((v.findings || '').slice(0, 120))}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">No visits match.</p>'}</div>`;
   }
-  return `<div class="top"><div><h1>Visits</h1><p class="lead">Record a visit with the blue button. The four tabs below are separate: what was done, who needs a visit, the plan, the actions.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' || tab === 'plan' ? monthPicker(m) : ''}<a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a></div></div>
+  return `<div class="top"><div><h1>Visits</h1><p class="lead">Blue button: record a visit.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' || tab === 'plan' ? monthPicker(m) : ''}<a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a></div></div>
   <div class="vtabs" id="vtabs" role="tablist">${tabs.map(([k, l, n]) => `<a href="#" role="tab" data-q="vtab=${k === 'done' ? '' : k}&all=&lall=" class="${tab === k ? 'on' : ''}">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</a>`).join('')}</div>
   ${visitChooser(q, m)}
   ${body}`;
@@ -1595,7 +1596,7 @@ function vAttendance(r) {
     <div id="attTable">${month ? attMonthTable(q) : attTable(q)}</div>
   </div>`}
   ${attCheckList(centre)}
-  <p class="sub" style="margin:0">Someone listed here who no longer comes: open the profile and close the file.</p>`;
+  <p class="sub" style="margin:0">No longer comes? Open the profile, close the file.</p>`;
 }
 
 function vOutreach(r) {
@@ -1630,7 +1631,7 @@ function vCounseling(r) {
         ${field('Group: number of participants not named above', 'others', '', 'number', { attrs: ' min="0"' })}
         ${field('Topic', 'topic', '', 'text')}
         ${field('Follow-up action', 'action', '', 'text', { wide: true })}
-      </div><p class="sub" style="margin:0">Session notes are visible to all staff: write only what colleagues need to know.</p>
+      </div><p class="sub" style="margin:0">All staff can read these notes.</p>
       <button class="btn pri">Save session</button></form>
     <section class="card"><h2>Sessions this month</h2>${ss.length ? ss.map(s => { const c = s.children && s.children[0] ? child(s.children[0]) : null; return `<div class="it"><div class="w"><b>${esc(fmtDate(s.date))} · ${esc(s.type)} · ${esc(s.centre)}</b><span>${c ? esc(fullName(c)) : (s.others ? esc(s.others) + ' participants' : '')}${s.topic ? ' · ' + esc(s.topic) : ''} · ${esc(staffName(s.by))}</span></div></div>`; }).join('') : '<p class="empty">No sessions recorded this month.</p>'}</section>
   </div>`;
@@ -1657,16 +1658,16 @@ function vReports(r) {
     const t = table6(m);
     body = `<div class="tw"><table id="rtable"><thead><tr><th rowspan="2">Age group</th>${['Brought forward', 'New placements', 'Total handled', 'Closed: to relatives', 'Closed: foster or other', 'Remaining'].map(h => `<th colspan="2" class="n">${h}</th>`).join('')}</tr><tr>${'<th class="n">M</th><th class="n">F</th>'.repeat(6)}</tr></thead><tbody>${t.rows.map(rw => `<tr>${rw.map((v, i) => `<td class="${i ? 'n' : ''}">${i ? v : `<b>${esc(v)}</b>`}</td>`).join('')}</tr>`).join('')}</tbody></table></div><p class="sub">${esc(t.q.label)}, Minsundu residents (UCC and Youth). Ages are today's ages.</p>`;
   } else body = abaScope(aba, () => reportTable(def, p === 'M' ? m : rg.a.slice(0, 7) + '~' + rg.b.slice(0, 7)));
-  return `<div class="top"><div><h1>Reports</h1><p class="lead">Each section has its own table, filled from what is recorded. Only the narrative is written by hand.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${k === 'Table6' ? '' : periodSeg(p)}${monthPicker(m)}</div></div>
+  return `<div class="top"><div><h1>Reports</h1><p class="lead">Choose the section and the month.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${k === 'Table6' ? '' : periodSeg(p)}${monthPicker(m)}</div></div>
   <div class="seg" style="align-self:flex-start">${REPORT_KEYS.map(x => `<a href="#" data-q="s=${x}" class="${x === k ? 'on' : ''}">${esc(REPORTS[x].short || REPORTS[x].label)}</a>`).join('')}<a href="#" data-q="s=${HISTORY_TAB}">2026 from the reports</a></div>
   <section class="card">
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
-      <div><h2>${esc(def.label)}${aba ? ' · ABA children only' : ''} · ${esc(def.quarterly ? quarterOf(m).label : rg.label)}</h2>${canAba ? `<div class="seg" role="group" aria-label="All children or ABA" style="margin:8px 0 2px"><a href="#" data-q="aba=" class="${aba ? '' : 'on'}">All children</a><a href="#" data-q="aba=1" class="${aba ? 'on' : ''}">ABA only (distance adoption) · ${S.children.filter(c => isAba(c) && c.status !== 'Closed').length}</a></div>` : ''}<p class="sub" style="margin:4px 0 0">${def.note ? esc(def.note) + ' ' : ''}Counted from today's records: a child counts in the section where he or she is now.</p></div>
+      <div><h2>${esc(def.label)}${aba ? ' · ABA children only' : ''} · ${esc(def.quarterly ? quarterOf(m).label : rg.label)}</h2>${canAba ? `<div class="seg" role="group" aria-label="All children or ABA" style="margin:8px 0 2px"><a href="#" data-q="aba=" class="${aba ? '' : 'on'}">All children</a><a href="#" data-q="aba=1" class="${aba ? 'on' : ''}">ABA only (distance adoption) · ${S.children.filter(c => isAba(c) && c.status !== 'Closed').length}</a></div>` : ''}<p class="sub" style="margin:4px 0 0">${def.note ? esc(def.note) + ' ' : ''}</p></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="repbtns"><button class="btn sm pri" data-act="wordreport" data-title="${esc(def.label)}" data-period="${esc(def.quarterly ? quarterOf(m).label : rg.label)}" data-name="${esc(k + (aba ? '-ABA' : '') + '-report-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)))}">Download the report in Word</button><button class="btn sm" data-act="copytable">Copy table</button>${k === 'Luigi' ? '<button class="btn sm" data-lact="xlreport">Export in Excel</button><button class="btn sm" data-lact="xlreportn">Export in Excel with names</button>' : `<button class="btn sm" data-act="csvtable" data-name="${esc(k + (aba ? '-ABA' : '') + '-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)))}">Export in Excel</button>${def.rows ? '<button class="btn sm" data-act="xlnames">Export in Excel with names</button>' : ''}`}${canAba ? `<button class="btn sm" data-mact="abasheet" data-y="${m.slice(0, 4)}">Export in Excel: scheda ABA ${m.slice(0, 4)} (italiano)</button>` : ''}<button class="btn sm" data-act="print">Print</button></div>
     </div>
     <div style="margin-top:12px">${body}</div>
   </section>
-  ${historyForMonth(k, m).map(h => `<section class="card"><h2>What the section reported · ${esc(h.label)}</h2><p class="sub" style="margin:4px 0 10px">Copied from ${esc(h.source)}, as written. Use it to compare with the table counted from the records.${h.note ? ' Note: ' + esc(h.note) : ''}</p>${historyTableHtml(h)}</section>`).join('')}
+  ${historyForMonth(k, m).map(h => `<section class="card"><h2>What the section reported · ${esc(h.label)}</h2><p class="sub" style="margin:4px 0 10px">Copied from ${esc(h.source)}, as written.${h.note ? ' Note: ' + esc(h.note) : ''}</p>${historyTableHtml(h)}</section>`).join('')}
   ${def.quarterly || p !== 'M' || aba ? '' : `<section class="card soft" style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center">
     <div><b>Status</b><div class="sub">${st.prepared ? 'Prepared by ' + esc(staffName(st.prepared.by)) + ' on ' + esc(fmtDate(st.prepared.date)) : 'Not prepared yet'}${st.checked ? ' · checked by ' + esc(staffName(st.checked.by)) + ' on ' + esc(fmtDate(st.checked.date)) : ''}</div></div>
     <div style="display:flex;gap:8px">${!st.prepared ? `<button class="btn" data-act="rstatus" data-k="${k}" data-m="${m}" data-v="prepared">Mark as prepared</button>` : ''}${st.prepared && !st.checked ? `<button class="btn pri" data-act="rstatus" data-k="${k}" data-m="${m}" data-v="checked">Mark as checked</button>` : ''}${st.prepared ? `<button class="btn sm" data-act="rstatus" data-k="${k}" data-m="${m}" data-v="reset">Undo</button>` : ''}</div>
@@ -1679,7 +1680,7 @@ function vHistory(r) {
   const secs = REPORT_KEYS.filter(k => historyFor(k).length);
   const tabs = `<div class="seg" style="align-self:flex-start">${REPORT_KEYS.map(x => `<a href="#" data-q="s=${x}">${esc(REPORTS[x].short || REPORTS[x].label)}</a>`).join('')}<a href="#" class="on">2026 from the reports</a></div>`;
   if (!S.history.length) return `<div class="top"><div><h1>Reports</h1></div></div>${tabs}<div class="card"><h2>No report figures loaded</h2><p>Load the starter pack (Staff, then Data) to see the figures of the 2026 section reports month by month.</p></div>`;
-  return `<div class="top"><div><h1>2026 from the section reports</h1><p class="lead">Figures copied from the Word reports of each section, as written, before this app was used. They are not counted from the records.</p></div><button class="btn" data-act="xl" data-k="history">Export in Excel: all report figures</button></div>
+  return `<div class="top"><div><h1>2026 from the section reports</h1><p class="lead">Copied from the Word reports of the sections.</p></div><button class="btn" data-act="xl" data-k="history">Export in Excel: all report figures</button></div>
   ${tabs}
   <div class="seg" style="align-self:flex-start">${secs.map(x => `<a href="#" data-q="h=${x}" class="${x === sec ? 'on' : ''}">${esc(REPORTS[x].short || REPORTS[x].label)}</a>`).join('')}</div>
   ${M ? `<section class="card"><h2>${esc(REPORTS[sec].label)}</h2><p class="sub" style="margin:4px 0 10px">Each cell shows the last column of the section's table (total${sec === 'Table6' ? '; for Table 6.0: remaining at the end of the quarter' : ''}). Point at a number to see the full breakdown. Empty: the indicator is not in that report.</p>
@@ -1693,24 +1694,24 @@ function vHistory(r) {
 function vStaff(r) {
   if (!USER.admin) return `<h1>Admin</h1><p>Only administrators see this page.</p>`;
   if (r.id === 'data') return vData();
-  return `<div class="top"><div><h1>Admin</h1><p class="lead">Who works where. Everyone can open every page; Education admin also opens this one.</p></div><a class="btn" href="#/staff/data">Data: import, backup, export</a></div>
+  return `<div class="top"><div><h1>Admin</h1><p class="lead">Who works where.</p></div><a class="btn" href="#/staff/data">Data: import, backup, export</a></div>
   <section class="card" style="padding:6px 8px">${staffTable()}</section>
-  <p class="sub" style="margin:0">Tick every area where the person works: staff rotate between centres, so one person can have several. The areas decide what each person sees first on the Home page. Education admin and Sports see all centres. Only Education admin opens this Admin page.</p>
+  <p class="sub" style="margin:0">Tick the areas where each person works.</p>
   <div class="grid g2" style="align-items:start">
     <form class="card" data-form="staffadd"><h2>Add a staff member</h2><div class="fs two" style="margin-top:10px">${field('Name', 'name', '', 'text', { req: true })}${field('Role', 'role', '', 'text')}<label class="f wide"><span>Areas of work</span>${checks('areas', STAFF_FLAGS.map(x => x[0]), [])}</label></div><button class="btn pri" style="margin-top:12px">Add</button></form>
-    <form class="card" data-form="handover"><h2>Hand over children</h2><p class="sub">When someone leaves or goes on leave, the children they follow move to a colleague. The history keeps who did what.</p>
+    <form class="card" data-form="handover"><h2>Hand over children</h2><p class="sub"></p>
       <div class="fs two">${field('From', 'from', '', 'select', { options: opt(S.staff.map(s => ({ v: s.id, l: s.name + ' (' + S.children.filter(c => c.responsible === s.id && c.status !== 'Closed').length + ')' })), '', '') })}${field('To', 'to', '', 'select', { options: opt(activeStaff().map(s => ({ v: s.id, l: s.name })), '', '') })}</div><button class="btn pri" style="margin-top:12px">Move the children</button></form>
   </div>
   ${fbAdminCard()}
-  ${IS_DEMO ? '' : `<form class="card" data-form="pin"><h2>PIN for the staff</h2><p class="sub">One PIN for everyone in the staff. It is asked each time a staff name is chosen on the opening screen. Guest does not need it.</p>
+  ${IS_DEMO ? '' : `<form class="card" data-form="pin"><h2>PIN for the staff</h2><p class="sub">One PIN for all staff. Guest does not need it.</p>
     <div class="fs">${field('New PIN (4 to 8 digits)', 'pin', '', 'text', { attrs: ' inputmode="numeric" pattern="[0-9]{4,8}" autocomplete="off"', req: true })}</div><button class="btn" style="margin-top:12px">Change the PIN</button></form>`}
-  <form class="card" data-form="settings"><h2>Home visit frequency</h2><p class="sub">Used for "Who needs a visit" on the Visits page. Days between two home visits.</p>
+  <form class="card" data-form="settings"><h2>Home visit frequency</h2><p class="sub">Days between two home visits.</p>
     <div class="fs">${field('Residents', 'Resident', S.settings.interval.Resident, 'number')}${field('Non-residents', 'Non-resident', S.settings.interval['Non-resident'], 'number')}${field('Reintegrated, in follow-up', 'Follow-up', S.settings.interval['Follow-up'], 'number')}</div><button class="btn" style="margin-top:12px">Save</button></form>
-  <form class="card" data-form="absence"><h2>Absences</h2><p class="sub">Used on the Attendance page and in To do, for Minsundu and Nkwazi. The first number gives a simple alert. The second asks to review the status of the child: semi-active, or file closed.</p>
+  <form class="card" data-form="absence"><h2>Absences</h2><p class="sub">First number: alert. Second number: review the status of the child.</p>
     <div class="fs">${field('Alert after this many days absent in a row', 'alert', absSet().alert, 'number', { attrs: ' min="1"' })}${field('Review the status after this many days without coming', 'review', absSet().review, 'number', { attrs: ' min="2"' })}</div><button class="btn" style="margin-top:12px">Save</button></form>`;
 }
 function vData() {
-  return `<div class="top"><div><h1>Data</h1><p class="lead">Import, backup and export. Data is kept only in this browser on this computer.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="#/sync">Shared database</a><a class="btn" href="#/staff">Back to staff</a></div></div>
+  return `<div class="top"><div><h1>Data</h1><p class="lead">Import, backup and export.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="#/sync">Shared database</a><a class="btn" href="#/staff">Back to staff</a></div></div>
   <div class="grid g2" style="align-items:start">
     ${IS_DEMO ? `<section class="card" style="grid-column:1/-1;border:2px solid var(--orange)"><h2>Demo version</h2><p class="sub">Loading real data is turned off here: this file is for trying the app with invented children. The real version is a separate file.</p><button class="btn" style="margin-top:10px" data-act="resetdemo">Start the demo again</button></section>` : ''}
     <section class="card${IS_DEMO ? ' hide' : ''}" style="grid-column:1/-1;border:2px solid var(--pri)"><h2>First start: load the starter pack</h2><p class="sub">One file with everything collected so far: the 179 children of the Minsundu tool (same IDs), the children of the Luigi tool with photos and the 2026 day and night attendance (Luigi IDs get an L in front, because both tools start at 5000), the Nkwazi children from the register of October 2026 and the Data Tool (IDs with an N in front; a child already in the Luigi or Minsundu tool keeps one file), and the figures of the 2026 section reports (School, UCC, Youth, Nkwazi, Luigi, Family, Counseling, Table 6.0). Loading it twice does not create duplicates.${S.meta.starterPack ? ' Loaded already: pack of ' + esc(fmtDate(S.meta.starterPack)) + ', version ' + (S.meta.starterPackVersion || 1) + ' (' + S.history.length + ' report tables).' : ''}</p>
@@ -1719,7 +1720,7 @@ function vData() {
       <input type="file" accept=".csv,text/csv" id="importfile" class="in" style="margin-top:10px"><div id="importmsg" style="margin-top:10px"></div></section>
     <section class="card${IS_DEMO ? ' hide' : ''}"><h2>Import a Luigi list (Excel)</h2><p class="sub">The monthly Luigi statistics file with the list of names (NAME, SEX, AGE, PLACE). Children already in the records under the same name and a similar age are not created twice: they are linked. The month is read from the title ("Luigi statistics for ..."). Use the most recent list.</p>
       <input type="file" accept=".xlsx" id="luigifile" class="in" style="margin-top:10px"><div id="luigimsg" style="margin-top:10px"></div></section>
-    <section class="card" style="grid-column:1/-1"><h2>Add photos from files</h2><p class="sub">Choose several pictures at once. The name of each file must be the name of the child, for example "Phiri James.jpg". The app shows which child it found, and you confirm before anything is saved. The pictures are made small.</p>
+    <section class="card" style="grid-column:1/-1"><h2>Add photos from files</h2><p class="sub">Choose the pictures. The file name must be the name of the child. Check, then save.</p>
       <input type="file" accept="image/*" multiple id="photosfile" class="in" style="margin-top:10px"><div id="photosmsg" style="margin-top:10px"></div></section>
     <section class="card"><h2>Backup</h2><p class="sub">Download a full copy of the data. Keep it on a USB key or Google Drive (not shared publicly: it contains children's personal data). ${S.meta.lastBackup ? 'Last backup: ' + esc(fmtDate(S.meta.lastBackup)) + '.' : 'No backup made yet.'}</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn pri" data-act="backup">Download backup</button><label class="btn">Restore a backup<input type="file" accept=".json,application/json" id="restorefile" class="hide"></label></div></section>
@@ -1866,6 +1867,8 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'more': body = vMore(); active = 'more'; break;
       case 'sync': body = vSync(); active = 'more'; break;
       case 'feedback': body = vFeedback(r); active = 'staff'; break;
+      case 'activities': body = vActivities(r); break;
+      case 'logframe': body = vLogframe(r); break;
       case 'review': body = vReview(); active = 'pending'; break;
       case 'paths': body = vPaths(r); active = 'children'; break;
       default: body = vHome(r); active = 'home';
@@ -1989,6 +1992,8 @@ document.addEventListener('click', e => {
   else if (fbAct(act, b)) return;
   else if (act === 'photossave') { photosBatchSave(); }
   else if (act === 'wordreport') { wordReport(b); }
+  else if (act === 'actmark') { actMark(b); }
+  else if (act === 'actxl') { actXlsx(); }
   else if (act === 'mcell') { monthCellAct(b); }
   else if (act === 'csvtable') { downloadXlsx(b.dataset.name, [{ name: b.dataset.name, rows: tableToRows() }]); }
   else if (act === 'print') window.print();
@@ -2247,14 +2252,14 @@ function luigiReportHtml(a, b, label) {
   const T = luigiTables(a, b), D = T.D;
   const names = L_COLS.map(([k, l]) => { const ks = D.kids(k).sort((x, y) => fullName(x).localeCompare(fullName(y))); return ks.length ? `<p style="margin:6px 0"><b>${esc(l)} (${ks.length})</b>: ${ks.map(c => `<a href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${D.isNew(c) ? ' (new)' : ''}`).join(', ')}</p>` : ''; }).join('');
   return `${tHtml(T.main, 'ltmain', 'rtable')}
-    <p class="sub" style="margin:8px 0 0">A child met in several activities counts in each column and once in the total. New: date of first contact inside the period. Connected to the street: category B children met by day.${D.back.length ? ` ${D.back.length} with a transfer date in the period are back in town and the place they were taken to is not recorded: they are under "other stakeholders" (${D.back.map(c => esc(fullName(c))).join(', ')}).` : ''}</p>
+    <p class="sub" style="margin:8px 0 0">A child counts in each column and once in the total.</p>
     <details style="margin-top:8px"><summary class="sub" style="cursor:pointer">Names behind each column</summary>${names || '<p class="empty">Nobody in this period.</p>'}</details>
     <h3 style="margin-top:22px">Places the children come from</h3>${tHtml(T.origin)}
     <h3 style="margin-top:22px">Ages</h3>${tHtml(T.ages)}
     <h3 style="margin-top:22px">Sleeping on the street or going home</h3>${tHtml(T.cat)}
-    <h3 style="margin-top:22px">Relatives on the street, children back on the street</h3>${tHtml(T.extra)}<p class="sub" style="margin:6px 0 0">From the child's file. "Back on the street": was in a centre, a facility or back home and is found on the street again.</p>
+    <h3 style="margin-top:22px">Relatives on the street, children back on the street</h3>${tHtml(T.extra)}<p class="sub" style="margin:6px 0 0"></p>
     <h3 style="margin-top:22px">Home visits and family tracing by Luigi</h3>${T.visits.length > 2 ? tHtml(T.visits) : '<p class="empty">No visit to a Luigi child recorded in this period.</p>'}
-    <h3 style="margin-top:22px">Who did the drop-in, the day outreach and the night outreach</h3>${T.staffT.length > 2 ? tHtml(T.staffT) + '<p class="sub" style="margin:6px 0 0">Days on which each person is ticked on the daily sheet. "Luigi team": days taken from the Luigi tool, which does not record the staff. "Not recorded": sheets with children marked and nobody ticked.</p>' : '<p class="empty">No activity recorded in this period.</p>'}
+    <h3 style="margin-top:22px">Who did the drop-in, the day outreach and the night outreach</h3>${T.staffT.length > 2 ? tHtml(T.staffT) + '<p class="sub" style="margin:6px 0 0">"Luigi team": days from the Luigi tool. "Not recorded": nobody ticked.</p>' : '<p class="empty">No activity recorded in this period.</p>'}
     <h3 style="margin-top:22px">Findings written on the daily sheets</h3>${T.findings.length > 1 ? tHtml(T.findings) : '<p class="empty">No findings written in this period.</p>'}`;
 }
 
@@ -2418,7 +2423,7 @@ function vLuigiAtt(r) {
       ${luigiStaffHtml(d, sh)}
       <div class="filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:2fr 1fr 1fr;margin:12px 0 6px;display:grid;gap:10px">${search}${filtBtn()}${catSel}<label class="f">Show<select class="in" data-filter="lonly">${opt([{ v: 'on', l: 'Only: ' + sh.mark.toLowerCase() }, { v: 'off', l: 'Only children not marked' }], only, 'Everyone')}</select></label></div>
       <div id="lattBody">${luigiDayList(d, sh.k)}</div></div>
-      <p class="sub" style="margin:0">Click the button to mark, click it again to clear. A child can be on more than one sheet on the same day. ${notMet} children in town are on none of the three sheets for this day. The month sheets show the same marks, one column per day.</p>`;
+      <p class="sub" style="margin:0">Tap to mark. Tap again to clear. ${notMet} children in town are on none of the three sheets for this day.</p>`;
   } else if (tab === 'sum') {
     when = monthPicker(m, 'lm'); filters = `<div class="card filters" style="grid-template-columns:1fr">${search}</div>`;
     body = `<div id="lattBody">${luigiSummary(m.slice(0, 4))}</div>`;
@@ -2434,7 +2439,7 @@ function vLuigiAtt(r) {
   return `<div class="top"><div><h1>Attendance · Luigi</h1><p class="lead">${esc(lead)}</p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">${centreSeg('Luigi')}${when}</div></div>
   ${tabs}
-  <section class="card soft knowncard"><h2>New face? Check first if the child is already known</h2><p class="sub hidem" style="margin:2px 0 8px">Type a name or nickname. You see who is already in the records of any centre and what is still to do for that child.</p>
+  <section class="card soft knowncard"><h2>New face? Check first if the child is already known</h2><p class="sub hidem" style="margin:2px 0 8px">Type a name or nickname.</p>
     <input class="in" id="knownq" data-ctx="luigi" placeholder="Name or nickname" autocomplete="off"><div id="knownbox" style="margin-top:8px"></div></section>
   ${filters}${body}`;
 }
@@ -2617,7 +2622,7 @@ function luigiStepsCard(r) {
   const row = (c, right) => `<div class="it">${avatar(c, 34)}<div class="w"><b>${childLink(c)}</b><span>${curAge(c) !== '' ? curAge(c) + ' years · ' : ''}${c.sex || ''}${c.streetCat ? ' · ' + c.streetCat : ''}${c.entryDate ? ' · first met ' + esc(fmtDate(c.entryDate)) : ''}${familyKnown(c) ? ' · family in ' + esc(c.familyAddress) : c.compound ? ' · from ' + esc(c.compound) : ''}</span></div>${right}</div>`;
   const planned = L.toVisit.filter(c => plans().some(p => String(p.childId) === String(c.id) && p.month >= thisMonth() && planTeam(p) === 'Luigi')).length;
   return `<section class="card" id="luigi" style="grid-column:1/-1"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2>Luigi · family and first home visit</h2><a href="#" data-q="lall=${all ? '' : '1'}" class="sub">${all ? 'Show fewer' : 'Show all'}</a></div>
-    <p class="sub" style="margin:2px 0 10px">Three steps for every child met by Luigi: find out where the family is, plan a first home visit, then the child enters the monthly plan of visits. ${L.visited.length} of ${L.kids.length} children in town already have a home visit recorded.</p>
+    <p class="sub" style="margin:2px 0 10px">Three steps: find the family, plan the first visit, monthly plan. ${L.visited.length} of ${L.kids.length} children in town already have a home visit recorded.</p>
     <div class="grid g2" style="align-items:start">
       <div><p class="sec">1 · We still do not know where the family is · ${L.noFamily.length}</p>
         ${L.noFamily.length ? (all ? L.noFamily : L.noFamily.slice(0, LIM)).map(c => row(c, `<a class="btn sm" href="#/child/${esc(c.id)}/edit">Add family details</a>`)).join('') : '<p class="empty">Family known for every child.</p>'}</div>
@@ -2654,7 +2659,7 @@ function planCard(m, team, centre) {
   const who = (team === 'all' ? '' : teamLabel(team) + ' · ') + (centre === 'all' ? '' : 'children of ' + CENTRE_LABEL[centre] + ' · ');
   return `<section class="card" id="plan"${centre !== 'all' ? ` style="border-top:4px solid ${CENTRE_COLOR[centre]}"` : ''}>
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><h2>Plan of visits · ${esc(who)}${esc(fmtMonth(m))}</h2>
-      <p class="sub" style="margin:2px 0 0">${list.length ? `${list.length} children planned: ${n('done')} done, ${n('tried')} tried, ${n('planned')} to do.` : 'Nobody planned yet.'} Made at the end of the month for the next one. A visit recorded in the month ticks the child off by itself.</p></div>
+      <p class="sub" style="margin:2px 0 0">${list.length ? `${list.length} children planned: ${n('done')} done, ${n('tried')} tried, ${n('planned')} to do.` : 'Nobody planned yet.'} A recorded visit ticks the child off.</p></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${m !== addMonths(thisMonth(), 1) ? `<a class="btn sm" href="#" data-q="m=${addMonths(thisMonth(), 1)}">Go to ${esc(fmtMonth(addMonths(thisMonth(), 1)))}</a>` : ''}<button class="btn sm" data-pact="xlplan" data-m="${m}" data-team="${team}" data-centre="${centre}">Export in Excel</button></div></div>
     ${CENTRES.map(block).join('')}
     ${past ? '' : `<div style="margin-top:14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end">
@@ -2863,7 +2868,7 @@ function needHtml(r, team, centre, N) {
   let shown = 0;
   const html = groups.map(([k, l]) => { if (!showAll && shown >= LIM) return ''; const part = showAll ? l : l.slice(0, LIM - shown); shown += part.length; return `<div class="grp">${esc(k)} · ${l.length}</div>` + part.map(row).join(''); }).join('');
   const fam = N.fam ? `<section class="card" id="need"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2>Home visits due · Family Section · ${list.length}</h2>${list.length > LIM ? `<a href="#" data-q="all=${showAll ? '' : '1'}" class="sub">${showAll ? 'Show fewer' : 'Show all ' + list.length}</a>` : ''}</div>
-      <p class="sub" style="margin:2px 0 6px">${N.due.length} late, ${N.never.length} never visited. Grouped by compound, so one trip covers several families. One button per child: it puts the child in the plan of ${esc(fmtMonth(pm))}. Residents every ${S.settings.interval.Resident} days, non-residents every ${S.settings.interval['Non-resident']}, follow-up every ${S.settings.interval['Follow-up']}.</p>
+      <p class="sub" style="margin:2px 0 6px">${N.due.length} late, ${N.never.length} never visited. Grouped by compound. The button puts the child in the plan of ${esc(fmtMonth(pm))}. Residents every ${S.settings.interval.Resident} days, non-residents every ${S.settings.interval['Non-resident']}, follow-up every ${S.settings.interval['Follow-up']}.</p>
       ${list.length ? html : '<p class="empty">No home visit is due.</p>'}</section>
       ${N.followEnd.length ? `<section class="card" id="followend"><h2>2-year follow-up completed · ${N.followEnd.length}</h2><p class="sub" style="margin:2px 0 6px">Reintegrated more than two years ago: the file can be closed.</p>${N.followEnd.map(c => `<div class="it"><div class="w"><b>${childLink(c)}</b><span>Reintegrated ${esc(fmtDate(c.reintegrationDate))}</span></div><a class="btn sm" href="#/child/${esc(c.id)}/status">Close file</a></div>`).join('')}</section>` : ''}` : '';
   const lui = N.lui ? luigiStepsCard(r) : '';
@@ -2873,7 +2878,7 @@ function visitActions(team, centre) {
   return S.visits.filter(v => v.action && !v.actionDone && (team === 'all' || visitTeam(v) === team) && (centre === 'all' || (child(v.childId) && centreOf(child(v.childId)) === centre))).sort((x, y) => (x.date || '').localeCompare(y.date || ''));
 }
 function actionsHtml(list) {
-  return `<section class="card" id="actions"><h2>Actions still open · ${list.length}</h2><p class="sub" style="margin:2px 0 6px">Written in "Follow-up action" when a visit was recorded. Click Done when it is done.</p>
+  return `<section class="card" id="actions"><h2>Actions still open · ${list.length}</h2><p class="sub" style="margin:2px 0 6px">Tap Done when it is done.</p>
     ${list.length ? list.map(v => { const c = child(v.childId); return `<div class="it"><div class="w"><b>${esc(v.action)}</b><span>${c ? childLink(c) + ' · ' + centreChip(c) + ' ' : ''}${esc(teamLabel(visitTeam(v)))} · ${esc(v.purpose)} · ${esc(staffName(v.by))} · since ${esc(fmtDate(v.date))}</span></div><button class="btn sm" data-act="actiondone" data-kind="visit" data-id="${esc(v.id)}">Done</button></div>`; }).join('') : '<p class="empty">No open actions.</p>'}</section>`;
 }
 function counselActions() {
@@ -2905,7 +2910,7 @@ function attCheckTop(centre, grp, d) {
 }
 function attCheckList(centre) {
   const miss = missingIn(centre), lg = longIn(centre); if (!miss.length && !lg.length) return '';
-  const longHtml = lg.length ? `<section class="card" id="attlong" style="border-color:var(--red,#E03E3E)"><h2>Not coming for ${absSet().review} days or more: check the status · ${lg.length}</h2><p class="sub" style="margin:2px 0 6px">Still in the programme? If the child comes rarely, make him or her semi-active. If the child has left, close the file with the reason. Counted from the first day marked absent in a row.</p>
+  const longHtml = lg.length ? `<section class="card" id="attlong" style="border-color:var(--red,#E03E3E)"><h2>Not coming for ${absSet().review} days or more: check the status · ${lg.length}</h2><p class="sub" style="margin:2px 0 6px">Comes rarely: make semi-active. Has left: close the file.</p>
     ${lg.map(x => `<div class="it">${avatar(x.c, 34)}<div class="w"><b>${childLink(x.c)}</b><span>${esc(SECTIONS[x.c.section].label)} · ${esc(x.c.status)} · absent since ${esc(fmtDate(x.since))}</span></div><span class="chip c-red">${x.days} days</span><a class="btn sm" href="#/child/${esc(x.c.id)}/status">Check the status</a></div>`).join('')}</section>` : '';
   if (!miss.length) return longHtml;
   return longHtml + `<section class="card" id="attcheck"><h2>Absent ${absSet().alert} days or more in a row · ${miss.length}</h2><p class="sub" style="margin:2px 0 6px">Counted on the days when attendance was marked.</p>
@@ -3000,7 +3005,7 @@ function homeBirthdays() {
   const nm = x => `<a href="#/child/${esc(x.c.id)}"><b>${esc(fullName(x.c))}</b></a> (${x.age})`, join = a => a.map(nm).join(', ');
   const tod = L.filter(x => x.k === 0), yes = L.filter(x => x.k === -1), wk = L.filter(x => x.k > 0);
   const day = d => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-  return `<div class="note bday" id="birthdays">${tod.length ? `<p><b>Today is the birthday of</b> ${join(tod)}.</p>` : ''}${yes.length ? `<p>Yesterday was the birthday of ${join(yes)}.</p>` : ''}${wk.length ? `<p>Birthdays in the next 7 days: ${wk.map(x => esc(day(x.d)) + ' ' + nm(x)).join(' · ')}.</p>` : ''}<p class="sub">In brackets the age the child turns. Only children with a real date of birth in the file.</p></div>`;
+  return `<div class="note bday" id="birthdays">${tod.length ? `<p><b>Today is the birthday of</b> ${join(tod)}.</p>` : ''}${yes.length ? `<p>Yesterday was the birthday of ${join(yes)}.</p>` : ''}${wk.length ? `<p>Birthdays in the next 7 days: ${wk.map(x => esc(day(x.d)) + ' ' + nm(x)).join(' · ')}.</p>` : ''}</div>`;
 }
 /* staff who are not supervisors: the To do of their own sections, on the Home page */
 function homeTodo() {
@@ -3014,7 +3019,7 @@ function homeTodo() {
   <div class="grid ${cards.length >= 3 ? 'g3' : cards.length === 2 ? 'g2' : ''} ovgrid" id="ovgrid" style="align-items:start${cards.length === 1 ? ';max-width:640px' : ''}">${cards.map(c => `<section class="card ovcard" style="border-top:5px solid ${c.color}"><h2>${esc(c.title)}</h2>
     <p class="ovsum ${open(c) ? 'has' : 'ok'}">${c.empty ? esc(c.empty) : open(c) ? open(c) + (open(c) === 1 ? ' thing' : ' things') + ' to look at' : 'Nothing open'}</p>
     ${c.lines.map(l => `<a class="al ${l.lvl}" href="${l.href}">${l.n !== '' ? `<b>${esc(l.n)}</b>` : '<b>·</b>'}<span>${esc(l.text)}</span><i aria-hidden="true">›</i></a>`).join('')}</section>`).join('')}</div>
-  <p class="sub" style="margin:6px 0 0">Red: late or missing. Orange: to do soon. Grey: where the month stands.</p></section>`;
+  <p class="sub" style="margin:6px 0 0">Red: late. Orange: soon. Grey: this month.</p></section>`;
 }
 function vPending(r) {
   const cards = overviewData(), mine = USER ? staffAreas(USER) : [];
@@ -3025,9 +3030,9 @@ function vPending(r) {
   const card = c => `<section class="card ovcard" style="border-top:5px solid ${c.color}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><h2>${esc(c.title)}</h2>${own(c) ? '<span class="chip c-blue">You work here</span>' : ''}</div>
     <p class="ovsum ${open(c) ? 'has' : 'ok'}">${c.empty ? esc(c.empty) : open(c) ? open(c) + (open(c) === 1 ? ' thing' : ' things') + ' to look at' : 'Nothing open'}</p>
     ${c.lines.map(l => `<a class="al ${l.lvl}" href="${l.href}">${l.n !== '' ? `<b>${esc(l.n)}</b>` : '<b>·</b>'}<span>${esc(l.text)}</span><i aria-hidden="true">›</i></a>`).join('')}</section>`;
-  return `<div class="top"><div><h1>To do</h1><p class="lead">For supervisors: all sections, one box each. Staff see the To do of their own section on the Home page. Click a line to open the page where the full list is.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="xl" data-k="pending">Export in Excel</button></div></div>
+  return `<div class="top"><div><h1>To do</h1><p class="lead">Tap a line to open the list.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="xl" data-k="pending">Export in Excel</button></div></div>
   <div class="grid g3 ovgrid" id="ovgrid" style="align-items:start">${sorted.map(card).join('')}</div>
-  <p class="sub" style="margin:0">Red: late or missing. Orange: to do soon. Grey: where the month stands. The lists are in their own pages: Attendance, Visits, Children, Counseling, Reports.</p>`;
+  <p class="sub" style="margin:0">Red: late. Orange: soon. Grey: this month.</p>`;
 }
 
 document.addEventListener('click', e => {
@@ -3057,6 +3062,8 @@ function vMore() {
     <a class="mitem" href="#/sync"><span><b>Shared database</b><small>${syncOn() ? (SY.state === 'off' ? 'No connection: saved here, sent later' : 'Connected: sent and received by itself') : 'Not connected yet'}</small></span>${syncOn() && pendingCount() ? '<span class="chip c-blue">Sending</span>' : ''}<i aria-hidden="true">›</i></a>
     ${item('#/counseling', 'Counseling', 'Record a session, sessions of the month')}
     ${item('#/reports', 'Reports', 'Tables of each section')}
+    ${USER.admin || staffAreas(USER).includes('Sports') ? item('#/activities', 'Activities', 'Sports and skills training · draft') : ''}
+    ${USER.admin ? item('#/logframe', 'Logframe', 'Indicators · draft') : ''}
     ${USER.admin ? item('#/staff', 'Admin', 'People, areas, PIN, backup') : ''}
     ${item('#/help', 'How it works', 'And what we want to know from you')}
   </div>
@@ -3295,7 +3302,7 @@ function pathHtml(c) {
     return `<div class="stg"><span class="stdot" style="background:${d.color}"></span><b>${esc(CENTRE_OF_SEC(s.sec))}</b><span class="sub">${d.phase ? 'Phase ' + d.phase + ' · ' : ''}${esc(spanDates(s))}${spanLen(s) ? ' · ' + spanLen(s) : ''}</span>${s.back ? '<span class="chip c-orange">Came back</span>' : ''}${now ? `<span class="chip ${STATUS_CHIP[c.status] || ''}">${c.status === 'Semi-active' ? 'Here now, semi-active' : 'Here now'}</span>` : ''}${endTxt}${s.end === 'home' && i === sp.length - 1 && c.status === 'Follow-up' ? '<span class="chip c-purple">2-year follow-up</span>' : ''}</div>`;
   }).join('');
   const src = sp[0].src && !(sp[0].sec === 'Luigi' && /luigi/i.test(sp[0].src)) && srcNorm(sp[0].src) !== CENTRE_OF_SEC(sp[0].sec) ? srcNorm(sp[0].src) : '';
-  return `<section class="card"><h2>Where this child has been</h2><p class="sub" style="margin:2px 0 10px">${src ? 'Came from: ' + esc(src) + '. ' : ''}The line shows the centres and how long. What happened is in the History.</p>
+  return `<section class="card"><h2>Where this child has been</h2><p class="sub" style="margin:2px 0 10px">${src ? 'Came from: ' + esc(src) + '. ' : ''}</p>
     <div class="rail" role="img" aria-label="${esc(sp.map(s => CENTRE_OF_SEC(s.sec) + ' ' + spanDates(s)).join(', then '))}">${rail}${open ? '<span class="now" title="Today"></span>' : `<span class="stop" style="background:${last.s.end === 'home' ? '#448361' : '#9B9A97'}"></span>`}</div>
     <div class="railx"><span>${esc(mon(firstA) || 'date of entry not known')}</span><span>${open ? 'Today' : esc(mon(last.b) || '')}</span></div>
     <div class="stages">${rows}</div>${nv ? '<p class="sub" style="margin:8px 0 0"><span class="vtick"></span> home or school visit</p>' : ''}</section>`;
@@ -3358,14 +3365,14 @@ function vPaths(r) {
   const nIn = Object.values(F.inBy).reduce((x, n) => x + n, 0), nOut = Object.values(F.outBy).reduce((x, n) => x + n, 0), nHere = Object.values(F.here).reduce((x, n) => x + n, 0);
   const rows = pathRows(q);
   const tile = (k, n, l) => `<a href="#" class="tile" data-q="pf=${only === k ? '' : k}" style="${only === k ? 'border-color:var(--ink)' : ''}"><b>${n}</b><span>${l}</span></a>`;
-  return `<div class="top"><div><h1>Admissions, transfers and discharges · ${esc(CENTRE_OF_SEC(sec))}</h1><p class="lead">Who was admitted and from where, who was discharged or transferred and to where. ${y === 'all' ? 'All years.' : 'Year ' + esc(y) + (y === today().slice(0, 4) ? ', up to today.' : '.')}</p></div>
+  return `<div class="top"><div><h1>Admissions, transfers and discharges · ${esc(CENTRE_OF_SEC(sec))}</h1><p class="lead">${y === 'all' ? 'All years.' : 'Year ' + esc(y) + (y === today().slice(0, 4) ? ', up to today.' : '.')}</p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Section">${SECTION_KEYS.map(k => `<a href="#" data-q="ps=${k}&pf=" class="${sec === k ? 'on' : ''}">${esc(k === 'UCC' ? 'Minsundu UCC' : k === 'Youth' ? 'Youth Centre' : k)}</a>`).join('')}</div>
     <select class="in" data-filter="py" style="width:auto" aria-label="Year">${opt(years.map(v => ({ v, l: v === 'all' ? 'All years' : v })), y)}</select></div></div>
-  <section class="card">${flowSvg(F, sec)}<p class="sub" style="margin:8px 0 0">Built from the date of entry, the moves between sections and the files closed. A child who was discharged and readmitted counts once for each stay.</p></section>
+  <section class="card">${flowSvg(F, sec)}<p class="sub" style="margin:8px 0 0">A child readmitted counts once for each stay.</p></section>
   <div class="grid g4">${tile('', F.rows.length, 'Worked with in the period')}${tile('in', nIn, 'Admitted')}${tile('out', nOut, 'Discharged or transferred')}${tile('here', nHere, 'Still at the centre')}</div>
   <section class="card" style="padding:6px 8px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px"><h2 style="margin:0">Admissions and discharges register · ${rows.length}</h2><button class="btn sm" data-act="xl" data-k="paths">Export in Excel</button></div>
     <div class="tw"><table class="mt"><thead><tr><th>Name</th><th>Admitted</th><th>From</th><th>Out</th><th>Date</th><th>Reason</th></tr></thead><tbody>${rows.map(x => `<tr><td>${childLink(x.c)}<div class="sub">ID ${esc(x.c.id)} · ${esc(x.c.sex || '?')}</div></td><td>${esc(x.s.a ? (x.s.approx ? x.s.a.slice(0, 4) : fmtDate(x.s.a)) : 'not written')}</td><td>${esc(x.srcLab)}</td><td>${x.s.end ? esc(x.outLab) : `<span class="chip ${STATUS_CHIP[x.c.status] || ''}">${esc(x.c.status)}</span>`}</td><td>${esc(x.s.end ? fmtDate(x.s.b) || 'not written' : '')}</td><td>${esc(x.s.reason || x.c.admissionNote || '')}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Nobody.</td></tr>'}</tbody></table></div></section>
-  <p class="sub" style="margin:0">This page replaces the Data Tool: a new admission is a child added with the date of entry and where he or she comes from; a discharge is a file closed; a transfer is "Change status or section" in the profile.</p>`;
+  <p class="sub" style="margin:0">New admission: add the child. Discharge: close the file. Transfer: Change status or section.</p>`;
 }
 
 /* ---------- absences: a short alert, and a long absence that asks to review the status ---------- */
@@ -3410,7 +3417,7 @@ function attMonthTable(q) {
   const kids = attKids(q2, true), days = []; for (let i = 1; i <= n; i++) days.push(m + '-' + String(i).padStart(2, '0'));
   if (!kids.length) return '<p class="empty">No child matches.</p>';
   const wk = x => { const w = new Date(x + 'T00:00:00').getDay(); return w === 0 || w === 6; };
-  return `<div class="tw"><table class="mreg"><thead><tr><th>Name</th>${days.map(x => `<th class="${wk(x) ? 'we' : ''}${x === today() ? ' td' : ''}">${Number(x.slice(8))}</th>`).join('')}<th title="Present">✓</th><th title="Absent">X</th><th title="Sick">S</th><th title="Permission">P</th></tr></thead><tbody>${kids.map(c => { const v = days.map(x => (S.attendance[x] || {})[attKey(c, q.get('c') || defCentre())] || ''); const cnt = k => v.filter(x => x === k).length; const key = attKey(c, q.get('c') || defCentre()); return `<tr><td>${childLink(c)}</td>${v.map((x, i) => days[i] > today() ? `<td class="fu${wk(days[i]) ? ' we' : ''}"></td>` : `<td class="mc ${x ? 'm' + x : ''}${wk(days[i]) ? ' we' : ''}" data-act="mcell" data-d="${days[i]}" data-id="${esc(key)}" data-c="${esc(c.id)}">${ATT_SHOW[x] || ''}</td>`).join('')}<td><b>${cnt('P')}</b></td><td>${cnt('A') || ''}</td><td>${cnt('S') || ''}</td><td>${cnt('E') || ''}</td></tr>`; }).join('')}</tbody></table></div><p class="sub" style="margin:8px 4px 2px">Click a box to mark. Each click changes the sign: ✓ present, X absent, S sick, P permission (H home leave for the residents of Minsundu), then empty. Same signs as the paper register.</p>`;
+  return `<div class="tw"><table class="mreg"><thead><tr><th>Name</th>${days.map(x => `<th class="${wk(x) ? 'we' : ''}${x === today() ? ' td' : ''}">${Number(x.slice(8))}</th>`).join('')}<th title="Present">✓</th><th title="Absent">X</th><th title="Sick">S</th><th title="Permission">P</th></tr></thead><tbody>${kids.map(c => { const v = days.map(x => (S.attendance[x] || {})[attKey(c, q.get('c') || defCentre())] || ''); const cnt = k => v.filter(x => x === k).length; const key = attKey(c, q.get('c') || defCentre()); return `<tr><td>${childLink(c)}</td>${v.map((x, i) => days[i] > today() ? `<td class="fu${wk(days[i]) ? ' we' : ''}"></td>` : `<td class="mc ${x ? 'm' + x : ''}${wk(days[i]) ? ' we' : ''}" data-act="mcell" data-d="${days[i]}" data-id="${esc(key)}" data-c="${esc(c.id)}">${ATT_SHOW[x] || ''}</td>`).join('')}<td><b>${cnt('P')}</b></td><td>${cnt('A') || ''}</td><td>${cnt('S') || ''}</td><td>${cnt('E') || ''}</td></tr>`; }).join('')}</tbody></table></div><p class="sub" style="margin:8px 4px 2px">Tap a box to change: ✓ present, X absent, S sick, P permission, H home leave, empty.</p>`;
 }
 
 /* ---------- section, where the child sleeps, where the child comes by day: three separate things ---------- */
@@ -3451,18 +3458,14 @@ function whereHtml(c) {
   const day = t ? dayLabel(t) + (c.schoolName && !/community school|Minsundu school|Literacy class|Luigi Special|Not in school/.test(t) ? ' · ' + c.schoolName : '') : c.section === 'Luigi' ? 'Luigi Drop-in' : 'Not written';
   const lists = attCentres(c).filter(k => k !== 'Luigi');
   const cell = (q, a, s) => `<div class="w3"><span>${q}</span><b>${esc(a)}</b>${s ? `<small>${s}</small>` : ''}</div>`;
-  return `<div class="where3">${cell('Section', sec.label || '', 'Phase ' + sec.phase + ' · the team that follows the child')}${cell('Sleeps', sleepsText(c), '')}${cell('By day goes to', day, (lists.length ? 'Attendance list: ' + lists.join(' and ') : '') + (auto ? '. Proposed by the app: check it in Edit.' : !t && c.section !== 'Luigi' ? '. Choose the school in Edit.' : ''))}</div>`;
+  return `<div class="where3">${cell('Section', sec.label || '', 'Phase ' + sec.phase)}${cell('Sleeps', sleepsText(c), '')}${cell('By day goes to', day, (lists.length ? 'Attendance list: ' + lists.join(' and ') : '') + (auto ? ' · to confirm' : ''))}</div>`;
 }
 function secExplain() {
-  const cell = (q, t) => `<div class="w3"><span>${q}</span><small style="font-size:13.5px;color:var(--soft)">${t}</small></div>`;
-  return `<section class="card" id="sections"><h2>Section, where the child sleeps, where the child goes by day</h2><p style="margin:8px 0 10px">These are three different things. The app keeps them apart.</p>
-  <div class="where3">${cell('Section', 'The team that follows the child: Luigi, UCC, Nkwazi or Youth. Each child has one section. Reports count the child under this section.')}${cell('Sleeps', 'Resident: sleeps at Minsundu Centre. Non-resident: sleeps at home.')}${cell('By day goes to', 'The school or centre where the child spends the day: Nkwazi community school, Minsundu community school, the literacy class at Minsundu, Luigi Special School, a GRZ school, a private school, college or skills training.')}</div>
-  <ul style="margin:0;padding-left:18px;line-height:1.6"><li>A child of UCC sleeps at Minsundu and goes to Nkwazi community school: section UCC, resident, on the attendance list of Minsundu and of Nkwazi.</li><li>A child of UCC sleeps at Minsundu and goes to Luigi Special School: section UCC, resident, on the attendance list of Minsundu.</li><li>A child of Youth sleeps at home and comes to Minsundu by day: section Youth, non-resident, on the attendance list of Minsundu.</li><li>UCC is Phase 2: the children at Minsundu who prepare to go to Nkwazi. Their attendance is under Attendance, Minsundu, UCC.</li></ul></section>`;
+  const cell = (q, t) => `<div class="w3"><span>${q}</span><b style="font-weight:500">${t}</b></div>`;
+  return `<section class="card" id="sections"><h2>Three things in every file</h2>
+  <div class="where3" style="margin:10px 0 0">${cell('Section', 'The team that follows the child')}${cell('Sleeps', 'At Minsundu (resident) or at home')}${cell('By day goes to', 'The school or centre')}</div></section>`;
 }
-function attWho(centre) {
-  const g = S.children.filter(c => isCurrent(c) && attCentres(c).includes(centre) && centreOf(c) !== centre).length;
-  return `<p class="sub attwho">On this list: every child who comes to ${esc(centre)} by day${g ? `, also ${g} followed by another section` : ''}. Residents sleep at Minsundu Centre. Non-residents sleep at home. <a href="#/help">How sections work</a></p>`;
-}
+function attWho(centre) { return ''; }
 
 /* ---------- quick marking: one tap on the name, made for a phone held in one hand ---------- */
 function attMode(q) { const v = q.get('av'); return ['month', 'day', 'quick'].includes(v) ? v : (window.matchMedia && window.matchMedia('(max-width:760px)').matches ? 'quick' : 'day'); }
@@ -3476,7 +3479,7 @@ function attQuick(q, centre, grp, d) {
   const base = attQuickBase(q), day = S.attendance[d] || {}, n = k => base.filter(c => day[attKey(c, centre)] === k).length, todo = base.filter(c => day[attKey(c, centre)] == null).length;
   const lm = UI.lastMark && UI.lastMark.d === d && UI.lastMark.centre === centre ? UI.lastMark : null, lc = lm ? child(String(lm.id).split('@')[0]) : null;
   const done = q.get('qt') === 'done';
-  return `<div class="qtop"><input class="in qsearch" id="attsearch" type="search" autocomplete="off" placeholder="Type a name, then tap it" aria-label="Find a name" value="${esc(UI.attq || '')}">
+  return `<div class="qtop"><input class="in qsearch" id="attsearch" type="search" autocomplete="off" placeholder="Type a name, tap it" aria-label="Find a name" value="${esc(UI.attq || '')}">
     <div class="qchips">${chips}</div>
     <div class="qcount"><span><b>${n('P')}</b> present${n('A') ? ` · ${n('A')} absent` : ''}${n('S') + n('E') + n('H') ? ` · ${n('S') + n('E') + n('H')} other` : ''} · <b>${todo}</b> to mark</span>${lm && lc ? `<button class="btn sm" data-act="qundo">Undo: ${esc(lc.name || fullName(lc))}</button>` : ''}</div>
     <div class="seg" role="group" aria-label="To mark or marked"><a href="#" data-q="qt=" class="${done ? '' : 'on'}">To mark · ${todo}</a><a href="#" data-q="qt=done" class="${done ? 'on' : ''}">Marked · ${base.length - todo}</a></div></div>
@@ -3496,7 +3499,7 @@ function attQuickList(q) {
       <button class="qmore" data-act="qopen" data-id="${esc(key)}" aria-expanded="${open}">${v ? 'Change' : 'Other'}</button>
       ${open ? `<div class="qopts">${attOpts(c, centre).filter(([k]) => k !== v && (v || k !== 'P')).map(([k, l]) => `<button class="btn ${k}" data-act="qatt" data-d="${d}" data-id="${esc(key)}" data-v="${k}">${l}</button>`).join('')}${v ? `<button class="btn" data-act="qatt" data-d="${d}" data-id="${esc(key)}" data-v="">Remove the mark</button>` : ''}<a class="btn" href="#/child/${esc(c.id)}">Open the file</a></div>` : ''}</div>`;
   }).join('');
-  const rest = !term && !done ? `<div class="qrest"><p class="sub" style="margin:0">${kids.length} not marked yet on this list. When the others are all the same:</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="qrest" data-v="A" data-d="${d}">The others are absent</button><button class="btn" data-act="qrest" data-v="P" data-d="${d}">The others are present</button></div></div>` : '';
+  const rest = !term && !done ? `<div class="qrest"><p class="sub" style="margin:0">${kids.length} not marked yet.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="qrest" data-v="A" data-d="${d}">The others are absent</button><button class="btn" data-act="qrest" data-v="P" data-d="${d}">The others are present</button></div></div>` : '';
   return rows + rest;
 }
 function attQuickAct(act, b) {
@@ -3567,7 +3570,7 @@ function fbOpen(text) {
   const old = document.getElementById('fbbox'); if (old) old.remove();
   const box = document.createElement('div'); box.id = 'fbbox';
   box.innerHTML = `<div class="fbcard" role="dialog" aria-label="Comment"><h2 style="margin:0 0 8px">Comment</h2><p class="sub" style="margin:0 0 4px">On the screen:</p><p class="fbq">${esc(text || '(no text here)')}</p>
-    <label class="sub" for="fbnote">Your comment. For a word: write the word you want in its place.</label><textarea class="in" id="fbnote" rows="3"></textarea>
+    <label class="sub" for="fbnote">Your comment</label><textarea class="in" id="fbnote" rows="3"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn pri" type="button" id="fbsave">Save the comment</button><button class="btn" type="button" id="fbcancel">Cancel</button></div></div>`;
   document.body.appendChild(box);
   const page = location.hash || '#/home';
@@ -3590,7 +3593,7 @@ document.addEventListener('click', e => {
 }, true);
 function fbAdminCard() {
   const L = fbList(), open = L.filter(x => !x.done).length;
-  return `<section class="card"><h2>Comments on the app</h2><p class="sub">To comment on a word or on a page: tap "Comment" at the bottom of the screen, then tap the word, then write. The comments arrive here from every phone and computer.</p>
+  return `<section class="card"><h2>Comments on the app</h2><p class="sub">Tap Comment, tap the word, write.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px"><a class="btn" href="#/feedback">Open the comments${open ? ` <span class="chip c-red">${open}</span>` : ''}</a>
     <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-act="fball" ${S.settings && S.settings.feedbackAll ? 'checked' : ''}> All staff can comment (now: ${S.settings && S.settings.feedbackAll ? 'everyone' : 'supervisors only'})</label></div></section>`;
 }
@@ -3679,7 +3682,85 @@ ${heads.map((h, i) => `<h2>${i + 3}. ${h}</h2><p>&nbsp;</p><p>&nbsp;</p>`).join(
 </body></html>`;
   const blob = new Blob(['﻿', html], { type: 'application/msword' }), url = URL.createObjectURL(blob), a = document.createElement('a');
   a.href = url; a.download = (b.dataset.name || 'report') + '.doc'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
-  toast('Report downloaded: open it in Word and write the narrative');
+  toast('Report downloaded');
+}
+
+/* ---------- Activities: sports and skills training (draft) ---------- */
+const ACT_DEFAULT = { Sports: ['Football', 'Basketball', 'Golf', 'Tennis', 'Swimming', 'Volleyball'], 'Skills training': ['Carpentry', 'Agriculture', 'Mechanics'] };
+function actGroups() { return (S.settings && S.settings.activities) || ACT_DEFAULT; }
+function actNow(q) { return q.get('a') || Object.values(actGroups())[0][0]; }
+function actIds(a, from, to) { const suf = '@act:' + a, ids = new Set(); for (const day of Object.keys(S.attendance)) if (day >= from && day <= to) for (const k of Object.keys(S.attendance[day])) if (k.endsWith(suf)) ids.add(k.slice(0, -suf.length)); return Array.from(ids); }
+function actList(q) {
+  const a = actNow(q), d = q.get('d') || today(), day = S.attendance[d] || {}, term = (UI.actq || '').trim().toLowerCase();
+  let rows = actIds(a, addDays(d, -90), d).map(id => [id, child(id)]).filter(x => x[1]);
+  if (term.length >= 2) rows = S.children.filter(c => c.status !== 'Closed' && (fullName(c) + ' ' + (c.nickname || '')).toLowerCase().includes(term)).slice(0, 30).map(c => [c.id, c]);
+  rows.sort((x, y) => fullName(x[1]).localeCompare(fullName(y[1])));
+  if (!rows.length) return `<p class="empty">${term.length >= 2 ? 'No child with this name.' : 'Nobody on this list yet. Type a name above.'}</p>`;
+  return rows.map(([id, c]) => { const k = id + '@act:' + a, v = day[k]; return `<div class="qrow"><button class="qmain" data-act="actmark" data-d="${d}" data-id="${esc(k)}">${avatar(c, 44)}<span class="qn"><b>${esc(fullName(c))}</b><small>${esc(c.section + ' · ID ' + c.id)}</small></span>${v ? '<span class="qmark P">Present</span>' : '<span class="qtick">Present</span>'}</button></div>`; }).join('');
+}
+function vActivities(r) {
+  const q = r.q, G = actGroups(), a = actNow(q), d = q.get('d') || today(), day = S.attendance[d] || {}, suf = '@act:' + a, m = d.slice(0, 7);
+  const n = Object.keys(day).filter(k => k.endsWith(suf)).length;
+  const days = Object.keys(S.attendance).filter(x => x.slice(0, 7) === m && Object.keys(S.attendance[x]).some(k => k.endsWith(suf))).length;
+  const mk = uniq(actIds(a, m + '-01', monthEnd(m)).map(id => child(id)).filter(Boolean));
+  return `<div class="top"><div><h1>Activities <span class="chip c-orange">Draft</span></h1><p class="lead">Sports and skills training. Draft, to try with coaches and instructors.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><input class="in" type="date" id="actdate" value="${d}" max="${today()}" style="width:auto" aria-label="Day"><button class="btn sm" data-act="actxl">Export in Excel</button></div></div>
+  ${Object.entries(G).map(([g, L]) => `<p class="sec" style="margin:6px 0 4px">${esc(g)}</p><div class="qchips">${L.map(x => `<a href="#" data-q="a=${esc(x)}" class="${x === a ? 'on' : ''}">${esc(x)}</a>`).join('')}</div>`).join('')}
+  <div class="qtop"><input class="in qsearch" id="actsearch" type="search" autocomplete="off" placeholder="Type a name, tap it" aria-label="Find a name" value="${esc(UI.actq || '')}">
+    <div class="qcount"><span><b>${esc(a)}</b> · ${esc(fmtDate(d))} · <b>${n}</b> present</span><span>${esc(fmtMonth(m))}: ${days} ${days === 1 ? 'day' : 'days'} · ${mk.length} children (F ${mk.filter(c => c.sex === 'F').length}, M ${mk.filter(c => c.sex === 'M').length})</span></div></div>
+  <div class="card" style="padding:0 8px"><div id="actlist">${actList(q)}</div></div>`;
+}
+function actMark(b) {
+  if (GUEST) return; const d = b.dataset.d, id = b.dataset.id; S.attendance[d] = S.attendance[d] || {}; touchAtt(d, id);
+  if (S.attendance[d][id]) delete S.attendance[d][id]; else S.attendance[d][id] = 'P';
+  const had = !!(UI.actq || ''); UI.actq = ''; save(); render(); if (had) { const s = $('#actsearch'); if (s) s.focus(); }
+}
+function actXlsx() {
+  const q = route().q, a = actNow(q), m = (q.get('d') || today()).slice(0, 7), suf = '@act:' + a;
+  const days = Object.keys(S.attendance).filter(x => x.slice(0, 7) === m && Object.keys(S.attendance[x]).some(k => k.endsWith(suf))).sort();
+  const kids = actIds(a, m + '-01', monthEnd(m)).map(id => [id, child(id)]).filter(x => x[1]).sort((x, y) => fullName(x[1]).localeCompare(fullName(y[1])));
+  const rows = [['ID', 'Name', 'Sex', 'Age', 'Section'].concat(days).concat(['Days present'])].concat(kids.map(([id, c]) => { const v = days.map(x => S.attendance[x][id + suf] ? 1 : ''); return [c.id, fullName(c), c.sex || '', curAge(c), (SECTIONS[c.section] || {}).label || ''].concat(v).concat([v.filter(Boolean).length]); }));
+  downloadXlsx('activity-' + a + '-' + m, [{ name: a.slice(0, 28), rows, filter: true }]);
+}
+document.addEventListener('input', e => { if (e.target.id === 'actsearch') { UI.actq = e.target.value; const t = $('#actlist'); if (t) t.innerHTML = actList(route().q); } });
+document.addEventListener('change', e => { if (e.target.id === 'actdate' && e.target.value) location.hash = '#/activities?a=' + encodeURIComponent(actNow(route().q)) + '&d=' + e.target.value; });
+
+/* ---------- Logframe v0.5: what the app can already count (draft, supervisors only) ---------- */
+function vLogframe(r) {
+  if (!USER.admin) return '<h1>Logframe</h1><p class="lead">Supervisors only.</p>';
+  const m = r.q.get('m') || thisMonth(), Q = quarterOf(m), a = Q.start, b = Q.end, me = monthEnd(m) > today() ? today() : monthEnd(m);
+  const ids = new Set();
+  for (const d of Object.keys(S.attendance)) if (inRange(d, a, b)) for (const [k, v] of Object.entries(S.attendance[d])) if (v === 'P' || v === 'H') ids.add(String(k).split('@')[0]);
+  for (const s of S.outreach) if (inRange(s.date, a, b)) for (const id of s.children || []) ids.add(String(id));
+  for (const v of S.visits) if (inRange(v.date, a, b)) ids.add(String(v.childId));
+  for (const s of S.sessions) if (inRange(s.date, a, b)) for (const id of s.children || []) ids.add(String(id));
+  const kidsOf = set => uniq(Array.from(set).map(id => child(id)).filter(Boolean));
+  const reach = kidsOf(ids), LD = luigiTables(a, b).D, lu = LD.kids('all');
+  const res = S.children.filter(c => centreOf(c) === 'Minsundu' && c.residence === 'Resident' && inCareOn(c, me));
+  const rein = S.children.filter(c => inRange(c.reintegrationDate, a, b)), r24 = S.children.filter(c => c.reintegrationDate && c.reintegrationDate >= addDays(today(), -730));
+  const pupils = S.children.filter(c => isCurrent(c) && dayType(c) && dayType(c) !== 'Not in school'), byType = {}; pupils.forEach(c => { const t = dayLabel(dayType(c)); byType[t] = (byType[t] || 0) + 1; });
+  const sp = new Set(), sports = actGroups().Sports || [];
+  for (const d of Object.keys(S.attendance)) if (inRange(d, a, b)) for (const k of Object.keys(S.attendance[d])) { const i = k.indexOf('@act:'); if (i > 0 && sports.includes(k.slice(i + 5))) sp.add(k.slice(0, i)); }
+  const val = L => `<b>${L.length}</b> <span class="sub">F ${L.filter(c => c.sex === 'F').length} · M ${L.filter(c => c.sex === 'M').length}</span>`;
+  const NA = '<span class="sub">Not in the app</span>', NY = '<span class="sub">Not recorded yet</span>', PS = '<span class="sub">Public statistics</span>';
+  const rows = [
+    ['R.1', 'Children and youth supported by CYP', Q.label, val(reach) + ` <span class="sub">· residents ${reach.filter(c => c.residence === 'Resident').length}</span>`],
+    ['SO1.1', 'Reintegrated children still at home (%)', 'Last 24 months', NY + ` <span class="sub">· ${r24.length} reintegrated</span>`],
+    ['SO1.2', 'Supported pupils promoted to the next grade (%)', 'Year', NY],
+    ['OP1.1.1', 'Children reached by Luigi', Q.label, val(lu) + ` <span class="sub">· new ${lu.filter(c => LD.isNew(c)).length}</span>`],
+    ['OP1.2.1', 'Residents at Minsundu', fmtDate(me), val(res)],
+    ['OP1.3.1', 'Children reintegrated', Q.label, val(rein)],
+    ['OP1.4.1', 'Pupils supported in school', 'Today', val(pupils) + `<div class="sub">${Object.entries(byType).map(([t, n]) => esc(t) + ' ' + n).join(' · ')}</div>`],
+    ['OP1.5.1', 'Clinic consultations', 'Month', NA], ['OP1.5.2', 'Meals served per day', 'Month', NA],
+    ['OP1.6.1', 'Children and youth in coached sport', Q.label, val(kidsOf(sp)) + ' <span class="sub">· from Activities (draft)</span>'],
+    ['OP1.7.1', 'Trainees passing the TEVETA exam (%)', 'Year', NA],
+    ['SO2.1', 'Graduates in work (%)', 'Year', NA], ['SO2.2', 'Muchinga businesses still active (%)', 'Quarter', NA],
+    ['OP2.1.1', 'Youth working or on placement', 'Quarter', NA], ['OP2.2.1', 'Graduates placed with external employers', 'Quarter', NA],
+    ['OP2.3.1', 'Families supported to start a business', 'Quarter', NA], ['OP2.4.1', 'Adults in supported work (Mary Christine)', 'Month', NA],
+    ['OO.1', 'Youth NEET rate, Copperbelt (%)', 'Year', PS], ['OO.2', 'Secondary completion rate, Copperbelt (%)', 'Year', PS]
+  ];
+  return `<div class="top"><div><h1>Logframe <span class="chip c-orange">Draft</span></h1><p class="lead">${esc(Q.label)}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(m)}<button class="btn sm" data-act="csvtable" data-name="logframe-${esc(Q.label.replace(/\s+/g, '-'))}">Export in Excel</button></div></div>
+  <div class="note">Draft. Logframe v0.5 of 9 Nov 2026. Check the figures with the sections. Targets not set.</div>
+  <div class="card"><div class="tw"><table><thead><tr><th>Code</th><th>Indicator</th><th>Period</th><th>Value</th></tr></thead><tbody>${rows.map(x => `<tr><td>${x[0]}</td><td>${esc(x[1])}</td><td>${esc(x[2])}</td><td>${x[3]}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 
 /* ====================================================================
