@@ -434,7 +434,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 3.4';
+const VERSION = 'alpha 3.5';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -4112,7 +4112,7 @@ document.addEventListener('click', async e => {
     if (act === 'now') { UI.syncMsg = ''; await syncNow(); if (route().path === 'sync') render(); }
     else if (act === 'check') { UI.syncPing = null; render(); await syncCheck(); }
     else if (act === 'start') { if (!confirm('Start the shared database with the ' + S.children.length + ' children and all the records of this device?')) return; b.disabled = true; b.textContent = 'Sending the records…'; await syncStart(); UI.syncMsg = 'The shared database is started. The other devices can now use it.'; SY.state = 'ok'; render(); syncNow(); }
-    else if (act === 'restart') { if (!confirm('Replace the shared database with the ' + S.children.length + ' children and all the records of this device? Every other device takes them.')) return; if (prompt('This replaces the database of everyone. Records not yet sent by the other devices are lost. Type REPLACE to go on.') !== 'REPLACE') return; b.disabled = true; b.textContent = 'Sending the records…'; await syncStart(true); UI.syncMsg = 'The shared database now holds the records of this device.'; SY.state = 'ok'; render(); }
+    else if (act === 'restart') { if (!confirm('Are you sure? This replaces the shared database with the ' + S.children.length + ' children and the records of this device. All the data now in the shared database will be lost, for everyone.')) return; if (!confirm('Are you really sure? All previous data will be lost. This cannot be undone.')) return; if (prompt('Last step. Type REPLACE to replace the database of everyone.') !== 'REPLACE') return; b.disabled = true; b.textContent = 'Sending the records…'; await syncStart(true); UI.syncMsg = 'The shared database now holds the records of this device.'; SY.state = 'ok'; render(); }
     else if (act === 'load') { if (S.children.length && !confirm('Replace the records on this device with the shared database?')) return; b.disabled = true; b.textContent = 'Loading the records…'; await syncLoad(); UI.syncMsg = 'This device now uses the shared database: ' + S.children.length + ' children.'; SY.state = 'ok'; render(); syncNow(); }
     else if (act === 'disconnect') { if (!confirm('Disconnect this device from the shared database?')) return; lsSet('cyp-sync', null); if (S.meta.sync) S.meta.sync.shared = 0; rawSave(); UI.syncPing = null; UI.syncMsg = 'Disconnected.'; render(); }
   } catch (err) { UI.syncMsg = 'Not done: ' + esc(String(err && err.message || err)) + '.'; render(); }
