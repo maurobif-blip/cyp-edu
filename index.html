@@ -419,6 +419,7 @@ body.fbmode .main *:hover,body.fbmode nav *:hover{outline:2px solid #B3261E;outl
 @media print{#fbbtn,#fbbar,#fbbox{display:none}}
 .sub:empty,.lead:empty{display:none}
 .qrow.enr{grid-template-columns:1fr}.qrow.enr .qmain{min-height:52px;padding-bottom:0}.qrow.enr .qopts .btn{flex:0 1 auto;min-height:40px}
+.attctl{margin:0 0 10px}.secf{grid-column:1/-1}.secf .qchips{margin-top:4px}
 
 </style>
 </head>
@@ -432,7 +433,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 3.1';
+const VERSION = 'alpha 3.2';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi Drop-in',             color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'UCC, Minsundu children',    color: '#337EA9' },
@@ -1296,7 +1297,7 @@ function filteredChildren(q) {
   const sec = q.get('section'), st = q.get('status') || 'open', res = q.get('res'), sx = q.get('sex'), issue = q.get('issue'), who = q.get('who'), grp = q.get('grp');
   const term = (UI.q || '').trim().toLowerCase();
   return S.children.filter(c => {
-    if (sec && c.section !== sec && !(sec === 'Minsundu' && SECTIONS[c.section].centre === 'Minsundu')) return false;
+    if (sec && !secList(sec).includes(c.section)) return false;
     if (st === 'open' && c.status === 'Closed') return false;
     if (st === 'current' && !isCurrent(c)) return false;
     if (STATUSES.includes(st) && c.status !== st) return false;
@@ -1311,8 +1312,8 @@ function filteredChildren(q) {
 }
 function childRows(list) {
   if (!list.length) return '<p class="empty">No child matches.</p>';
-  return `<div class="tw"><table><thead><tr><th class="mh">ID</th><th>Name</th><th class="mh">Sex</th><th class="n mh">Age</th><th>Section</th><th class="mh">Residence</th><th>Status</th><th class="mh">Compound</th><th class="mh">Last home visit</th></tr></thead><tbody>
-  ${list.map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td><b>${esc(fullName(c))}</b>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}${c.compound ? ' · ' + esc(c.compound) : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}${alsoAt(c) ? `<div class="sub">by day also at ${esc(alsoAt(c))}</div>` : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${esc(c.compound || c.familyAddress || '')}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td></tr>`; }).join('')}
+  return `<div class="tw"><table><thead><tr><th class="mh">ID</th><th>Name</th><th class="mh">Sex</th><th class="n mh">Age</th><th class="mh">Education</th><th>Phase</th><th class="mh">Resident or not</th><th>Status</th><th class="mh">Last home visit</th></tr></thead><tbody>
+  ${list.map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td><b>${esc(fullName(c))}</b>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td><span class="sub">${SECTIONS[c.section] ? SECTIONS[c.section].phase + ' ·' : ''}</span> ${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
 function vChildren(r) {
@@ -1321,7 +1322,7 @@ function vChildren(r) {
   return `<div class="top"><div><h1>Children</h1><p class="lead">${childrenLead(list)}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${q.get('grp') === 'ABA' ? `<button class="btn" data-mact="abasheet" data-y="${today().slice(0, 4)}">Export in Excel: scheda ABA ${today().slice(0, 4)} (italiano)</button>` : ''}<a class="btn" href="#/paths${SECTION_KEYS.includes(q.get('section')) ? '?ps=' + esc(q.get('section')) : q.get('section') === 'Minsundu' ? '?ps=UCC' : ''}">Admissions, transfers and discharges</a><button class="btn" data-act="exportlist">Export in Excel</button><a class="btn pri" href="#/child/new">Add a child</a></div></div>
   <div class="card filters fold${UI.fopen ? ' open' : ''}">
     <label class="f">Search<input class="in" id="search" placeholder="Name, nickname, ID or compound" value="${esc(UI.q)}"></label>${filtBtn()}
-    ${sel('section', opt(SECTION_KEYS.map(k => ({ v: k, l: SECTIONS[k].label })).concat([{ v: 'Minsundu', l: 'Minsundu: UCC and Youth together' }]), q.get('section'), 'All sections'), '', 'Section')}
+    ${secChips(q.get('section'))}
     ${sel('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All, including closed' }]), q.get('status') || 'open'), '', 'Status')}
     ${sel('res', opt(['Resident', 'Non-resident'], q.get('res'), 'All'), '', 'Residence')}
     ${sel('sex', opt([{ v: 'M', l: 'Boys' }, { v: 'F', l: 'Girls' }], q.get('sex'), 'All'), '', 'Sex')}
@@ -1334,6 +1335,8 @@ function vChildren(r) {
   <div class="card" style="padding:6px 8px" id="childTable">${childRows(list)}</div>`;
 }
 
+function secList(v) { const out = []; for (const k of String(v || '').split(',')) { if (k === 'Minsundu') out.push('UCC', 'Youth'); else if (SECTIONS[k]) out.push(k); } return out; }
+function secChips(v) { const on = secList(v); return `<div class="f secf"><span>Phase: tap one or more</span><div class="qchips">${SECTION_KEYS.map(k => { const next = on.includes(k) ? on.filter(x => x !== k) : on.concat([k]); return `<a href="#" data-q="section=${next.join(',')}" class="${on.includes(k) ? 'on' : ''}" aria-pressed="${on.includes(k)}">${SECTIONS[k].phase} · ${esc(SECTIONS[k].label)}</a>`; }).join('')}</div></div>`; }
 function field(label, name, val, type, extra) {
   extra = extra || {};
   const req = extra.req ? ' <span class="req">*</span>' : '';
@@ -1366,7 +1369,7 @@ function vChildForm(c) {
       ${field('Back on the street after a service', 'backStreet', '', 'select', { options: opt(BACK_OPTS.map(([k, l]) => ({ v: k, l })), c.backStreet, 'No / not known'), hint: '' })}${field('Found on the street again on', 'backStreetDate', c.backStreetDate, 'date')}
     </fieldset></div>
     <div><p class="sec">In the programme</p><fieldset class="fs">
-      ${field('Section', 'section', '', 'select', { req: true, options: opt(SECTION_KEYS.map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label })), c.section), hint: '' })}
+      ${field('Phase', 'section', '', 'select', { req: true, options: opt(SECTION_KEYS.map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label })), c.section), hint: '' })}
       ${field('Where the child sleeps', 'residence', '', 'select', { options: opt([{ v: 'Resident', l: 'Resident: sleeps at Minsundu Centre' }, { v: 'Non-resident', l: 'Non-resident: sleeps at home' }], c.residence) })}
       ${field('Date of entry', 'entryDate', c.entryDate, 'date', { req: isNew })}${isNew ? '' : field('Year of entry, if the date is not known', 'entryYear', c.entryYear, 'text', { attrs: ' inputmode="numeric" pattern="[0-9]{4}" maxlength="4"' })}
       ${field('Came from (referred by)', 'referredBy', c.referredBy, 'text', { hint: 'Luigi, Minsundu, community school recruitment, stakeholder, Social Welfare...', attrs: ' list="srclist"' })}<datalist id="srclist">${NKZ_SOURCES.concat(['District Social Welfare Office']).map(x => `<option value="${esc(x)}">`).join('')}</datalist>
@@ -1381,7 +1384,7 @@ function vChildForm(c) {
     </fieldset></div>
     ${isNew ? '<details class="more"><summary>More details: school, health, notes. They can be added later.</summary><div style="display:flex;flex-direction:column;gap:18px;margin-top:14px">' : ''}
     <div><p class="sec">School</p><fieldset class="fs">
-      ${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('School name', 'schoolName', c.schoolName)}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
+      ${field('Education: by day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('School name', 'schoolName', c.schoolName)}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
       ${field('Skill or trade', 'skill', c.skill)}${field('Education at entry', 'educationAtEntry', c.educationAtEntry, 'textarea', { wide: true, rows: 2 })}
     </fieldset></div>
     <div><p class="sec">Health and notes</p><fieldset class="fs">
@@ -1470,7 +1473,7 @@ function vStatus(c) {
     ${c.section === 'Luigi' || c.streetCat ? `<form class="card" data-form="street"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Street situation</h2><p class="sub">Now: <b>${esc(c.streetCat ? STREET_CATS[c.streetCat] : 'not on the street, or not known')}</b></p>
       <div class="fs two">${field('Situation now', 'cat', '', 'select', { options: opt([{ v: 'A', l: STREET_CATS.A }, { v: 'B', l: STREET_CATS.B }, { v: 'none', l: 'Not on the street any more' }], c.streetCat || 'none') })}${field('Date', 'date', today(), 'date', { req: true })}</div><button class="btn" style="margin-top:12px">Save</button></form>` : ''}
     <form class="card" data-form="move"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Move to another section</h2><p class="sub"></p>
-      <div class="fs two">${field('New section', 'to', '', 'select', { options: opt(SECTION_KEYS.filter(k => k !== c.section).map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label }))) })}${field('Date', 'date', today(), 'date', { req: true })}${field('Where the child sleeps', 'residence', '', 'select', { options: opt([{ v: 'Resident', l: 'Resident: sleeps at Minsundu Centre' }, { v: 'Non-resident', l: 'Non-resident: sleeps at home' }], c.residence) })}${field('By day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('Note', 'note', '')}</div><button class="btn pri" style="margin-top:12px">Move</button></form>
+      <div class="fs two">${field('New section', 'to', '', 'select', { options: opt(SECTION_KEYS.filter(k => k !== c.section).map(k => ({ v: k, l: 'Phase ' + SECTIONS[k].phase + ' · ' + SECTIONS[k].label }))) })}${field('Date', 'date', today(), 'date', { req: true })}${field('Where the child sleeps', 'residence', '', 'select', { options: opt([{ v: 'Resident', l: 'Resident: sleeps at Minsundu Centre' }, { v: 'Non-resident', l: 'Non-resident: sleeps at home' }], c.residence) })}${field('Education: by day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('Note', 'note', '')}</div><button class="btn pri" style="margin-top:12px">Move</button></form>
     <form class="card" data-form="activity"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Active or semi-active</h2><p class="sub"></p>
       <div class="fs two">${field('Status', 'status', '', 'select', { options: opt(['Active', 'Semi-active'], c.status === 'Semi-active' ? 'Semi-active' : 'Active') })}${field('Date', 'date', today(), 'date')}</div><button class="btn" style="margin-top:12px">Save</button></form>
     ${c.status !== 'Follow-up' ? `<form class="card" data-form="reintegrate"><input type="hidden" name="id" value="${esc(c.id)}"><h2>Reintegrated with the family</h2><p class="sub"></p>
@@ -1579,15 +1582,17 @@ function vAttendance(r) {
   const only = q.get('only') || '';
   const tile = (k, n, l) => `<a href="#" class="tile" data-q="only=${only === k ? '' : k}" style="${only === k ? 'border-color:var(--ink)' : ''}"><b>${n}</b><span>${l}</span><span class="sub">${sx(k)}</span></a>`;
   return `<div class="top"><div><h1>Attendance · ${centre} · ${grp === 'All' ? 'everyone' : grp === 'Resident' ? 'residents' : 'non-residents'}</h1><p class="lead">${esc(new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}</p></div>
+  </div>
+  ${quick ? '' : `<div class="grid g4">
+    ${tile('P', cnt('P'), 'Present')}${grp === 'Resident' ? tile('H', cnt('H'), 'Home leave') : ''}${tile('A', cnt('A'), 'Absent')}${tile('S', cnt('S') + cnt('E'), grp === 'Resident' ? 'Sick' : 'Sick or with permission')}${tile('unmarked', notDone, 'Not marked yet')}
+  </div>`}
+  <div class="attctl">
     ${quick ? `<details class="qctl"${window.matchMedia && window.matchMedia('(max-width:760px)').matches ? '' : ' open'}><summary>Change centre, group, day or view</summary>` : ''}<div style="display:flex;gap:8px;flex-wrap:wrap">${centreSeg(centre)}<div class="seg" role="group" aria-label="Residents or non-residents">${[['All', 'Everyone'], ['Resident', 'Residents'], ['Non-resident', 'Non-residents']].map(([k, l]) => `<a href="#" data-q="g=${k}" class="${grp === k ? 'on' : ''}">${l} · ${S.children.filter(c => isCurrent(c) && attIn(c, centre, k)).length}</a>`).join('')}</div>
     <div class="seg dayseg"><a href="#" data-q="d=${addDays(d, -1)}" aria-label="Previous day">‹</a><a href="#" data-q="d=${today()}" class="${d === today() ? 'on' : ''}">Today</a><a href="#" data-q="d=${addDays(d, 1)}" aria-label="Next day">›</a></div>
     <input class="in" type="date" value="${d}" data-filter="d" style="width:auto">
     <div class="seg" role="group" aria-label="How to mark"><a href="#" data-q="av=quick" class="${quick ? 'on' : ''}">Quick marking</a><a href="#" data-q="av=day" class="${mode === 'day' ? 'on' : ''}">Full list</a><a href="#" data-q="av=month" class="${month ? 'on' : ''}">Month register</a></div></div>${quick ? '</details>' : ''}</div>
   ${quick ? attQuick(q, centre, grp, d) + attWho(centre) + attCheckTop(centre, grp, d) : `${attWho(centre)}
   ${attCheckTop(centre, grp, d)}
-  <div class="grid g4">
-    ${tile('P', cnt('P'), 'Present')}${grp === 'Resident' ? tile('H', cnt('H'), 'Home leave') : ''}${tile('A', cnt('A'), 'Absent')}${tile('S', cnt('S') + cnt('E'), grp === 'Resident' ? 'Sick' : 'Sick or with permission')}${tile('unmarked', notDone, 'Not marked yet')}
-  </div>
   <div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:2fr 1fr 1fr${centre === 'Nkwazi' ? ' 1fr' : ''}">
     <label class="f">Find a name<input class="in" id="attsearch" placeholder="Name, nickname or ID" value="${esc(UI.attq || '')}"></label>${filtBtn()}
     ${centre === 'Nkwazi' ? nkzFilters(q) : `<label class="f">Section<select class="in" data-filter="sec">${opt([{ v: 'UCC', l: 'UCC, Minsundu children' }, { v: 'Youth', l: 'Minsundu Youth Centre' }], q.get('sec'), 'Both sections')}</select></label>`}
@@ -2410,7 +2415,7 @@ function luigiDayList(d, k) {
 }
 function vLuigiAtt(r) {
   const q = r.q, m = q.get('lm') || thisMonth(), tab = q.get('lt') || 'today', night = tab === 'night', d = q.get('ld') || today();
-  const tabs = `<div class="seg">${[['today', 'One day', 'One day'], ['day', 'Month sheet: day', 'Month: day'], ['night', 'Month sheet: night', 'Month: night'], ['sum', 'Whole year', 'Year']].map(([k, l, s]) => `<a href="#" data-q="lt=${k}" class="${tab === k ? 'on' : ''}"><span class="dlong">${l}</span><span class="dshort">${s}</span></a>`).join('')}</div>`;
+  const tabs = `<div class="seg">${[['today', 'Daily attendance', 'Daily'], ['day', 'Day outreach monthly view', 'Day: month'], ['night', 'Night outreach monthly view', 'Night: month'], ['sum', 'Whole year', 'Year']].map(([k, l, s]) => `<a href="#" data-q="lt=${k}" class="${tab === k ? 'on' : ''}"><span class="dlong">${l}</span><span class="dshort">${s}</span></a>`).join('')}</div>`;
   const search = `<label class="f">Find a name<input class="in" id="lattsearch" placeholder="Name, nickname, ID or place" value="${esc(UI.lattq || '')}"></label>`;
   const catSel = `<label class="f">Street situation<select class="in" data-filter="lcat">${opt([{ v: 'A', l: 'A · sleeps on the street' }, { v: 'B', l: 'B · street connected' }], q.get('lcat'), 'All')}</select></label>`;
   let body, filters, when;
@@ -2439,12 +2444,13 @@ function vLuigiAtt(r) {
       <div id="lattBody">${luigiGrid(m, night)}</div></div>`;
   }
   const lead = tab === 'today' ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : tab === 'sum' ? 'Year ' + m.slice(0, 4) : fmtMonth(m) + '. Same sheets as the Luigi tool.';
-  return `<div class="top"><div><h1>Attendance · Luigi</h1><p class="lead">${esc(lead)}</p></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">${centreSeg('Luigi')}${when}</div></div>
+  return `<div class="top"><div><h1>Attendance · Luigi</h1><p class="lead">${esc(lead)}</p></div></div>
+  ${tab === 'today' ? filters : ''}
+  <div class="attctl"><div style="display:flex;gap:8px;flex-wrap:wrap">${centreSeg('Luigi')}${when}</div></div>
   ${tabs}
   <section class="card soft knowncard"><h2>New face? Check first if the child is already known</h2><p class="sub hidem" style="margin:2px 0 8px">Type a name or nickname.</p>
     <input class="in" id="knownq" data-ctx="luigi" placeholder="Name or nickname" autocomplete="off"><div id="knownbox" style="margin-top:8px"></div></section>
-  ${filters}${body}`;
+  ${tab === 'today' ? '' : filters}${body}`;
 }
 
 /* ---------- is this child already known? ---------- */
@@ -2707,10 +2713,10 @@ function defReport() { const m = mainFlag(USER); return ['Family', 'School', 'Co
 function centreGuide(full) {
   const lm = planMonth();
   const G = [
-    { k: 'Luigi', title: 'Luigi Drop-in', sub: 'Phase 1 · street outreach and drop-in', color: SECTIONS.Luigi.color, links: [['Mark today: centre, street, night', '#/attendance?c=Luigi'], ['Luigi children', '#/children?section=Luigi'], ['Admissions, transfers and discharges', '#/paths?ps=Luigi'], ['Families to find, home visits to plan', '#/visits?vt=Luigi&vtab=need'], ['New face? Check if the child is known', '#/attendance?c=Luigi&go=knownq'], ['Luigi report', '#/reports?s=Luigi']] },
-    { k: 'Minsundu', title: 'Minsundu', sub: 'Phase 2 UCC children · Phase 4 Youth Centre', color: SECTIONS.UCC.color, links: [['Mark today\'s attendance: UCC and Youth', '#/attendance?c=Minsundu'], ['Minsundu children: UCC and Youth', '#/children?section=Minsundu'], ['Admissions, transfers and discharges', '#/paths?ps=UCC'], ['Visits to Minsundu children', '#/visits?vt=all&vc=Minsundu'], ['Absences to check', '#/attendance?c=Minsundu&go=attcheck'], ['Reports: UCC, Youth, Table 6.0', '#/reports?s=' + ('UCC')]] },
-    { k: 'Nkwazi', title: 'Nkwazi', sub: 'Phase 3 · community school, GRZ and private schools', color: SECTIONS.Nkwazi.color, links: [['Mark today\'s attendance', '#/attendance?c=Nkwazi'], ['Nkwazi children', '#/children?section=Nkwazi'], ['Admissions, transfers and discharges', '#/paths?ps=Nkwazi'], ['Visits to Nkwazi children', '#/visits?vt=all&vc=Nkwazi'], ['Absences to check', '#/attendance?c=Nkwazi&go=attcheck'], ['Nkwazi report', '#/reports?s=Nkwazi']] },
-    { k: 'All', title: 'Family, School, Counseling', sub: 'Sections working in all centres', color: '#73726E', links: [[mainFlag(USER) === 'Counseling' ? 'Record a counseling session' : 'Record a home or school visit', mainFlag(USER) === 'Counseling' ? '#/counseling' : '#/visit/new'], ['Who needs a visit', '#/visits?vtab=need'], ['Plan of visits of your section · ' + fmtMonth(lm), '#/visits?vtab=plan&m=' + lm], ['Counseling sessions', '#/counseling'], ['Reports: Family, School, Counseling', '#/reports?s=' + (['Family', 'School', 'Counseling'].includes(mainFlag(USER)) ? mainFlag(USER) : 'Family')]] }
+    { k: 'Luigi', title: 'Luigi Drop-in', sub: 'Phase 1 · street outreach and drop-in', color: SECTIONS.Luigi.color, links: [['Attendance', '#/attendance?c=Luigi'], ['Children', '#/children?section=Luigi'], ['Admissions and discharges', '#/paths?ps=Luigi'], ['Visits', '#/visits?vt=Luigi&vtab=need'], ['New face? Check', '#/attendance?c=Luigi&go=knownq'], ['Reports', '#/reports?s=Luigi']] },
+    { k: 'Minsundu', title: 'Minsundu', sub: 'Phase 2 UCC children · Phase 4 Youth Centre', color: SECTIONS.UCC.color, links: [['Attendance', '#/attendance?c=Minsundu'], ['Children', '#/children?section=Minsundu'], ['Admissions and discharges', '#/paths?ps=UCC'], ['Visits', '#/visits?vt=all&vc=Minsundu'], ['Absences to check', '#/attendance?c=Minsundu&go=attcheck'], ['Reports', '#/reports?s=' + ('UCC')]] },
+    { k: 'Nkwazi', title: 'Nkwazi', sub: 'Phase 3 · community school, GRZ and private schools', color: SECTIONS.Nkwazi.color, links: [['Attendance', '#/attendance?c=Nkwazi'], ['Children', '#/children?section=Nkwazi'], ['Admissions and discharges', '#/paths?ps=Nkwazi'], ['Visits', '#/visits?vt=all&vc=Nkwazi'], ['Absences to check', '#/attendance?c=Nkwazi&go=attcheck'], ['Reports', '#/reports?s=Nkwazi']] },
+    { k: 'All', title: 'Family, School, Counseling', sub: 'Sections working in all centres', color: '#73726E', links: [[mainFlag(USER) === 'Counseling' ? 'Record a counseling session' : 'Record a home or school visit', mainFlag(USER) === 'Counseling' ? '#/counseling' : '#/visit/new'], ['Visits', '#/visits?vtab=need'], ['Plan of visits · ' + fmtMonth(lm), '#/visits?vtab=plan&m=' + lm], ['Counseling', '#/counseling'], ['Reports', '#/reports?s=' + (['Family', 'School', 'Counseling'].includes(mainFlag(USER)) ? mainFlag(USER) : 'Family')]] }
   ];
   const mine = full ? [] : myBoxes();
   const box = (g, big, own) => `<div class="card guide${own ? ' mine' : ''}" style="border-top:4px solid ${g.color}">
@@ -3461,12 +3467,12 @@ function whereHtml(c) {
   const day = t ? dayLabel(t) + (c.schoolName && !/community school|Minsundu school|Literacy class|Luigi Special|Not in school/.test(t) ? ' · ' + c.schoolName : '') : c.section === 'Luigi' ? 'Luigi Drop-in' : 'Not written';
   const lists = attCentres(c).filter(k => k !== 'Luigi');
   const cell = (q, a, s) => `<div class="w3"><span>${q}</span><b>${esc(a)}</b>${s ? `<small>${s}</small>` : ''}</div>`;
-  return `<div class="where3">${cell('Section', sec.label || '', 'Phase ' + sec.phase)}${cell('Sleeps', sleepsText(c), '')}${cell('By day goes to', day, (lists.length ? 'Attendance list: ' + lists.join(' and ') : '') + (auto ? ' · to confirm' : ''))}</div>`;
+  return `<div class="where3">${cell('Phase', 'Phase ' + sec.phase + ' · ' + (sec.label || ''), '')}${cell('Sleeps', sleepsText(c), '')}${cell('Education', day, (lists.length ? 'Attendance list: ' + lists.join(' and ') : '') + (auto ? ' · to confirm' : ''))}</div>`;
 }
 function secExplain() {
   const cell = (q, t) => `<div class="w3"><span>${q}</span><b style="font-weight:500">${t}</b></div>`;
   return `<section class="card" id="sections"><h2>Three things in every file</h2>
-  <div class="where3" style="margin:10px 0 0">${cell('Section', 'The team that follows the child')}${cell('Sleeps', 'At Minsundu (resident) or at home')}${cell('By day goes to', 'The school or centre')}</div></section>`;
+  <div class="where3" style="margin:10px 0 0">${cell('Phase', 'Luigi, UCC, Nkwazi or Youth')}${cell('Sleeps', 'At Minsundu (resident) or at home')}${cell('Education', 'The school or centre of the day')}</div></section>`;
 }
 function attWho(centre) { return ''; }
 
@@ -4048,7 +4054,7 @@ function syncChip() {
   if (!syncOn()) return storageOk ? `<span id="syncchip" class="chip c-green hidem" title="Everything is saved in this browser on this ${isPhone() ? 'phone' : 'computer'}">Saved on this ${isPhone() ? 'phone' : 'computer'}</span>` : `<span id="syncchip" class="chip c-red">Not saving: open the app in Chrome</span>`;
   const p = SY.state === 'wait' || (SY.state !== 'off' && pendingCount());
   if (SY.state === 'err') return `<a id="syncchip" href="#/sync" class="chip c-red">Shared database: open "More"</a>`;
-  if (SY.state === 'off') return `<a id="syncchip" href="#/sync" class="chip c-orange hidem" title="${esc(SY.err)}">No connection: saved here, sent later</a>`;
+  if (SY.state === 'off') { const n = pendingCount(); return `<a id="syncchip" href="#/sync" class="chip c-orange" title="${esc(SY.err)}">No internet: saved on this ${isPhone() ? 'phone' : 'computer'}${n ? ' · ' + n + ' to send' : ''}</a>`; }
   return `<a id="syncchip" href="#/sync" class="chip ${p ? 'c-blue' : 'c-green'} hidem">${p ? 'Sending…' : 'Shared: up to date'}${UI.staleView ? ' · new data' : ''}</a>`;
 }
 function syncDot() { if (!syncOn()) return '<span id="syncdot"></span>'; const p = pendingCount(); return `<a id="syncdot" href="#/sync" class="sdot ${SY.state === 'off' || SY.state === 'err' ? 'off' : (SY.state === 'wait' || p) ? 'wait' : 'ok'}" aria-label="${SY.state === 'off' ? 'No connection: saved on this phone, sent later' : p ? 'Sending' : 'Up to date'}"></a>`; }
