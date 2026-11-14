@@ -442,6 +442,12 @@ body.guest .actbox button{pointer-events:none}
 .ptile:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
 @media (max-width:760px){.pgrid{grid-template-columns:repeat(3,minmax(0,1fr))}.ptile{min-height:116px}}
 
+img.cph{cursor:zoom-in}button img.cph,[data-pact] img.cph,.qrow img.cph{cursor:inherit}
+#phbox{position:fixed;inset:0;z-index:1000;background:rgba(15,15,15,.82);display:flex;align-items:center;justify-content:center;padding:16px;cursor:zoom-out}
+#phbox figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:12px;max-width:100%}
+#phbox img{width:min(86vw,420px,70vh);height:auto;max-height:70vh;object-fit:contain;border-radius:14px;background:#FFFFFF}
+#phbox figcaption{color:#FFFFFF;font-size:17px;font-weight:600;text-align:center}
+
 </style>
 </head>
 <body>
@@ -454,7 +460,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 4.0';
+const VERSION = 'alpha 4.1';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9' },
@@ -2141,8 +2147,23 @@ function photos() { if (!S.photos) S.photos = {}; return S.photos; }
 function photoOf(c) { return photos()[c.id] || ''; }
 function avatar(c, size) {
   const p = photoOf(c), s = size || 34;
-  return p ? `<img src="${p}" alt="" style="width:${s}px;height:${s}px;border-radius:50%;object-fit:cover;flex:none">` : `<span class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s / 3)}px">${esc(initials(fullName(c)))}</span>`;
+  return p ? `<img class="cph" data-name="${esc(fullName(c))}" src="${p}" alt="" style="width:${s}px;height:${s}px;border-radius:50%;object-fit:cover;flex:none">` : `<span class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s / 3)}px">${esc(initials(fullName(c)))}</span>`;
 }
+/* a tap on a child's photo shows it large; inside a button (planner, quick marking) the tap keeps doing what the button does */
+function photoBig(src, name) {
+  photoBigClose();
+  const d = document.createElement('div'); d.id = 'phbox'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-label', 'Photo of ' + name);
+  d.innerHTML = `<figure><img src="${src}" alt="Photo of ${esc(name)}"><figcaption>${esc(name)}</figcaption><button type="button" class="btn">Close</button></figure>`;
+  document.body.appendChild(d); d.querySelector('button').focus();
+}
+function photoBigClose() { const d = document.getElementById('phbox'); if (d) d.remove(); }
+document.addEventListener('click', e => {
+  if (document.getElementById('phbox')) { e.preventDefault(); e.stopPropagation(); photoBigClose(); return; }
+  const im = e.target.closest && e.target.closest('img.cph'); if (!im || im.closest('button, label, [data-pact], .qrow')) return;
+  e.preventDefault(); e.stopPropagation(); photoBig(im.src, im.dataset.name || '');
+}, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') photoBigClose(); });
+window.addEventListener('hashchange', photoBigClose);
 function childUsed(id) {
   id = String(id);
   return S.visits.some(v => String(v.childId) === id) || S.events.some(e => String(e.childId) === id) || S.moves.some(m => String(m.childId) === id) || S.sessions.some(x => (x.children || []).map(String).includes(id))
