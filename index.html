@@ -466,7 +466,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 4.3';
+const VERSION = 'alpha 4.4';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9' },
@@ -1418,7 +1418,7 @@ function vChildForm(c) {
     </fieldset></div>
     ${isNew ? '<details class="more"><summary>More details: school, health, notes. They can be added later.</summary><div style="display:flex;flex-direction:column;gap:18px;margin-top:14px">' : ''}
     <div><p class="sec">School</p><fieldset class="fs">
-      ${field('Education: by day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('School name', 'schoolName', c.schoolName)}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
+      ${field('Education: by day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('School name', 'schoolName', schoolNorm(c.schoolName), 'text', { attrs: ' list="schoolnames"', hint: 'Choose from the list if the school is there.' })}${schoolList()}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
       ${field('Skill or trade', 'skill', c.skill)}${field('Education at entry', 'educationAtEntry', c.educationAtEntry, 'textarea', { wide: true, rows: 2 })}
     </fieldset></div>
     <div><p class="sec">Health and notes</p><fieldset class="fs">
@@ -2968,7 +2968,14 @@ function abaSheet(year) {
   });
   const by = f => kids.filter(f).length;
   const sum = [['Scheda ABA (adozioni a distanza), anno ' + year], ['Preparata il', fmtDate(today())], [''], ['Bambini e ragazzi ABA', kids.length], ['Maschi', by(c => c.sex !== 'F')], ['Femmine', by(c => c.sex === 'F')], ['Minsundu', by(c => centreOf(c) === 'Minsundu')], ['Nkwazi', by(c => centreOf(c) === 'Nkwazi')], ['Luigi', by(c => centreOf(c) === 'Luigi')], ['Visite a casa nell\'anno', nh], ['Visite a scuola nell\'anno', ns], ['Senza nessuna visita registrata nell\'anno', never]];
-  downloadXlsx('scheda-ABA-' + year, [{ name: 'Riepilogo', rows: sum }, { name: 'Bambini ABA', rows: [H].concat(rows) }]);
+  const HS = ['ID', 'Nome', 'Cognome', 'Scuola', 'Classe', 'Insegnante', 'Data dell\'ultima visita a scuola', 'Compilato da', 'Rendimento', 'Materie con risultati positivi', 'Materie con risultati negativi', 'Materia opzionale scelta', 'Attività co-curricolari', 'Esami: risultati', 'Difficoltà a scuola', 'Suggerimento dell\'insegnante (rendimento)', 'Andamento degli ultimi tre anni', 'Frequenza', 'Comportamento', 'Rapporto con insegnanti', 'Rapporto con compagni', 'Suggerimento dell\'insegnante (comportamento)', 'Rispetto all\'ultima visita', 'Interventi e prossimi passi', 'Term 1', 'Term 2', 'Term 3', 'Giorni di assenza nell\'anno', 'Esito di fine anno', 'Progresso'];
+  const PI = { 'Above average': 'Sopra la media', Average: 'Nella media', 'Below average': 'Sotto la media', Regular: 'Regolare', Irregular: 'Irregolare', Absent: 'Assente', Improving: 'In miglioramento', 'The same': 'Stabile', Decreasing: 'In calo' }, it = x => PI[x] || x || '';
+  const school = kids.filter(c => isPupil(c) || (c.terms || []).some(r => r.y === Number(year)) || schoolVisits(c).some(v => inRange(v.date, a, b))).map(c => {
+    const v = schoolVisits(c).find(x => inRange(x.date, a, b)) || {}, T = t => (c.terms || []).find(r => r.y === Number(year) && r.t === t) || {}, ty = [1, 2, 3].map(T), abs = ty.map(r => Number(r.absent)).filter(n => n === n && n > 0), ye = ty.map(r => r.yearEnd).filter(Boolean).pop() || '';
+    return [c.id, c.name, c.surname, schoolOf(c), c.grade || '', v.teacher || v.classTeacher || '', v.date ? fmtDate(v.date) : '', v.by ? staffName(v.by) : '', it(v.perf) + (v.perfNote ? ': ' + v.perfNote : ''), v.strong || ty.map(r => r.strong).filter(Boolean).pop() || '', v.weak || ty.map(r => r.weak).filter(Boolean).pop() || '', v.abaOptional || '', v.cocurr || '', v.abaExam || '', v.weak || '', v.abaSugAcad || v.teacherComment || '', v.aba3y || '', it(v.schAtt), v.behaviour || '', v.intTeachers || '', v.intMates || '', v.abaSugSoc || '', it(v.trend), v.action || '',
+      it(ty[0].perf), it(ty[1].perf), it(ty[2].perf), abs.length ? abs.reduce((x, y) => x + y, 0) : '', ye, it(progressOf(c))];
+  });
+  downloadXlsx('scheda-ABA-' + year, [{ name: 'Riepilogo', rows: sum.concat([['Alunni ABA con dati di scuola', school.length]]) }, { name: 'Bambini ABA', rows: [H].concat(rows) }, { name: 'Scuola ABA', rows: [HS].concat(school) }]);
 }
 
 /* ---------- Children page: records to complete ---------- */
@@ -4009,7 +4016,7 @@ const TREND = ['Improving', 'The same', 'Decreasing'];
 const YEAR_END = ['Promoted to the next grade', 'Repeats the grade', 'Completed school', 'Stopped school', 'Results not out yet'];
 const REFER_TO = [['Family', 'Family Section'], ['School', 'School Section'], ['Counseling', 'Counselling'], ['Luigi', 'Luigi'], ['Minsundu', 'Minsundu'], ['Nkwazi', 'Nkwazi Centre']];
 const REFER_WHY = ['Not attending school', 'School performance going down', 'Behaviour', 'Problem at home', 'Health', 'Needs school support', 'Other'];
-const SCH_KEYS = ['teacher', 'teacherPhone', 'schAtt', 'perf', 'perfNote', 'cocurr', 'behaviour', 'intTeachers', 'intMates', 'teacherComment', 'weak', 'strong', 'classTeacher', 'trend'];
+const SCH_KEYS = ['teacher', 'teacherPhone', 'schAtt', 'perf', 'perfNote', 'cocurr', 'behaviour', 'intTeachers', 'intMates', 'teacherComment', 'weak', 'strong', 'classTeacher', 'trend', 'abaOptional', 'abaExam', 'abaSugAcad', 'aba3y', 'abaSugSoc'];
 function referLabel(k) { const x = REFER_TO.find(r => r[0] === k); return x ? x[1] : (k || ''); }
 
 /* ---------- terms ---------- */
@@ -4023,7 +4030,11 @@ function termLabel(x) { return 'Term ' + x.t + ' ' + x.y; }
 function schoolVisits(c) { return visitsOf(c.id).filter(v => v.purpose === 'School visit' && v.successful !== 'No').sort((a, b) => (b.date || '').localeCompare(a.date || '')); }
 function isPupil(c) { const t = dayType(c); return (isCurrent(c) || c.status === 'Follow-up') && !!t && t !== 'Not in school'; }
 function outsideSchool(c) { return ['GRZ primary', 'GRZ secondary', 'Private school', 'College / skills training', 'Luigi Special School'].includes(dayType(c)); }
-function schoolOf(c) { const s = String(c.schoolName || '').trim().replace(/\s+/g, ' '); return s ? titleCase(s) : outsideSchool(c) ? 'School name not written' : dayLabel(dayType(c)); }
+/* one spelling for each school: "Chifubu sec" and "Chifubu Sec." read as "Chifubu Secondary" */
+function schoolNorm(n) { let s = String(n || '').trim().replace(/\s+/g, ' ').replace(/\bSt\.\s*/i, 'St '); if (!s) return ''; s = s.replace(/\bsec\b\.?/i, 'Secondary').replace(/\bprim\b\.?/i, 'Primary').replace(/\bcomb\b\.?/i, 'Combined'); return s.split(' ').map(w => w === w.toLowerCase() || (w === w.toUpperCase() && w.length > 3) ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w).join(' '); }
+function schoolOf(c) { const s = schoolNorm(c.schoolName); return s || (outsideSchool(c) ? 'School name not written' : dayLabel(dayType(c))); }
+function schoolNames() { const m = {}; for (const c of S.children) { const s = schoolNorm(c.schoolName); if (s) m[s] = 1; } return Object.keys(m).sort((a, b) => a.localeCompare(b)); }
+function schoolList() { return `<datalist id="schoolnames">${schoolNames().map(n => `<option value="${esc(n)}"></option>`).join('')}</datalist>`; }
 function termsOf(c) { return (c.terms || []).slice().sort((a, b) => (b.y - a.y) || (b.t - a.t)); }
 function termAvg(r) { const v = (r.subjects || []).map(s => Number(s.e)).filter(n => n === n && n > 0); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : null; }
 /* progress of a pupil: the last two term results (level, or average mark when the marks are written); if there is only one, what the last school visit says */
@@ -4091,7 +4102,7 @@ function schoolVisitFields(c) {
       ${field('Visited by', 'by', '', 'select', { options: opt(activeStaff().map(s => ({ v: s.id, l: s.name })), USER.id) })}
       ${field('Did the visit take place?', 'successful', '', 'select', { options: opt([{ v: 'Yes', l: 'Yes' }, { v: 'No', l: 'No, nobody found' }], 'Yes') })}
       <div class="note" style="grid-column:1/-1;margin:0">Last school visit: <b>${esc(last || (c ? 'none recorded' : 'choose the child first'))}</b></div>
-      ${field('School', 'place', c ? c.schoolName || '' : '', 'text')}
+      ${field('School', 'place', c ? schoolNorm(c.schoolName) : '', 'text', { attrs: ' list="schoolnames"' })}
       ${field('Grade teacher', 'teacher', '', 'text')}
       ${field('Phone of the teacher', 'teacherPhone', '', 'tel')}
       ${field('Attendance', 'schAtt', '', 'select', { options: opt(SCH_ATT, '', 'Choose') })}
@@ -4106,7 +4117,13 @@ function schoolVisitFields(c) {
       ${field('Strengths', 'strong', '', 'text')}
       ${field('Name of class teacher', 'classTeacher', '', 'text')}
       ${field('Comparison with the last visit', 'trend', '', 'select', { options: opt(TREND, '', last ? 'Choose' : 'First visit') })}
-      ${field('Interventions and way forward', 'action', '', 'text', { wide: true, hint: 'Stays in Actions still open until done.' })}`;
+      ${c && isAba(c) ? `<p class="sec" style="grid-column:1/-1;margin:6px 0 0">ABA child: update / closing report</p>
+      ${field('Optional subject chosen', 'abaOptional', '', 'text')}
+      ${field('Exams: statement of results', 'abaExam', '', 'text', { hint: 'Improving or decreasing from last year' })}
+      ${field('Suggestion from the teacher: academic performance', 'abaSugAcad', '', 'text', { wide: true })}
+      ${field('Change in the academic performance of the last three years', 'aba3y', '', 'text', { wide: true })}
+      ${field('Suggestion from the teacher: social behaviour', 'abaSugSoc', '', 'text', { wide: true })}` : ''}
+      ${field('Interventions and way forward', 'action', '', 'text', { wide: true, hint: 'Stays in Actions still open until done.' })}${schoolList()}`;
 }
 function schoolFindings(o) {
   const p = [['Attendance', o.schAtt], ['Performance', [o.perf, o.perfNote].filter(Boolean).join(', ')], ['Behaviour', o.behaviour], ['With teachers', o.intTeachers], ['With schoolmates', o.intMates], ['Co-curriculum', o.cocurr], ["Teacher's comment", o.teacherComment], ['Weaknesses', o.weak], ['Strengths', o.strong], ['Compared with the last visit', o.trend]];
@@ -4151,16 +4168,20 @@ function schoolBox(c) {
 }
 
 /* ---------- pupils by school: who was visited this term, how they are doing ---------- */
-function schoolRows(q) {
+function schoolRows(q, all) {
   const x = termSel(q), [ta, tb] = termRange(x.y, x.t), ty = q.get('ty') || 'out', ce = q.get('sc') || '', show = q.get('show') || '';
   const refs = new Set(referOpen().map(e => String(e.childId)));
-  return S.children.filter(c => isPupil(c) && (ty === 'all' || (ty === 'out') === outsideSchool(c)) && (!ce || centreOf(c) === ce)).map(c => {
+  const base = S.children.filter(c => isPupil(c) && (ty === 'all' || (ty === 'out') === outsideSchool(c)) && (!ce || centreOf(c) === ce)).map(c => {
     const sv = schoolVisits(c), inT = sv.filter(v => inRange(v.date, ta, tb)), v = sv[0] || null, tr = (c.terms || []).find(r => r.y === x.y && r.t === x.t) || null;
     return { c, school: schoolOf(c), v, visited: inT.length > 0, tr, pr: progressOf(c), ref: refs.has(String(c.id)) };
-  }).filter(r => !show || (show === 'novisit' ? !r.visited : show === 'att' ? r.v && r.v.schAtt && r.v.schAtt !== 'Regular' : show === 'down' ? r.pr === 'Decreasing' || (r.v && r.v.perf === 'Below average') || (r.tr && r.tr.perf === 'Below average') : show === 'noterm' ? !r.tr : r.ref));
+  });
+  if (all) return base;
+  const sn = base.some(r => r.school === q.get('sn')) ? q.get('sn') : '';
+  return base.filter(r => (!sn || r.school === sn) && (!show || (show === 'novisit' ? !r.visited : show === 'att' ? r.v && r.v.schAtt && r.v.schAtt !== 'Regular' : show === 'down' ? r.pr === 'Decreasing' || (r.v && r.v.perf === 'Below average') || (r.tr && r.tr.perf === 'Below average') : show === 'noterm' ? !r.tr : r.ref)));
 }
 function vSchool(r) {
   const q = r.q, x = termSel(q), rows = schoolRows(q), n = termNow(), pm = planMonth();
+  const names = {}; for (const r of schoolRows(q, true)) names[r.school] = (names[r.school] || 0) + 1;
   const terms = []; for (let y = n.y, t = n.t, i = 0; i < 6; i++) { terms.push({ v: y + '-' + t, l: 'Term ' + t + ' ' + y }); t--; if (!t) { t = 3; y--; } }
   const by = {}; for (const r of rows) (by[r.school] = by[r.school] || []).push(r);
   const schools = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
@@ -4168,8 +4189,9 @@ function vSchool(r) {
   const cnt = k => rows.filter(r => r.pr === k).length;
   return `<div class="top"><div><h1>Pupils by school · ${esc(termLabel(x))}</h1><p class="lead">The School Section visits every school each term.</p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="#/referrals?to=School">Referrals</a><button class="btn" data-act="xl" data-k="school">Export in Excel</button></div></div>
-  <div class="card filters" style="grid-template-columns:repeat(4,minmax(0,1fr))">
+  <div class="card filters" style="grid-template-columns:repeat(5,minmax(0,1fr))">
     <label class="f">Term<select class="in" data-filter="tm">${opt(terms, x.y + '-' + x.t)}</select></label>
+    <label class="f">School<select class="in" data-filter="sn">${opt(Object.keys(names).sort((a, b) => a.localeCompare(b)).map(k => ({ v: k, l: k + ' · ' + names[k] })), names[q.get('sn')] ? q.get('sn') : '', 'Every school')}</select></label>
     <label class="f">Schools<select class="in" data-filter="ty">${opt([{ v: 'out', l: 'GRZ, private, college' }, { v: 'in', l: 'Community school, literacy class' }, { v: 'all', l: 'All schools' }], q.get('ty') || 'out')}</select></label>
     <label class="f">Centre<select class="in" data-filter="sc">${opt(CENTRES.map(k => ({ v: k, l: CENTRE_LABEL[k] })), q.get('sc') || '', 'All centres')}</select></label>
     <label class="f">Show<select class="in" data-filter="show">${opt([{ v: 'novisit', l: 'Not visited this term' }, { v: 'att', l: 'Attendance irregular or absent' }, { v: 'down', l: 'Below average or decreasing' }, { v: 'noterm', l: 'No term result yet' }, { v: 'ref', l: 'Referred, still open' }], q.get('show') || '', 'Everyone')}</select></label></div>
@@ -4181,7 +4203,7 @@ function vSchool(r) {
 const SCHOOL_COLS = [{ label: 'School', get: r => r.school }, { label: 'ID', get: r => r.c.id }, { label: 'Name', get: r => fullName(r.c) }, { label: 'Sex', get: r => r.c.sex }, { label: 'Centre', get: r => centreOf(r.c) }, { label: 'Type of school', get: r => dayLabel(dayType(r.c)) }, { label: 'Grade', get: r => r.c.grade || '' },
   { label: 'Visited this term', get: r => r.visited ? 'Yes' : 'No' }, { label: 'Last school visit', get: r => r.v ? r.v.date : '' }, { label: 'Attendance', get: r => (r.v && r.v.schAtt) || '' }, { label: 'Performance (last visit)', get: r => (r.v && r.v.perf) || '' },
   { label: 'Term result', get: r => (r.tr && r.tr.perf) || '' }, { label: 'Position in class', get: r => (r.tr && r.tr.pos) || '' }, { label: 'Days absent', get: r => r.tr && r.tr.absent != null ? r.tr.absent : '' }, { label: 'Average mark', get: r => r.tr && termAvg(r.tr) != null ? termAvg(r.tr) : '' }, { label: 'End of the year', get: r => (r.tr && r.tr.yearEnd) || '' },
-  { label: 'Progress', get: r => r.pr }, { label: 'Referred, open', get: r => r.ref ? 'Yes' : '' }];
+  { label: 'Progress', get: r => r.pr }, { label: 'Referred, open', get: r => r.ref ? 'Yes' : '' }, { label: 'ABA', get: r => isAba(r.c) ? 'Yes' : '' }];
 /* logframe SO1.2: pupils with an end-of-year result written for the year */
 function promotedIn(y) { const all = [], ok = []; for (const c of S.children) { const r = (c.terms || []).filter(x => x.y === y && x.yearEnd && x.yearEnd !== 'Results not out yet').sort((a, b) => b.t - a.t)[0]; if (!r) continue; all.push(c); if (/^Promoted|^Completed/.test(r.yearEnd)) ok.push(c); } return { all, ok }; }
 
