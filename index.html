@@ -466,7 +466,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 4.5';
+const VERSION = 'alpha 4.6';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9' },
@@ -1550,20 +1550,38 @@ function vVisitForm(r) {
     <div style="display:flex;gap:10px"><button class="btn pri">Save visit</button><a class="btn" href="${c ? '#/child/' + esc(c.id) : '#/visits'}">Cancel</a></div>
   </form>`;
 }
-function filteredVisits(q) {
-  const m = q.get('m') || thisMonth(); const { a, b } = monthCtx(m);
-  const p = q.get('p'), by = q.get('by'), ok = q.get('ok'), { team, centre } = visitSel(q);
-  return S.visits.filter(v => {
-    if (!inRange(v.date, a, b)) return false;
-    if (p && v.purpose !== p) return false;
-    if (by && v.by !== by) return false;
-    if (ok && (ok === 'No') !== (v.successful === 'No')) return false;
-    if (q.get('vg')) { const c = child(v.childId); if (!c || !inGroup(c, q.get('vg'))) return false; }
-    if (!tmatch(visitTeam(v), team)) return false;
-    if (!vcIn(child(v.childId), team, centre)) return false;
-    return true;
-  }).sort((x, y) => y.date.localeCompare(x.date));
+/* visits done: every column can be filtered and sorted; the export gives what is on the screen */
+function visitsBase(q) {
+  const m = q.get('m') || thisMonth(), per = q.get('vper') || '', y = String(m).slice(0, 4);
+  const { a, b } = per === 'year' ? { a: y + '-01-01', b: y + '-12-31' } : per === 'all' ? { a: '1990-01-01', b: '2999-12-31' } : monthCtx(m);
+  const { team, centre } = visitSel(q);
+  return S.visits.filter(v => inRange(v.date, a, b) && tmatch(visitTeam(v), team) && vcIn(child(v.childId), team, centre));
 }
+function visitSchool(v) { const c = child(v.childId); return v.purpose === 'School visit' ? (schoolNorm(v.place) || (c ? schoolOf(c) : '')) : ''; }
+const VISIT_FK = ['p', 'by', 'ok', 'vg', 'vw', 'vq', 'vf', 'va', 'vsn', 'vsa', 'vsp', 'vst'];
+function filteredVisits(q) {
+  const g = k => q.get(k) || '', term = g('vq').trim().toLowerCase(), words = g('vf').trim().toLowerCase();
+  const so = g('vso') || 'date', dir = (g('vsd') || 'desc') === 'asc' ? 1 : -1;
+  const rows = visitsBase(q).filter(v => {
+    const c = child(v.childId);
+    if (g('p') && v.purpose !== g('p')) return false;
+    if (g('by') && v.by !== g('by')) return false;
+    if (g('ok') && (g('ok') === 'No') !== (v.successful === 'No')) return false;
+    if (g('vg') && (!c || !inGroup(c, g('vg')))) return false;
+    if (g('vw') && (v.where || '') !== g('vw')) return false;
+    if (term && !(c ? [c.id, c.name, c.surname, c.nickname].join(' ') : String(v.childId)).toLowerCase().includes(term)) return false;
+    if (words && ![v.findings, v.action, v.metWith, v.place].join(' ').toLowerCase().includes(words)) return false;
+    if (g('va') && (g('va') === 'open' ? !(v.action && !v.actionDone) : g('va') === 'done' ? !(v.action && v.actionDone) : !!v.action)) return false;
+    if (g('vsn') && visitSchool(v) !== g('vsn')) return false;
+    if (g('vsa') && (v.schAtt || '') !== g('vsa')) return false;
+    if (g('vsp') && (v.perf || '') !== g('vsp')) return false;
+    if (g('vst') && (v.trend || '') !== g('vst')) return false;
+    return true;
+  });
+  const val = v => { const c = child(v.childId); return so === 'child' ? (c ? fullName(c) : '').toLowerCase() : so === 'team' ? teamLabel(visitTeam(v)) : so === 'centre' ? (c ? centreOf(c) : '') : so === 'purpose' ? v.purpose || '' : so === 'where' ? (v.where || '') + (v.place || '') : so === 'ok' ? (v.successful === 'No' ? 'No' : 'Yes') : so === 'by' ? staffName(v.by) : v.date || ''; };
+  return rows.sort((x, y) => { const va = val(x), vb = val(y); return (va < vb ? -1 : va > vb ? 1 : 0) * dir || (y.date || '').localeCompare(x.date || ''); });
+}
+const VISIT_COLS_SCHOOL = [{ label: 'School', get: v => visitSchool(v) }, { label: 'School attendance', get: v => v.schAtt || '' }, { label: 'Performance', get: v => v.perf || '' }, { label: 'Compared with the last visit', get: v => v.trend || '' }, { label: 'Grade teacher', get: v => v.teacher || '' }, { label: 'Weaknesses', get: v => v.weak || '' }, { label: 'Strengths', get: v => v.strong || '' }];
 const VISIT_COLS = [{ key: 'date', label: 'Date' }, { label: 'Visit made by (section)', get: v => teamLabel(visitTeam(v)) }, { label: 'Centre of the child', get: v => { const c = child(v.childId); return c ? centreOf(c) : ''; } }, { key: 'childId', label: 'Child ID' }, { label: 'Child', get: v => { const c = child(v.childId); return c ? fullName(c) : ''; } }, { label: 'Section', get: v => { const c = child(v.childId); return c ? (SECTIONS[c.section] || {}).label || '' : ''; } }, { label: 'Residence', get: v => { const c = child(v.childId); return c ? c.residence || '' : ''; } }, { key: 'purpose', label: 'Purpose' }, { key: 'where', label: 'Where' }, { key: 'place', label: 'Place' }, { label: 'Found', get: v => v.successful === 'No' ? 'No' : 'Yes' }, { key: 'metWith', label: 'Met with' }, { key: 'stillHome', label: 'Still at home' }, { label: 'By', get: v => staffName(v.by) }, { key: 'findings', label: 'Findings' }, { key: 'action', label: 'Action' }, { label: 'Action done', get: v => v.actionDone ? 'Yes' : '' }];
 function vVisits(r) {
   if (r.id === 'new') return vVisitForm(r);
@@ -1576,17 +1594,28 @@ function vVisits(r) {
   else if (tab === 'plan') body = planReminder() + planCard(m, team, centre);
   else if (tab === 'actions') body = actionsHtml(acts);
   else {
-    const vs = filteredVisits(q);
+    const base = visitsBase(q), vs = filteredVisits(q), any = VISIT_FK.some(k => q.get(k)), per = q.get('vper') || '', yy = String(m).slice(0, 4);
+    const hasSchool = base.some(v => v.purpose === 'School visit'), schoolCols = hasSchool && team === 'School';
     const sel = (name, options, label) => `<label class="f">${label}<select class="in" data-filter="${name}">${options}</select></label>`;
+    const txt = (name, label, ph) => `<label class="f">${label}<input class="in" data-filter="${name}" value="${esc(q.get(name) || '')}" placeholder="${ph}"></label>`;
+    const so = q.get('vso') || 'date', sd = q.get('vsd') || 'desc';
+    const th = (key, label, cls) => `<th class="${cls || ''}"><a href="#" class="sortth" data-q="vso=${key}&vsd=${so === key && sd === 'desc' ? 'asc' : 'desc'}" title="Sort by this column">${label}${so === key ? (sd === 'asc' ? ' ▲' : ' ▼') : ''}</a></th>`;
+    const names = {}; for (const v of base) { const n = visitSchool(v); if (n) names[n] = (names[n] || 0) + 1; }
     const who = (team === 'all' ? '' : ' · ' + teamLabel(team)) + (centre === 'all' ? '' : ' · children of ' + CENTRE_LABEL[centre]);
-    body = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">Visits done${esc(who)} · ${esc(fmtMonth(m))} · ${vs.length}</h2><button class="btn sm" data-act="xl" data-k="visits">Export in Excel</button></div>
+    body = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">Visits done${esc(who)} · ${esc(per === 'year' ? yy : per === 'all' ? 'all years' : fmtMonth(m))} · ${vs.length}</h2><button class="btn sm" data-act="xl" data-k="visits">Export in Excel</button></div>
   <div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:repeat(4,minmax(0,1fr))">${filtBtn()}
+    ${sel('vper', opt([{ v: 'year', l: 'Whole year ' + yy }, { v: 'all', l: 'All years' }], per, 'The month chosen above'), 'Period')}
+    ${txt('vq', 'Child', 'Name or ID')}
     ${sel('p', opt(VISIT_PURPOSES, q.get('p'), 'All purposes'), 'Purpose')}
+    ${sel('vw', opt(VISIT_WHERE, q.get('vw'), 'Anywhere'), 'Where')}
+    ${sel('ok', opt([{ v: 'Yes', l: 'Somebody found' }, { v: 'No', l: 'Nobody found' }], q.get('ok'), 'All visits'), 'Found')}
     ${sel('by', opt(S.staff.map(s => ({ v: s.id, l: s.name })), q.get('by'), 'Anyone'), 'Visited by')}
-    ${sel('ok', opt([{ v: 'Yes', l: 'Somebody found' }, { v: 'No', l: 'Nobody found' }], q.get('ok'), 'All visits'), 'Result')}
     ${sel('vg', opt([{ v: 'ABA', l: 'ABA children only' }, { v: 'ZAS', l: 'ZAS children only' }], q.get('vg'), 'All children'), 'Children')}
+    ${sel('va', opt([{ v: 'open', l: 'Action still open' }, { v: 'done', l: 'Action done' }, { v: 'none', l: 'No action written' }], q.get('va'), 'Any'), 'Follow-up action')}
+    ${txt('vf', 'Findings', 'A word')}
+    ${hasSchool ? sel('vsn', opt(Object.keys(names).sort((x, y) => x.localeCompare(y)).map(k => ({ v: k, l: k + ' · ' + names[k] })), q.get('vsn'), 'Every school'), 'School') + sel('vsa', opt(SCH_ATT, q.get('vsa'), 'Any'), 'School attendance') + sel('vsp', opt(PERF, q.get('vsp'), 'Any'), 'Performance') + sel('vst', opt(TREND, q.get('vst'), 'Any'), 'Compared with the last visit') : ''}
   </div>
-  <div class="card" style="padding:6px 8px">${vs.length ? `<div class="tw"><table class="vtab"><thead><tr><th>Date</th><th class="mh">Section</th><th class="mh">Centre</th><th>Child</th><th>Purpose</th><th class="mh">Where</th><th>Found</th><th class="mh">By</th><th class="mh">Findings</th></tr></thead><tbody>${vs.map(v => { const c = child(v.childId); return `<tr><td>${esc(fmtDate(v.date))}</td><td class="mh">${esc(teamLabel(visitTeam(v)))}</td><td class="mh">${c ? centreChip(c) : ''}</td><td>${c ? childLink(c) : esc(v.childId)}${c && isAba(c) ? ' <span class="chip c-green">ABA</span>' : ''}<div class="sub mo">${esc(teamLabel(visitTeam(v)))} · ${esc(staffName(v.by))}</div></td><td>${esc(v.purpose)}</td><td class="mh">${esc(v.where || '')}${v.place ? ' · ' + esc(v.place) : ''}</td><td>${v.successful === 'No' ? '<span class="chip c-red">No</span>' : 'Yes'}</td><td class="mh">${esc(staffName(v.by))}</td><td class="mh">${esc((v.findings || '').slice(0, 120))}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">No visits match.</p>'}</div>`;
+  <div class="card" style="padding:6px 8px"><p class="sub" style="margin:4px 4px 6px"><b>${vs.length}</b> of ${base.length} visits shown${any ? ' · <a href="#" data-q="' + VISIT_FK.map(k => k + '=').join('&') + '">clear the filters</a>' : ''} · tap a column title to sort</p>${vs.length ? `<div class="tw"><table class="vtab"><thead><tr>${th('date', 'Date')}${th('team', 'Section', 'mh')}${th('centre', 'Centre', 'mh')}${th('child', 'Child')}${th('purpose', 'Purpose')}${th('where', 'Where', 'mh')}${th('ok', 'Found')}${th('by', 'By', 'mh')}${schoolCols ? '<th class="mh">Attendance</th><th class="mh">Performance</th>' : ''}<th class="mh">Findings</th></tr></thead><tbody>${vs.map(v => { const c = child(v.childId); return `<tr><td>${esc(fmtDate(v.date))}</td><td class="mh">${esc(teamLabel(visitTeam(v)))}</td><td class="mh">${c ? centreChip(c) : ''}</td><td>${c ? childLink(c) : esc(v.childId)}${c && isAba(c) ? ' <span class="chip c-green">ABA</span>' : ''}<div class="sub mo">${esc(teamLabel(visitTeam(v)))} · ${esc(staffName(v.by))}</div></td><td>${esc(v.purpose)}</td><td class="mh">${esc(v.where || '')}${v.place ? ' · ' + esc(v.place) : ''}</td><td>${v.successful === 'No' ? '<span class="chip c-red">No</span>' : 'Yes'}</td><td class="mh">${esc(staffName(v.by))}</td>${schoolCols ? `<td class="mh">${esc(v.schAtt || '')}</td><td class="mh">${esc(v.perf || '')}${v.trend ? ' · ' + esc(v.trend) : ''}</td>` : ''}<td class="mh">${esc((v.findings || '').slice(0, 120))}${v.action ? `<div class="sub">Action${v.actionDone ? ' (done)' : ''}: ${esc(v.action.slice(0, 80))}</div>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">No visits match.</p>'}</div>`;
   }
   return `<div class="top"><div><h1>Monitoring</h1><p class="lead">Blue button: record a visit.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' || tab === 'plan' ? monthPicker(m) : ''}${team === 'School' || team === 'all' ? '<a class="btn" href="#/school">Pupils by school</a>' : ''}<a class="btn" href="#/referrals${TEAM_KEYS.includes(team) ? '?to=' + team : ''}">Referrals${referOpen(TEAM_KEYS.includes(team) ? team : '').length ? ' · ' + referOpen(TEAM_KEYS.includes(team) ? team : '').length : ''}</a><a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a></div></div>
   <div class="vtabs" id="vtabs" role="tablist">${tabs.map(([k, l, n]) => `<a href="#" role="tab" data-q="vtab=${k === 'done' ? '' : k}&all=&lall=" class="${tab === k ? 'on' : ''}">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</a>`).join('')}</div>
@@ -1865,7 +1894,7 @@ const XL = {
   monthly() { const q = route().q, m = /^\d{4}-\d{2}$/.test(q.get('m') || '') ? q.get('m') : (monthDue() || thisMonth()); downloadXlsx('monthly-reports-' + m, [{ name: m, rows: colsToRows(monthlyKids(q).map(c => ({ c, r: monthlyOf(c, m) || {} })), MONTHLY_COLS), filter: true }]); },
   school() { const q = route().q, x = termSel(q); downloadXlsx('pupils-by-school-' + x.y + '-term' + x.t, [{ name: 'Pupils', rows: colsToRows(schoolRows(q).sort((a, b) => a.school.localeCompare(b.school) || fullName(a.c).localeCompare(fullName(b.c))), SCHOOL_COLS), filter: true }]); },
   referrals() { const L = S.events.filter(e => e.type === 'Referral' && child(e.childId)); downloadXlsx('referrals', [{ name: 'Referrals', rows: colsToRows(L, [{ key: 'date', label: 'Date' }, { key: 'childId', label: 'Child ID' }, { label: 'Child', get: e => fullName(child(e.childId)) }, { label: 'From', get: e => referLabel(e.from) }, { label: 'To', get: e => referLabel(e.to) }, { key: 'reason', label: 'Why' }, { key: 'note', label: 'Note' }, { label: 'By', get: e => staffName(e.by) }, { label: 'Done on', get: e => (referClosed(e.id) || {}).date || '' }, { label: 'What was done', get: e => (referClosed(e.id) || {}).note || '' }]), filter: true }]); },
-  visits() { const q = route().q; downloadXlsx('visits-' + (q.get('m') || thisMonth()), [{ name: 'Visits', rows: colsToRows(filteredVisits(q), VISIT_COLS) }]); },
+  visits() { const q = route().q, per = q.get('vper') || '', m = q.get('m') || thisMonth(); downloadXlsx('visits-' + (per === 'year' ? String(m).slice(0, 4) : per === 'all' ? 'all-years' : m), [{ name: 'Visits', rows: colsToRows(filteredVisits(q), VISIT_COLS.concat(VISIT_COLS_SCHOOL)), filter: true }]); },
   attday() { const q = route().q, d = q.get('d') || today(), day = S.attendance[d] || {}; const L = ATT_L; downloadXlsx('attendance-' + d, [{ name: d, rows: colsToRows(attKids(q), [{ key: 'id', label: 'ID' }, { label: 'Name', get: c => fullName(c) }, { key: 'nickname', label: 'Nickname' }, { label: 'Section', get: c => SECTIONS[c.section].label }, { key: 'residence', label: 'Residence' }, { label: 'Sleeps', get: c => sleepsText(c) }, { label: d, get: c => L[day[attKey(c, q.get('c') || defCentre())]] || '' }]) }]); },
   paths() { const q = route().q, x = pathSel(q), rows = pathRows(q), PC = x.sec === 'Minsundu' ? PATH_COLS.slice(0, 4).concat(PATH_COLS_M, PATH_COLS.slice(4)) : PATH_COLS; downloadXlsx('register-' + x.sec + '-' + x.y, [{ name: 'Register', rows: [PC.map(c => c.label)].concat(rows.map((r, i) => PC.map(c => c.get(r, i)))) }]); },
   attmonth() {
