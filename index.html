@@ -466,7 +466,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 4.4';
+const VERSION = 'alpha 4.5';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9' },
@@ -1437,6 +1437,7 @@ function vChild(r) {
   if (r.sub === 'status') return vStatus(c);
   if (r.sub === 'refer') return vRefer(c);
   if (r.sub === 'term') return vTerm(c);
+  if (r.sub === 'month') return vMonthly1(c);
   const vi = visitInfo(c);
   const hist = [];
   for (const v of visitsOf(c.id)) hist.push({ d: v.date, t: `<b>${esc(v.purpose)}</b> visit${v.where ? ' · ' + esc(v.where) : ''}${v.successful === 'No' ? ' · <span class="chip c-red">nobody found</span>' : ''}${v.stillHome ? ' · still at home: ' + esc(v.stillHome) : ''} <span class="sub">by ${esc(staffName(v.by))} · ${esc(teamLabel(visitTeam(v)))}</span>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}${v.actionDone ? ' (done)' : ''}</div>` : ''}` });
@@ -1460,6 +1461,7 @@ function vChild(r) {
   ${whereHtml(c)}
   ${actBoxes(c)}
   ${schoolBox(c)}
+  ${monthlyBox(c)}
   ${c.sameAs && child(c.sameAs) ? `<div class="note">Probably the same child as <a href="#/child/${esc(c.sameAs)}">${esc(fullName(child(c.sameAs)))}, ID ${esc(c.sameAs)}</a> in ${esc(SECTIONS[child(c.sameAs).section].label)}: same name and a similar age. Check with the section before using two files.</div>` : ''}
   ${backAskHtml(c)}
   ${(c.toCheck || []).length ? `<div class="note"><b>To confirm with the Nkwazi team</b><ul style="margin:6px 0 8px 18px;padding:0">${c.toCheck.map(x => `<li>${esc(x)}</li>`).join('')}</ul><button class="btn sm" data-act="nkzchecked" data-id="${esc(c.id)}">Checked: remove this note</button></div>` : ''}
@@ -1860,6 +1862,7 @@ function vReview() {
 
 /* ---------- Excel exports of the current view ---------- */
 const XL = {
+  monthly() { const q = route().q, m = /^\d{4}-\d{2}$/.test(q.get('m') || '') ? q.get('m') : (monthDue() || thisMonth()); downloadXlsx('monthly-reports-' + m, [{ name: m, rows: colsToRows(monthlyKids(q).map(c => ({ c, r: monthlyOf(c, m) || {} })), MONTHLY_COLS), filter: true }]); },
   school() { const q = route().q, x = termSel(q); downloadXlsx('pupils-by-school-' + x.y + '-term' + x.t, [{ name: 'Pupils', rows: colsToRows(schoolRows(q).sort((a, b) => a.school.localeCompare(b.school) || fullName(a.c).localeCompare(fullName(b.c))), SCHOOL_COLS), filter: true }]); },
   referrals() { const L = S.events.filter(e => e.type === 'Referral' && child(e.childId)); downloadXlsx('referrals', [{ name: 'Referrals', rows: colsToRows(L, [{ key: 'date', label: 'Date' }, { key: 'childId', label: 'Child ID' }, { label: 'Child', get: e => fullName(child(e.childId)) }, { label: 'From', get: e => referLabel(e.from) }, { label: 'To', get: e => referLabel(e.to) }, { key: 'reason', label: 'Why' }, { key: 'note', label: 'Note' }, { label: 'By', get: e => staffName(e.by) }, { label: 'Done on', get: e => (referClosed(e.id) || {}).date || '' }, { label: 'What was done', get: e => (referClosed(e.id) || {}).note || '' }]), filter: true }]); },
   visits() { const q = route().q; downloadXlsx('visits-' + (q.get('m') || thisMonth()), [{ name: 'Visits', rows: colsToRows(filteredVisits(q), VISIT_COLS) }]); },
@@ -1923,6 +1926,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'logframe': body = vLogframe(r); break;
       case 'school': body = vSchool(r); active = 'visits'; break;
       case 'referrals': body = vReferrals(r); active = 'visits'; break;
+      case 'monthly': body = vMonthly(r); active = 'children'; break;
       case 'review': body = vReview(); active = 'pending'; break;
       case 'paths': body = vPaths(r); active = 'children'; break;
       default: body = vHome(r); active = 'home';
@@ -2825,7 +2829,7 @@ function centreGuide(full) {
   const lm = planMonth();
   const G = [
     { k: 'Luigi', title: 'Luigi Drop-in', sub: 'Street outreach and drop-in', color: SECTIONS.Luigi.color, links: [['Attendance', '#/attendance?c=Luigi'], ['Children', '#/children?section=Luigi'], ['Admissions and discharges', '#/paths?ps=Luigi'], ['Monitoring', '#/visits?vt=Luigi&vtab=need'], ['New face? Check', '#/attendance?c=Luigi&go=knownq'], ['Reports', '#/reports?s=Luigi']] },
-    { k: 'Minsundu', title: 'Minsundu', sub: 'UCC and Youth', color: SECTIONS.UCC.color, links: [['Attendance: UCC', '#/attendance?c=Minsundu&g=UCC'], ['Attendance: Youth', '#/attendance?c=Minsundu&g=Youth'], ['Attendance: non-residents', '#/attendance?c=Minsundu&g=Non-resident'], ['Attendance: literacy class', '#/attendance?c=Literacy'], ['Children', '#/children?section=Minsundu'], ['Admissions and discharges', '#/paths?ps=Minsundu'], ['Monitoring', '#/visits?vt=all&vc=Minsundu'], ['Absences to check', '#/attendance?c=Minsundu&go=attcheck'], ['Reports', '#/reports?s=' + ('UCC')]] },
+    { k: 'Minsundu', title: 'Minsundu', sub: 'UCC and Youth', color: SECTIONS.UCC.color, links: [['Attendance: UCC', '#/attendance?c=Minsundu&g=UCC'], ['Attendance: Youth', '#/attendance?c=Minsundu&g=Youth'], ['Attendance: non-residents', '#/attendance?c=Minsundu&g=Non-resident'], ['Attendance: literacy class', '#/attendance?c=Literacy'], ['Monthly reports', '#/monthly'], ['Children', '#/children?section=Minsundu'], ['Admissions and discharges', '#/paths?ps=Minsundu'], ['Monitoring', '#/visits?vt=all&vc=Minsundu'], ['Absences to check', '#/attendance?c=Minsundu&go=attcheck'], ['Reports', '#/reports?s=' + ('UCC')]] },
     { k: 'Nkwazi', title: 'Nkwazi', sub: 'Centre register and community school', color: SECTIONS.Nkwazi.color, links: [['Attendance: centre', '#/attendance?c=Nkwazi'], ['Attendance: community school', '#/attendance?c=School'], ['Children', '#/children?section=Nkwazi'], ['Admissions and discharges', '#/paths?ps=Nkwazi'], ['Monitoring', '#/visits?vt=all&vc=Nkwazi'], ['Absences to check', '#/attendance?c=Nkwazi&go=attcheck'], ['Reports', '#/reports?s=Nkwazi']] },
     { k: 'All', title: 'Family, School, Counseling', sub: 'Sections working in all centres', color: '#73726E', links: [[mainFlag(USER) === 'Counseling' ? 'Record a counseling session' : 'Record a home or school visit', mainFlag(USER) === 'Counseling' ? '#/counseling' : '#/visit/new'], ['Monitoring', '#/visits?vtab=need'], ['Plan of visits · ' + fmtMonth(lm), '#/visits?vtab=plan&m=' + lm], ['Pupils by school', '#/school'], ['Referrals', '#/referrals'], ['Counseling', '#/counseling'], ['Reports', '#/reports?s=' + (['Family', 'School', 'Counseling'].includes(mainFlag(USER)) ? mainFlag(USER) : 'Family')]] }
   ];
@@ -3078,7 +3082,7 @@ function overviewData() {
     }
     referLine(lines, 'Luigi'); cards.push({ k: 'Luigi', title: 'Luigi Drop-in', color: SECTIONS.Luigi.color, lines, empty: !kids.length ? 'No children recorded yet.' : '' }); }
   for (const centre of ['Minsundu', 'Nkwazi']) { const n = S.children.filter(c => isCurrent(c) && centreOf(c) === centre).length;
-    cards.push({ k: centre, title: centre, color: CENTRE_COLOR[centre], lines: referLine(n ? gapLines(centre) : [], centre), empty: n ? '' : 'No children recorded yet.' }); }
+    cards.push({ k: centre, title: centre, color: CENTRE_COLOR[centre], lines: referLine(monthlyLine(n ? gapLines(centre) : [], centre), centre), empty: n ? '' : 'No children recorded yet.' }); }
   // Family
   { const lines = [], d2 = P.due.length, nv = P.never.length;
     if (d2) lines.push(L(d2, 'home visits late', '#/visits?vt=Family&vtab=need'));
@@ -3200,6 +3204,7 @@ function vMore() {
     ${USER.admin || staffAreas(USER).includes('Sports') ? item('#/activities', 'Activities', 'Sports and VET training · draft') : ''}
     ${item('#/school', 'Pupils by school', 'School visits and results per term')}
     ${item('#/referrals', 'Referrals', 'Between sections')}
+    ${item('#/monthly', 'Monthly reports', 'Minsundu key child form')}
     ${USER.admin ? item('#/logframe', 'Logframe', 'Indicators · draft') : ''}
     ${USER.admin ? item('#/staff', 'Admin', 'People, areas, PIN, backup') : ''}
     ${item('#/help', 'How it works', 'And what we want to know from you')}
@@ -4226,6 +4231,77 @@ document.addEventListener('change', e => {
   const f = s.form, id = (f.querySelector('[name="childId"]') || {}).value || '';
   if ((s.value === 'School') !== !!f.querySelector('[name="schAtt"]')) location.hash = '#/visit/new?' + (id ? 'child=' + encodeURIComponent(id) + '&' : '') + 't=' + s.value;
 });
+
+/* ====================================================================
+   Minsundu Key Child Form: the monthly report of the key worker, one per child and month.
+   The app fills what it already knows (school, registers, visits, counselling); the key worker writes the rest.
+   Kept in the file of the child (c.monthly).
+   ==================================================================== */
+const PARENTAL = ['Both parents alive', 'Paternal orphan', 'Maternal orphan', 'Double orphan', 'Not known'];
+const MONTHLY_FROM = '2026-11';
+function monthlyOf(c, m) { return (c.monthly || []).find(r => r.m === m) || null; }
+function monthlyKids(q) { const g = (q && q.get('mg')) || 'Resident'; return S.children.filter(c => isCurrent(c) && centreOf(c) === 'Minsundu' && (g === 'all' || (g === 'UCC' || g === 'Youth' ? c.section === g && c.residence === 'Resident' : (g === 'Resident') === (c.residence === 'Resident')))).sort((a, b) => fullName(a).localeCompare(fullName(b))); }
+function monthDue() { const m = Number(today().slice(8)) >= 25 ? thisMonth() : addMonths(thisMonth(), -1); return m >= MONTHLY_FROM ? m : ''; }
+function canCheck() { return USER.admin || /supervisor|head/i.test(USER.role || ''); }
+/* what the app already knows about the child in the month */
+function monthFacts(c, m) {
+  const { a, b } = monthCtx(m), out = [], key = String(c.id); let p = 0, h = 0, bs = 0, ab = 0, n = 0;
+  for (const d of Object.keys(S.attendance)) { if (!inRange(d, a, b)) continue; const v = S.attendance[d][key]; if (v == null) continue; n++; if (v === 'P') p++; else if (v === 'H') h++; else if (v === 'B') bs++; else if (v === 'A') ab++; }
+  out.push(['Register of the centre', n ? `present ${p} of ${n} days marked${h ? ', home ' + h : ''}${bs ? ', boarding school ' + bs : ''}${ab ? ', absent ' + ab : ''}` : 'no marks this month']);
+  for (const k of attCentres(c).filter(x => teacherReg(x))) { const kk = attKey(c, k); let pp = 0, nn = 0; for (const d of Object.keys(S.attendance)) { if (!inRange(d, a, b)) continue; const v = S.attendance[d][kk]; if (v == null) continue; nn++; if (v === 'P') pp++; } out.push([CENTRE_LABEL[k], nn ? `present ${pp} of ${nn} days marked` : 'no marks this month']); }
+  const sv = schoolVisits(c)[0], T = termsOf(c)[0];
+  out.push(['School', schoolOf(c) + (c.grade ? ', grade ' + c.grade : '')]);
+  if (sv) out.push(['Last school visit', fmtDate(sv.date) + [sv.schAtt && 'attendance ' + sv.schAtt.toLowerCase(), sv.perf && sv.perf.toLowerCase(), sv.trend && sv.trend.toLowerCase()].filter(Boolean).map(x => ', ' + x).join('')]);
+  if (T) out.push(['Last term result', 'Term ' + T.t + ' ' + T.y + (T.perf ? ', ' + T.perf.toLowerCase() : '') + (T.pos ? ', position ' + T.pos : '')]);
+  const hv = visitsOf(c.id).filter(v => v.purpose !== 'School visit' && inRange(v.date, a, b)); if (hv.length) out.push(['Home visits this month', hv.map(v => fmtDate(v.date)).join(', ')]);
+  const ses = S.sessions.filter(s => inRange(s.date, a, b) && (s.children || []).map(String).includes(key)); if (ses.length) out.push(['Counselling this month', ses.length + (ses.length === 1 ? ' session' : ' sessions')]);
+  const ev = S.events.filter(e => String(e.childId) === key && inRange(e.date, a, b) && !/^Referral/.test(e.type)); if (ev.length) out.push(['Happened this month', ev.map(e => e.type + (e.note ? ': ' + e.note : '')).join('; ')]);
+  const rf = referOpen().filter(e => String(e.childId) === key); if (rf.length) out.push(['Referred, still open', rf.map(e => referLabel(e.to) + ': ' + e.reason).join('; ')]);
+  return out;
+}
+function schoolGuess(c) { const v = schoolVisits(c)[0], T = termsOf(c)[0]; return (T && T.perf) || (v && v.perf) || ''; }
+function vMonthly1(c) {
+  const q = route().q, m = /^\d{4}-\d{2}$/.test(q.get('m') || '') ? q.get('m') : (monthDue() || thisMonth()), old = monthlyOf(c, m) || {}, prev = monthlyOf(c, addMonths(m, -1));
+  return `<div class="top"><div><h1>Monthly report · ${esc(fullName(c))}</h1><p class="lead">Key child form · ${esc(fmtMonth(m))}</p></div><a class="btn" href="#/child/${esc(c.id)}">Back</a></div>
+  <section class="card"><h2>From the app</h2><dl class="dl">${[['Age', curAge(c) !== '' ? curAge(c) + ' years' : '']].concat(monthFacts(c, m)).filter(x => x[1]).map(x => `<dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join('')}</dl></section>
+  <form class="card" data-form="monthly" style="max-width:820px"><input type="hidden" name="id" value="${esc(c.id)}"><input type="hidden" name="m" value="${m}">
+    <div class="fs two">${field('Parental status', 'parental', '', 'select', { options: opt(PARENTAL, c.parentalStatus || '', 'Choose') })}${field('School performance', 'perf', old.perf != null ? old.perf : schoolGuess(c), 'text')}
+      ${field('General behaviour', 'behaviour', old.behaviour || '', 'textarea', { wide: true, rows: 2 })}${field('Health status', 'health', old.health || '', 'text', { wide: true })}
+      ${field('Strengths', 'strengths', old.strengths || '', 'textarea', { wide: true, rows: 2 })}${field('Weakness', 'weak', old.weak || '', 'textarea', { wide: true, rows: 2 })}
+      ${field('Areas which need to be worked on', 'areas', old.areas || '', 'textarea', { wide: true, rows: 2 })}${field('Action plan / period', 'plan', old.plan || '', 'textarea', { wide: true, rows: 2 })}
+      ${field('Note', 'note', old.note || '', 'text', { wide: true })}${field('Key worker', 'by', '', 'select', { options: opt(activeStaff().map(s => ({ v: s.id, l: s.name })), old.by || USER.id) })}${field('Date', 'on', old.on || today(), 'date', { req: true })}</div>
+    ${prev && !old.m ? `<p class="sub" style="margin:10px 0 0">Last month's action plan: ${esc(prev.plan || 'not written')}</p>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center"><button class="btn pri">Save the report</button>${old.m ? (old.checkedBy ? `<span class="chip c-green">Checked by ${esc(staffName(old.checkedBy))} · ${esc(fmtDate(old.checkedOn))}</span>` : canCheck() ? `<button type="button" class="btn" data-sact="monthcheck" data-id="${esc(c.id)}" data-m="${m}">Checked by the supervisor</button>` : '<span class="chip c-orange">Not checked by the supervisor yet</span>') : ''}</div></form>`;
+}
+function monthlyBox(c) {
+  if (centreOf(c) !== 'Minsundu' || (!isCurrent(c) && !(c.monthly || []).length)) return '';
+  const m0 = monthDue() || thisMonth(), list = (c.monthly || []).slice().sort((a, b) => b.m.localeCompare(a.m)).slice(0, 6), has = monthlyOf(c, m0);
+  return `<section class="card" id="monthlybox"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">Monthly reports · key child form</h2><a class="btn sm${has ? '' : ' pri'}" href="#/child/${esc(c.id)}/month?m=${m0}">${has ? 'Open' : 'Write'} the report of ${esc(fmtMonth(m0))}</a></div>
+    ${list.length ? list.map(r => `<div class="it"><div class="w"><b><a href="#/child/${esc(c.id)}/month?m=${r.m}">${esc(fmtMonth(r.m))}</a></b><span>${esc([r.perf && 'School: ' + r.perf, r.behaviour, r.plan && 'Plan: ' + r.plan].filter(Boolean).join(' · ').slice(0, 220))}</span><span class="sub">${esc(staffName(r.by))}${r.checkedBy ? ' · checked by ' + esc(staffName(r.checkedBy)) : ' · not checked yet'}</span></div></div>`).join('') : '<p class="empty">No monthly report yet.</p>'}</section>`;
+}
+function vMonthly(r) {
+  const q = r.q, m = /^\d{4}-\d{2}$/.test(q.get('m') || '') ? q.get('m') : (monthDue() || thisMonth()), kids = monthlyKids(q), g = q.get('mg') || 'Resident';
+  const done = kids.filter(c => monthlyOf(c, m)), chk = done.filter(c => monthlyOf(c, m).checkedBy), tile = (n, l) => `<div class="tile"><b>${n}</b><span>${l}</span></div>`;
+  return `<div class="top"><div><h1>Monthly reports · ${esc(fmtMonth(m))}</h1><p class="lead">Minsundu key child form: one for each child, every month.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(m)}<button class="btn" data-act="xl" data-k="monthly">Export in Excel</button></div></div>
+  <div class="seg" role="group" aria-label="Children" style="margin-bottom:10px">${[['Resident', 'Residents'], ['UCC', 'UCC'], ['Youth', 'Youth'], ['Non-resident', 'Non-residents'], ['all', 'Everyone']].map(([k, l]) => `<a href="#" data-q="mg=${k}" class="${g === k ? 'on' : ''}">${l}</a>`).join('')}</div>
+  <div class="grid g4">${tile(kids.length, 'Children')}${tile(done.length, 'Reports written')}${tile(kids.length - done.length, 'Still to write')}${tile(chk.length, 'Checked by the supervisor')}</div>
+  <section class="card" style="padding:6px 8px">${kids.length ? kids.map(c => { const x = monthlyOf(c, m); return `<div class="it">${avatar(c, 34)}<div class="w"><b>${childLink(c)}</b><span>${esc(c.section)} · ${esc(c.residence || '')}${x ? ' · ' + esc(staffName(x.by)) + ' · ' + esc(fmtDate(x.on)) : ''}</span></div>${x ? (x.checkedBy ? '<span class="chip c-green">Checked</span>' : '<span class="chip">Written</span>') : '<span class="chip c-orange">To write</span>'}<a class="btn sm${x ? '' : ' pri'}" href="#/child/${esc(c.id)}/month?m=${m}">${x ? 'Open' : 'Write'}</a></div>`; }).join('') : '<p class="empty">No child here.</p>'}</section>`;
+}
+const MONTHLY_COLS = [{ label: 'ID', get: x => x.c.id }, { label: 'Name', get: x => fullName(x.c) }, { label: 'UCC or Youth', get: x => x.c.section }, { label: 'Resident or not', get: x => x.c.residence || '' }, { label: 'Age', get: x => curAge(x.c) }, { label: 'Parental status', get: x => x.c.parentalStatus || '' }, { label: 'Grade', get: x => x.c.grade || '' }, { label: 'School', get: x => schoolOf(x.c) },
+  { label: 'School performance', get: x => x.r.perf || '' }, { label: 'General behaviour', get: x => x.r.behaviour || '' }, { label: 'Health status', get: x => x.r.health || '' }, { label: 'Strengths', get: x => x.r.strengths || '' }, { label: 'Weakness', get: x => x.r.weak || '' }, { label: 'Areas to work on', get: x => x.r.areas || '' }, { label: 'Action plan / period', get: x => x.r.plan || '' }, { label: 'Note', get: x => x.r.note || '' },
+  { label: 'Key worker', get: x => x.r.by ? staffName(x.r.by) : '' }, { label: 'Date', get: x => x.r.on || '' }, { label: 'Checked by', get: x => x.r.checkedBy ? staffName(x.r.checkedBy) : '' }];
+FORMS.monthly = function (o) {
+  const c = child(o.id); if (!c || !/^\d{4}-\d{2}$/.test(o.m || '')) return;
+  const old = monthlyOf(c, o.m) || {}, t = k => String(o[k] || '').trim();
+  const r = { m: o.m, perf: t('perf'), behaviour: t('behaviour'), health: t('health'), strengths: t('strengths'), weak: t('weak'), areas: t('areas'), plan: t('plan'), note: t('note'), by: o.by || USER.id, on: o.on || today() };
+  if (old.checkedBy && ['perf', 'behaviour', 'health', 'strengths', 'weak', 'areas', 'plan'].every(k => (old[k] || '') === r[k])) { r.checkedBy = old.checkedBy; r.checkedOn = old.checkedOn; }
+  c.monthly = (c.monthly || []).filter(x => x.m !== o.m).concat(r); if (o.parental) c.parentalStatus = o.parental; c.updatedAt = today(); save(); toast('Report saved'); go('#/child/' + c.id);
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-sact="monthcheck"]'); if (!b || !canCheck()) return; e.preventDefault();
+  const c = child(b.dataset.id), r = c && monthlyOf(c, b.dataset.m); if (!r) return; r.checkedBy = USER.id; r.checkedOn = today(); c.updatedAt = today(); save(); toast('Checked'); render();
+});
+function monthlyLine(lines, centre) { const m = centre === 'Minsundu' ? monthDue() : ''; if (!m) return lines; const kids = monthlyKids(null), left = kids.filter(c => !monthlyOf(c, m)).length; if (left) lines.push({ n: left, text: 'monthly reports of ' + fmtMonth(m) + ' to write (residents)', href: '#/monthly?m=' + m, lvl: 'orange' }); return lines; }
 
 /* ====================================================================
    PIN for the staff
