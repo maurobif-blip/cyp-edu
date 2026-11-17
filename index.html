@@ -398,7 +398,7 @@ table.mreg td.mB{color:#5B3F8C;font-weight:700;background:#EFE9F7}
 .qrest{display:flex;flex-direction:column;gap:8px;padding:14px 6px}
 .qrest .btn{min-height:46px;flex:1 1 40%}
 body.guest .qrow button,body.guest .qrest button,body.guest .qcount button{pointer-events:none}
-@media (max-width:760px){.qtop{top:var(--hdh,49px);margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px}}
+@media (max-width:760px){.qtop{top:var(--hdh,49px);margin-left:-12px;margin-right:-12px;padding-left:12px;padding-right:12px}}
 .qctl{margin-top:8px;width:100%}.qctl>summary{cursor:pointer;font-weight:600;font-size:13.5px;color:var(--pri2);padding:8px 0;list-style-position:inside}
 .qctl[open]>summary{margin-bottom:6px}
 table.mreg td.mc{cursor:pointer;min-width:26px;height:26px}
@@ -472,7 +472,8 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 4.8';
+const VERSION = 'alpha 4.9';
+const BUILD_DATE = '2026-11-17'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9' },
@@ -698,7 +699,7 @@ function pendingData() {
     const st = (S.reports[lastM] || {})[k] || {};
     if (!st.checked) reports.push({ key: k, month: lastM, st });
   }
-  const backupDays = S.meta.lastBackup ? daysBetween(S.meta.lastBackup, t) : null;
+  const backupDays = typeof syncOn === 'function' && syncOn() ? 0 : S.meta.lastBackup ? daysBetween(S.meta.lastBackup, t) : null; /* the shared database is copied every day on the server */
   const total = due.length + never.length + missing.length + longAbs.length + actions.length + followEnd.length + withIssues + reports.length;
   const urgent = due.length + missing.length + longAbs.length + actions.length + followEnd.length + reports.length;
   const review = S.children.filter(c => reviewSignals(c).score > 0).length;
@@ -1226,7 +1227,7 @@ function shell(active, body) {
   <nav class="nav" aria-label="Main">${nav}</nav>
   <main class="main">${body}</main>
   ${mobileNav(active, pc)}
-  <div class="foot">CYP EDU ${VERSION}. Data stays in this browser on this computer: make a backup every week (Admin page). Everyone sees the whole site; only administrators see the Admin page. <a href="#/help">How it works and what to tell us</a></div>`;
+  <div class="foot">CYP EDU ${VERSION}. ${typeof syncOn === 'function' && syncOn() ? 'Shared database: what you record is sent by itself.' : 'The records are only on this ' + (isPhone() ? 'phone' : 'computer') + '.'} <a href="#/help">How it works</a></div>`;
 }
 function demoBar() { return `<div class="demobar"><button class="btn sm pri" data-tour="start" style="margin-right:10px"><span class="dlong">Start the guided tour</span><span class="dshort">Guided tour</span></button><b>Demo version.</b> <span class="dshort">Invented children.</span><span class="dlong">All children, visits and attendance are invented. The 2026 report figures are the real ones from the section reports. Try everything: nothing here is real and nothing leaves this computer. <a href="#/help">What we want to know from you</a> · <button class="btn link" data-act="resetdemo">Start the demo again</button></span></div>`; }
 function chip(status) { return `<span class="chip ${STATUS_CHIP[status] || ''}">${esc(STATUS_LABEL[status] || status)}</span>`; }
@@ -1297,12 +1298,12 @@ function vHome(r) {
   ${homeBirthdays()}
   ${homeTodo()}
   ${syncReminder()}
-  ${(() => { const d = S.meta.lastBackup ? daysBetween(S.meta.lastBackup, today()) : null; return (d == null || d > 7) ? `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span>${d == null ? 'No safety copy of the data has been made on this computer yet.' : 'The last safety copy of the data is ' + d + ' days old.'} If this computer breaks, everything recorded since is lost.</span>${USER.admin ? '<button class="btn" data-act="backup">Save a copy now</button>' : '<span>Ask an administrator to save a copy.</span>'}</div>` : ''; })()}
+  ${(() => { if (typeof syncOn === 'function' && syncOn()) return ''; const dev = isPhone() ? 'phone' : 'computer', d = S.meta.lastBackup ? daysBetween(S.meta.lastBackup, today()) : null; return (d == null || d > 7) ? `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span>${d == null ? 'No copy of the records has been saved from this ' + dev + ' yet.' : 'The last copy of the records is ' + d + ' days old.'} If this ${dev} breaks, what was recorded since is lost.</span>${USER.admin ? '<button class="btn" data-act="backup">Save a copy now</button>' : '<span>Ask an administrator to save a copy.</span>'}</div>` : ''; })()}
   <section class="card">
-    <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px"><span class="big">${tot}</span><span style="color:var(--soft)">children and youth active in the programme today, by phase</span><span class="chip">${sexText([].concat(...perList))}</span></div>
+    <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px"><span class="big">${tot}</span><span style="color:var(--soft)">children and youth active in the programme today</span><span class="chip">${sexText([].concat(...perList))}</span></div>
     <div class="bar" style="height:16px;margin:16px 0 12px">${SECTION_KEYS.map((k, i) => `<div style="width:${pct(per[i], tot)}%;background:${SECTIONS[k].color}" title="${esc(SECTIONS[k].label)}: ${per[i]}"></div>`).join('')}</div>
     <div class="grid g6">
-      ${SECTION_KEYS.map((k, i) => `<a class="tile" href="#/children?section=${k}&status=current${filt !== 'all' ? '&res=' + (filt === 'res' ? 'Resident' : 'Non-resident') : ''}"><span class="key"><span class="sw" style="background:${SECTIONS[k].color}"></span>Phase ${SECTIONS[k].phase} · ${esc(SECTIONS[k].label)}</span><b>${per[i]}</b><span>${sexText(perList[i])}</span>${k === 'Luigi' ? '<span class="sub">met in the last 3 months</span>' : ''}</a>`).join('')}
+      ${SECTION_KEYS.map((k, i) => `<a class="tile" href="#/children?section=${k}&status=current${filt !== 'all' ? '&res=' + (filt === 'res' ? 'Resident' : 'Non-resident') : ''}"><span class="key"><span class="sw" style="background:${SECTIONS[k].color}"></span>${esc(SECTIONS[k].label)}</span><b>${per[i]}</b><span>${sexText(perList[i])}</span>${k === 'Luigi' ? '<span class="sub">met in the last 3 months</span>' : ''}</a>`).join('')}
       <a class="tile" href="#/children?status=Follow-up"><span class="key"><span class="sw" style="background:#D3D1CB"></span>Reintegrated, in 2-year follow-up</span><b>${follow}</b><span>${sexText(followList)}</span></a>
       <a class="tile" href="#/children?status=Closed"><span class="key"><span class="sw" style="background:#E9E9E7"></span>Files closed in ${esc(fmtMonth(m))}</span><b>${closed}</b></a>
     </div>
@@ -1385,7 +1386,7 @@ function field(label, name, val, type, extra) {
   let input;
   if (type === 'select') input = `<select class="in" name="${name}"${extra.req ? ' required' : ''}>${extra.options}</select>`;
   else if (type === 'textarea') input = `<textarea class="in" name="${name}" rows="${extra.rows || 3}">${esc(val)}</textarea>`;
-  else input = `<input class="in" type="${type || 'text'}" name="${name}" value="${esc(val)}"${extra.req ? ' required' : ''}${extra.attrs || ''}>`;
+  else input = `<input class="in" type="${type || 'text'}" name="${name}" value="${esc(val)}"${extra.req ? ' required' : ''}${type === 'date' && name === 'date' && !/max=/.test(extra.attrs || '') ? ' max="' + today() + '"' : ''}${extra.attrs || ''}>`;
   return `<label class="f${extra.wide ? ' wide' : ''}"><span>${esc(label)}${req}</span>${input}${extra.hint ? `<span class="sub" style="font-weight:400">${esc(extra.hint)}</span>` : ''}</label>`;
 }
 function checks(name, list, vals) { return `<div class="checks">${list.map(o => `<label><input type="checkbox" name="${name}" value="${esc(o)}"${(vals || []).includes(o) ? ' checked' : ''}>${esc(o)}</label>`).join('')}</div>`; }
@@ -1598,7 +1599,7 @@ function vVisits(r) {
   const q = r.q, m = q.get('m') || thisMonth(), { team, centre } = visitSel(q);
   const tab = ['need', 'plan', 'actions', 'check'].includes(q.get('vtab')) ? q.get('vtab') : 'done';
   const N = visitNeed(team, centre), acts = visitActions(team, centre);
-  const tabs = [['done', 'Visits done', ''], ['need', 'Who needs a visit', N.count], ['plan', 'Plan of the month', planFor(tab === 'plan' ? m : planMonth(), team, centre).length], ['actions', 'Actions still open', acts.length], ['check', 'To validate', visitsToCheck(team, centre).filter(v => visitState(v) === 'wait' && (USER.admin || v.by === USER.id || v.enteredBy === USER.id)).length]];
+  const tabs = [['done', 'Visits done', ''], ['need', 'Who needs a visit', N.count], ['plan', 'Plan of the month', planFor(tab === 'plan' ? m : planMonth(), team, centre).length], ['actions', 'Actions still open', acts.length], ['check', 'To validate', visitsToCheck(team, centre).filter(v => visitState(v) === (USER.admin ? 'wait' : 'back')).length]];
   let body;
   if (tab === 'check') body = checkHtml(team, centre);
   else if (tab === 'need') body = needHtml(r, team, centre, N);
@@ -1823,42 +1824,41 @@ function vData() {
 }
 
 function vHelp() {
-  return `<div class="top"><div><h1>How it works</h1><p class="lead">CYP EDU ${VERSION}: a first version to try with each section.</p></div></div>
+  const li = a => a.map(x => `<li>${x}</li>`).join('');
+  return `<div class="top"><div><h1>How it works</h1><p class="lead">CYP EDU ${VERSION}</p></div></div>
   ${centreGuide(true)}
   ${secExplain()}
   <div class="grid g2" style="align-items:start">
-    <section class="card"><h2>What it does</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6">
-      <li>One record per child, with the same ID across Luigi, Minsundu and Nkwazi. The children of the Minsundu tool keep their numbers (5000 and up).</li>
-      <li>Daily work: attendance at Minsundu and Nkwazi (residents and non-residents), Luigi drop-in, day outreach and night outreach as three separate sheets with the staff who did each, counseling sessions, events (family visit, bonding, sickness, sneaked out).</li>
-      <li>Visits: each section that visits (Family, School, Luigi, Counseling) plans and records its own, and every list can be read by centre. Home visits to Minsundu and Nkwazi children are made by the Family Section.</li>
-      <li>A child's path: move between sections, reintegration with the 2-year follow-up, closing and reopening the file. Nothing is deleted.</li>
-      <li>To do: one box per section with what is still open. Each line opens the page with the full list: Attendance (days not marked, children absent), Visits (who needs a visit, plan, actions), Children (records to complete), Reports.</li>
-      <li>Children: ABA (distance adoption), relatives on the street and back on the street after a service are in the child's file and in the "Group" filter. Family and School reports can be read for ABA children only, with a yearly ABA sheet in Italian.</li>
-      <li>Reports: each section's monthly table is counted from what is recorded. Copy it into the Word report, or download it for Excel.</li>
-    </ul></section>
-    <section class="card"><h2>What it does not do yet</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6">
-      <li>Data stays on this computer only. Two computers do not share data yet: that comes in the next version, with automatic sync when there is internet.</li>
-      <li>No PIN: anyone at this computer can choose a name.</li>
-      <li>No school term results, no clinic or kitchen data.</li>
-      <li>Report codes (UCC 1-16, Yth 1-12, SCH 1-12) still to be matched one by one with each section's template.</li>
-    </ul></section>
-    <section class="card"><h2>Every day</h2><ol style="margin:10px 0 0;padding-left:18px;line-height:1.6">
-      <li>Open the file in Microsoft Edge or Google Chrome, always the same browser on the same computer.</li>
-      <li>Choose your name.</li>
-      <li>On a phone the menu is at the bottom of the screen: Home, Attendance, Visits, Children, More. Lists become one child per row with large buttons.</li>
-      <li>Shared database (in More, or in Admin, Data): once a device is connected, what is recorded on it is sent by itself and what the others record arrives by itself. Without a connection the app keeps working and sends later.</li>
-      <li>Staff names ask for the staff PIN. The PIN is changed on the Admin page.</li>
-      <li>Guest (first name on the opening screen): for visitors. Children's names, photos and personal details are hidden and nothing can be changed.</li>
-      <li>Start from Home, in the box of your centre. Record what you did: a visit, the attendance, a session. To do shows what is still open in every section.</li>
-      <li>Administrators: download a backup every week (Staff, then Data).</li>
-    </ol></section>
-    <section class="card soft"${IS_DEMO ? ' style="grid-column:1/-1;border:2px solid var(--orange)"' : ''}><h2>Questions for each section</h2><ol style="margin:10px 0 0;padding-left:18px;line-height:1.6">
-      <li>Does the report table match yours? Which rows are missing or wrong?</li>
-      <li>What do you record today that you cannot record here?</li>
-      <li>What would you look at first thing in the morning?</li>
-      <li>Which computer or phone would you use, and where is there internet?</li>
-      <li>What takes longer here than on paper or in Excel?</li>
-    </ol></section>
+    <section class="card"><h2>Every day</h2><ol style="margin:10px 0 0;padding-left:18px;line-height:1.6">${li([
+      'Open the app and tap your name. Staff names ask for the staff PIN.',
+      'Start from Home, in the box of your centre or section.',
+      'Record what you did: attendance, a visit, a session, something that happened.',
+      'To do shows what is still open.',
+      'On a phone the menu is at the bottom: Home, Attendance, Monitoring, Children, More.'])}</ol></section>
+    <section class="card"><h2>Without internet</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6">${li([
+      'The app opens and saves without internet.',
+      'When internet is back, what you recorded is sent by itself and what the others recorded arrives.',
+      'Photos and documents wait on the device until they are sent.',
+      'Text half written stays on the device until you save it.'])}</ul></section>
+    <section class="card"><h2>Visits</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6">${li([
+      'Each section plans and records its own visits. Home visits to Minsundu and Nkwazi children are made by the Family Section.',
+      'The supervisor opens the report of each visit and validates it, or sends it back.',
+      'A visit sent back: open it, add what is missing, send it again.',
+      'The reports count the validated visits.',
+      'A visit recorded by mistake: open its report, Cancel this visit.'])}</ul></section>
+    <section class="card"><h2>The file of the child</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6">${li([
+      'One file per child, with the same ID at Luigi, Minsundu and Nkwazi.',
+      'In the file: path between the centres, school and term results, monthly reports, documents, referrals, history.',
+      'A file is closed and reopened, never deleted.',
+      'Guest (first name on the opening screen): names, photos and personal details are hidden and nothing can be changed.'])}</ul></section>
+    <section class="card"><h2>Reports</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6">${li([
+      'The monthly table of each section is counted from what is recorded.',
+      'Copy it into the Word report, or download it for Excel.',
+      'Not in the app yet: clinic and kitchen data.'])}</ul></section>
+    <section class="card soft"${IS_DEMO ? ' style="border:2px solid var(--orange)"' : ''}><h2>Tell us</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6">${li([
+      'Comment button, on every page: write what is wrong or missing on that page.',
+      'What do you record today that you cannot record here?',
+      'What takes longer here than on paper?'])}</ul></section>
   </div>`;
 }
 
@@ -1941,7 +1941,7 @@ const XL = {
 };
 
 /* ---------- render ---------- */
-function render() { _SI = null; UI.staleView = false; document.body.classList.toggle('guest', !!GUEST);
+function render() { _SI = null; UI.staleView = false; document.body.classList.toggle('guest', !!GUEST); dropCancelled();
   const app = $('#app');
   if (!USER) { app.innerHTML = vLogin(); return; }
   const r = route();
@@ -1973,10 +1973,11 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       default: body = vHome(r); active = 'home';
     }
   } catch (e) { console.error(e); body = `<div class="warn">Something went wrong on this page: ${esc(e.message)}</div>`; }
+  if (clockBad()) body = `<div class="warn" id="clockwarn"><b>The date of this ${isPhone() ? 'phone' : 'computer'} is wrong: ${esc(fmtDate(today()))}.</b> Set the date in the settings, then open the app again. Nothing can be saved until then.</div>` + body;
   app.innerHTML = zm(shell(active, body));
   const s = $('#search'); if (s && UI.focusSearch) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); UI.focusSearch = false; }
   if (IS_DEMO && typeof tourDraw === 'function') setTimeout(tourDraw, 0);
-  fbDraw();
+  fbDraw(); draftRestore();
 }
 
 /* ---------- actions ---------- */
@@ -2067,10 +2068,48 @@ const FORMS = {
 
 function tableToRows() { const t = $('#rtable'); if (!t) return []; return $$('tr', t).filter(tr => !tr.classList.contains('hide')).map(tr => $$('th,td', tr).filter(td => !td.classList.contains('nx')).map(td => td.innerText.replace(/\s+/g, ' ').trim())); }
 
+let _LASTSUB = { sig: '', at: 0 };
 document.addEventListener('submit', e => {
   const f = e.target; const h = FORMS[f.dataset.form]; if (!h) return;
-  e.preventDefault(); h(formObj(f), f);
+  e.preventDefault(); const o = formObj(f), free = ['pinlogin', 'synclink'].includes(f.dataset.form);
+  let sig = ''; try { sig = f.dataset.form + JSON.stringify(o); } catch (x) {}
+  if (sig && sig === _LASTSUB.sig && Date.now() - _LASTSUB.at < 2500) return;
+  if (!free && clockBad()) return toast('Set the date of this ' + (isPhone() ? 'phone' : 'computer') + ' first');
+  if (!free && typeof o.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.date) && o.date > today()) { toast('This date is in the future'); const d = f.querySelector('[name="date"]'); if (d) d.focus(); return; }
+  _LASTSUB = { sig, at: Date.now() }; draftClear(); h(o, f);
 });
+/* a wrong clock (phones go back to 2015 or 1970 when the battery was empty) would date the records wrongly */
+function clockBad() { return today() < BUILD_DATE; }
+/* text half written is kept on this device: leaving the page, a call or a closed browser does not lose it */
+const DRAFT_KEY = 'cyp-draft', DRAFT_SKIP = ['pinlogin', 'synclink', 'docadd', 'staffadd', 'staffpin'];
+function draftKey() { const r = route(); return [r.path, r.id || '', r.sub || ''].join('/'); }
+function draftClear() { lsSet(DRAFT_KEY, null); }
+function draftSave(f) {
+  if (GUEST || !f || DRAFT_SKIP.includes(f.dataset.form)) return; const vals = {}; let text = 0;
+  for (const el of f.elements) { if (!el.name || el.type === 'file' || el.type === 'password' || el.type === 'submit') continue;
+    if (el.type === 'checkbox') (vals[el.name] = vals[el.name] || { cb: [] }).cb.push([el.value, el.checked]);
+    else if (el.type === 'radio') { if (el.checked) vals[el.name] = el.value; }
+    else { vals[el.name] = el.value; if ((el.tagName === 'TEXTAREA' || el.type === 'text') && el.value.trim().length > 2) text++; } }
+  if (!text) return;
+  lsSet(DRAFT_KEY, JSON.stringify({ key: draftKey(), form: f.dataset.form, at: Date.now(), by: USER ? USER.id : '', vals }));
+}
+function draftRestore() {
+  let d = null; try { d = JSON.parse(lsGet(DRAFT_KEY) || 'null'); } catch (e) {}
+  if (!d || !USER || d.by !== USER.id || d.key !== draftKey() || Date.now() - d.at > 48 * 3600000) return;
+  const f = document.querySelector('form[data-form="' + d.form + '"]'); if (!f) return;
+  const cq = route().q.get('child'), tq = route().q.get('t'); if (cq && d.vals.childId && String(d.vals.childId) !== String(cq)) return; if (tq && d.vals.team && d.vals.team !== tq) return;
+  for (const el of f.elements) if (el.type === 'hidden' && el.name && el.name !== 'childId' && el.name in d.vals && String(d.vals[el.name]) !== el.value) return;
+  if (d.vals.childId && !cq && f.querySelector('.cpick') && child(d.vals.childId)) { const cp = f.querySelector('.cpick'); cp.innerHTML = `<span>${cp.querySelector('span') ? cp.querySelector('span').innerHTML : ''}</span>` + childPickInner(cp.dataset.name, d.vals.childId); }
+  let n = 0;
+  for (const el of f.elements) { if (!el.name || !(el.name in d.vals) || el.type === 'file' || el.type === 'hidden') continue; const v = d.vals[el.name];
+    if (el.type === 'checkbox') { const hit = v && v.cb && v.cb.find(x => x[0] === el.value); if (hit && el.checked !== hit[1]) { el.checked = hit[1]; n++; } }
+    else if (el.type === 'radio') { if (el.value === v && !el.checked) { el.checked = true; n++; } }
+    else if (el.tagName === 'SELECT') { if (el.value !== v && [...el.options].some(x => x.value === v)) { el.value = v; n++; } }
+    else if (el.value !== v) { el.value = v; n++; } }
+  if (n && UI.draftTold !== d.at) { UI.draftTold = d.at; toast('Your text is back'); }
+}
+document.addEventListener('input', e => { const f = e.target.closest && e.target.closest('form[data-form]'); if (f) draftSave(f); });
+document.addEventListener('click', e => { const a = e.target.closest && e.target.closest('form[data-form] a.btn'); if (a) draftClear(); }, true);
 document.addEventListener('click', e => {
   const sc = e.target.closest('[data-scroll]');
   if (sc) { e.preventDefault(); const el = document.getElementById(sc.dataset.scroll); if (el) el.scrollIntoView({ behavior: 'smooth' }); return; }
@@ -2153,7 +2192,7 @@ document.addEventListener('change', e => {
       let month = res.month;
       if (!month) { month = prompt('Which month is this list for? (YYYY-MM)', thisMonth()) || ''; if (!/^\d{4}-\d{2}$/.test(month)) throw new Error('month not given'); }
       const out = importLuigiList(res.kids, month);
-      $('#luigimsg').innerHTML = `<div class="ok">${esc(fmtMonth(month))}: ${res.kids.length} names in the list. ${out.created.length} children added to Luigi (phase 1); ${out.matched.length} already in the records and linked: ${out.matched.map(c => esc(fullName(c)) + ' (' + esc(c.id) + ', ' + esc(SECTIONS[c.section].label) + ')').join(', ') || 'none'}. Check that the linked ones are the same person.</div>`;
+      $('#luigimsg').innerHTML = `<div class="ok">${esc(fmtMonth(month))}: ${res.kids.length} names in the list. ${out.created.length} children added to Luigi; ${out.matched.length} already in the records and linked: ${out.matched.map(c => esc(fullName(c)) + ' (' + esc(c.id) + ', ' + esc(SECTIONS[c.section].label) + ')').join(', ') || 'none'}. Check that the linked ones are the same person.</div>`;
     }).catch(err => { $('#luigimsg').innerHTML = '<div class="warn">Could not read the file: ' + esc(err.message) + '</div>'; });
   }
   if (el.id === 'restorefile' && el.files[0]) {
@@ -3122,7 +3161,7 @@ function overviewData() {
       const a2 = acts('Luigi'); if (a2) lines.push(L(a2, 'actions from Luigi visits still open', '#/visits?vt=Luigi&vtab=actions'));
       lines.push(...planLines('Luigi'));
     }
-    referLine(lines, 'Luigi'); cards.push({ k: 'Luigi', title: 'Luigi Drop-in', color: SECTIONS.Luigi.color, lines, empty: !kids.length ? 'No children recorded yet.' : '' }); }
+    referLine(lines, 'Luigi'); backLine(lines, 'Luigi'); cards.push({ k: 'Luigi', title: 'Luigi Drop-in', color: SECTIONS.Luigi.color, lines, empty: !kids.length ? 'No children recorded yet.' : '' }); }
   for (const centre of ['Minsundu', 'Nkwazi']) { const n = S.children.filter(c => isCurrent(c) && centreOf(c) === centre).length;
     cards.push({ k: centre, title: centre, color: CENTRE_COLOR[centre], lines: referLine(monthlyLine(n ? gapLines(centre) : [], centre), centre), empty: n ? '' : 'No children recorded yet.' }); }
   // Family
@@ -3134,7 +3173,7 @@ function overviewData() {
     lines.push(...planLines('Family'));
     const t = Number((S.settings.targets[m] || {}).homeVisits) || 0, done = S.visits.filter(v => inRange(v.date, a, b) && visitTeam(v) === 'Family').length;
     lines.push(L(done + (t ? ' / ' + t : ''), `home visits done in ${fmtMonth(m)}${t ? ' (target)' : ''}`, '#/visits?vt=Family', 'info'));
-    referLine(lines, 'Family'); cards.push({ k: 'Family', title: 'Family Section', color: '#73726E', lines }); }
+    referLine(lines, 'Family'); backLine(lines, 'Family'); cards.push({ k: 'Family', title: 'Family Section', color: '#73726E', lines }); }
   // School
   { const lines = [], a2 = acts('School'); if (a2) lines.push(L(a2, 'actions from school visits still open', '#/visits?vt=School&vtab=actions'));
     if (P.issueCount.school) lines.push(L(P.issueCount.school, 'children under 18 without school information', '#/children?issue=school', 'orange'));
@@ -3142,11 +3181,11 @@ function overviewData() {
     const t = Number((S.settings.targets[m] || {}).schoolVisits) || 0, done = S.visits.filter(v => inRange(v.date, a, b) && v.purpose === 'School visit').length;
     lines.push(L(done + (t ? ' / ' + t : ''), `school visits done in ${fmtMonth(m)}${t ? ' (target)' : ''}`, '#/visits?vt=School', 'info'));
     { const tn = termNow(), [ta, tb] = termRange(tn.y, tn.t), pup = S.children.filter(c => isPupil(c) && outsideSchool(c)), left = pup.filter(c => !schoolVisits(c).some(v => inRange(v.date, ta, tb))).length; if (pup.length) lines.unshift(L(left, 'pupils not visited at school in ' + termLabel(tn), '#/school?show=novisit', left ? 'orange' : 'info')); }
-    referLine(lines, 'School'); cards.push({ k: 'School', title: 'School Section', color: '#73726E', lines }); }
+    referLine(lines, 'School'); backLine(lines, 'School'); cards.push({ k: 'School', title: 'School Section', color: '#73726E', lines }); }
   // Counseling
   { const lines = [], a2 = S.sessions.filter(s => s.action && !s.actionDone).length; if (a2) lines.push(L(a2, 'actions from sessions still open', '#/counseling?go=cactions'));
     lines.push(L(S.sessions.filter(s => inRange(s.date, a, b)).length, `sessions recorded in ${fmtMonth(m)}`, '#/counseling', 'info'));
-    referLine(lines, 'Counseling'); cards.push({ k: 'Counseling', title: 'Counseling', color: '#73726E', lines }); }
+    referLine(lines, 'Counseling'); backLine(lines, 'Counseling'); cards.push({ k: 'Counseling', title: 'Counseling', color: '#73726E', lines }); }
   // Education office
   { const lines = [];
     for (const x of P.reports) lines.push(L('', `${REPORTS[x.key].short || REPORTS[x.key].label} report of ${fmtMonth(x.month)}: ${x.st.prepared ? 'to check' : 'not prepared'}`, `#/reports?s=${x.key}&m=${x.month}`, x.st.prepared ? 'orange' : 'red'));
@@ -4261,7 +4300,7 @@ FORMS.referdone = function (o) { const e = S.events.find(x => x.id === o.id); if
 FORMS.term = function (o) {
   const c = child(o.id), y = Number(o.y), t = Number(o.t); if (!c || !y || ![1, 2, 3].includes(t)) return toast('Write the year and the term');
   const subjects = []; for (let i = 0; i < 10; i++) { const s = (o['ms' + i] || '').trim(); if (s) subjects.push({ s, t1: (o['m1' + i] || '').trim(), t2: (o['m2' + i] || '').trim(), e: (o['me' + i] || '').trim(), g: (o['mg' + i] || '').trim() }); }
-  const r = { y, t, perf: o.perf || '', pos: (o.pos || '').trim(), absent: o.absent === '' || o.absent == null ? '' : Number(o.absent), strong: (o.strong || '').trim(), weak: (o.weak || '').trim(), note: (o.note || '').trim(), yearEnd: o.yearEnd || '', subjects, by: USER.id, on: today() };
+  const r = { y, t, perf: o.perf || '', pos: (o.pos || '').trim(), absent: o.absent === '' || o.absent == null ? '' : Number(o.absent), strong: (o.strong || '').trim(), weak: (o.weak || '').trim(), note: (o.note || '').trim(), yearEnd: o.yearEnd || '', subjects, by: USER.id, on: today(), ts: Date.now() };
   c.terms = (c.terms || []).filter(x => !(x.y === y && x.t === t)).concat(r); c.updatedAt = today(); save(); toast('Term saved'); go('#/child/' + c.id);
 };
 document.addEventListener('click', e => {
@@ -4336,13 +4375,13 @@ const MONTHLY_COLS = [{ label: 'ID', get: x => x.c.id }, { label: 'Name', get: x
 FORMS.monthly = function (o) {
   const c = child(o.id); if (!c || !/^\d{4}-\d{2}$/.test(o.m || '')) return;
   const old = monthlyOf(c, o.m) || {}, t = k => String(o[k] || '').trim();
-  const r = { m: o.m, perf: t('perf'), behaviour: t('behaviour'), health: t('health'), strengths: t('strengths'), weak: t('weak'), areas: t('areas'), plan: t('plan'), note: t('note'), by: o.by || USER.id, on: o.on || today() };
+  const r = { m: o.m, perf: t('perf'), behaviour: t('behaviour'), health: t('health'), strengths: t('strengths'), weak: t('weak'), areas: t('areas'), plan: t('plan'), note: t('note'), by: o.by || USER.id, on: o.on || today(), ts: Date.now() };
   if (old.checkedBy && ['perf', 'behaviour', 'health', 'strengths', 'weak', 'areas', 'plan'].every(k => (old[k] || '') === r[k])) { r.checkedBy = old.checkedBy; r.checkedOn = old.checkedOn; }
   c.monthly = (c.monthly || []).filter(x => x.m !== o.m).concat(r); if (o.parental) c.parentalStatus = o.parental; c.updatedAt = today(); save(); toast('Report saved'); go('#/child/' + c.id);
 };
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-sact="monthcheck"]'); if (!b || !canCheck()) return; e.preventDefault();
-  const c = child(b.dataset.id), r = c && monthlyOf(c, b.dataset.m); if (!r) return; r.checkedBy = USER.id; r.checkedOn = today(); c.updatedAt = today(); save(); toast('Checked'); render();
+  const c = child(b.dataset.id), r = c && monthlyOf(c, b.dataset.m); if (!r) return; r.checkedBy = USER.id; r.checkedOn = today(); r.ts = Date.now(); c.updatedAt = today(); save(); toast('Checked'); render();
 });
 function monthlyLine(lines, centre) { const m = centre === 'Minsundu' ? monthDue() : ''; if (!m) return lines; const kids = monthlyKids(null), left = kids.filter(c => !monthlyOf(c, m)).length; if (left) lines.push({ n: left, text: 'monthly reports of ' + fmtMonth(m) + ' to write (residents)', href: '#/monthly?m=' + m, lvl: 'orange' }); return lines; }
 
@@ -4428,7 +4467,13 @@ FORMS.docadd = function (o) {
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-dact]'); if (!b) return; e.preventDefault();
   if (b.dataset.dact === 'open') return void fileOpen(b.dataset.id, b.dataset.name);
-  if (b.dataset.dact === 'del') { const c = child(b.dataset.child); if (!c || !USER.admin || !confirm('Remove this document? The file is deleted for everyone.')) return; c.docs = (c.docs || []).filter(d => d.id !== b.dataset.id); c.updatedAt = today(); save(); filesOutSet(filesOut().filter(x => x !== b.dataset.id)); fileLocalDel(b.dataset.id); if (syncOn()) syncPost({ action: 'file_del', id: b.dataset.id }).catch(() => {}); render(); }
+  if (b.dataset.dact === 'del') { const c = child(b.dataset.child); if (!c || !USER.admin || !confirm('Remove this document? The file is deleted for everyone.')) return; c.docs = (c.docs || []).filter(d => d.id !== b.dataset.id); c.docsGone = (c.docsGone || []).concat(b.dataset.id); c.updatedAt = today(); save(); filesOutSet(filesOut().filter(x => x !== b.dataset.id)); fileLocalDel(b.dataset.id); if (syncOn()) syncPost({ action: 'file_del', id: b.dataset.id }).catch(() => {}); render(); }
+  if (b.dataset.dact === 'cancelvisit') { const v = S.visits.find(x => x.id === b.dataset.id); if (!v || !visitCanCancel(v)) return;
+    const why = prompt('Cancel this visit? It leaves the lists and the reports.\nWhy is it cancelled?'); if (why == null) return; if (!why.trim()) return toast('Write why');
+    const ph = visitPhotos(v);
+    S.events.push({ id: uid('e'), childId: String(v.childId), type: 'Visit cancelled', ref: v.id, date: today(), ts: Date.now(), note: [fmtDate(v.date), teamLabel(visitTeam(v)), v.purpose, 'by ' + staffName(v.by)].filter(Boolean).join(' · ') + '. Why: ' + why.trim(), by: USER.id });
+    dropCancelled(); save(); for (const id of ph) { filesOutSet(filesOut().filter(x => x !== id)); fileLocalDel(id); if (syncOn() && navigator.onLine) syncPost({ action: 'file_del', id }).catch(() => {}); }
+    toast('Visit cancelled'); if (history.length > 1) history.back(); else go('#/visits'); return; }
   if (b.dataset.dact === 'goback') { if (history.length > 1) history.back(); else go('#/visits?vtab=check'); return; }
   if (b.dataset.dact === 'valid' || b.dataset.dact === 'back') {
     if (!USER.admin) return; const v = S.visits.find(x => x.id === b.dataset.id); if (!v) return; let note = b.dataset.note || '';
@@ -4443,18 +4488,21 @@ const VALID_FROM = '2026-11-17';
 const VISIT_EV = ['Visit validated', 'Visit sent back', 'Visit sent again'];
 function visitTrail(v) { return S.events.filter(e => e.ref === v.id && VISIT_EV.includes(e.type)).sort((x, y) => (x.ts || 0) - (y.ts || 0)); }
 function visitCheck(v) { let last = null; for (const e of S.events) if (e.ref === v.id && VISIT_EV.includes(e.type) && (!last || (e.ts || 0) >= (last.ts || 0))) last = e; return last; }
-function visitState(v) { if ((v.date || '') < VALID_FROM) return 'old'; const e = visitCheck(v); return !e || e.type === 'Visit sent again' ? 'wait' : e.type === 'Visit validated' ? 'ok' : 'back'; }
+function visitState(v) { if ((v.recordedOn || v.date || '') < VALID_FROM) return 'old'; const e = visitCheck(v); return !e || e.type === 'Visit sent again' ? 'wait' : e.type === 'Visit validated' ? 'ok' : 'back'; }
 function visitCounts(v) { const s = visitState(v); return s === 'old' || s === 'ok'; }
 function visitChip(v) { const s = visitState(v), e = visitCheck(v); return s === 'ok' ? `<span class="chip c-green">Validated by ${esc(staffName(e.by))}</span>` : s === 'back' ? `<span class="chip c-red">Sent back: ${esc(e.note || '')}</span>` : s === 'wait' ? '<span class="chip c-orange">To validate</span>' : ''; }
+/* a visit recorded by mistake is cancelled: it leaves the lists, a line stays in the history of the child */
+function visitCanCancel(v) { if (GUEST) return false; const s = visitState(v); return USER.admin || (visitMine(v) && (s === 'wait' || s === 'back')); }
+function dropCancelled() { if (typeof S !== 'object' || !S || !S.events || !S.visits) return; let gone = null; for (const e of S.events) if (e.type === 'Visit cancelled' && e.ref) (gone = gone || new Set()).add(e.ref); if (gone && S.visits.some(v => gone.has(v.id))) S.visits = S.visits.filter(v => !gone.has(v.id)); }
 function visitPhotos(v) { return [v.photo].concat(visitTrail(v).map(e => e.file)).filter(Boolean); }
-function visitMine(v) { return v.by === USER.id || v.enteredBy === USER.id; }
+function visitMine(v) { return v.by === USER.id || v.recordedBy === USER.id; }
 function visitsToCheck(team, centre) { return S.visits.filter(v => { const s = visitState(v); return (s === 'wait' || s === 'back') && tmatch(visitTeam(v), team) && vcIn(child(v.childId), team, centre) && child(v.childId); }).sort((a, b) => (a.date || '').localeCompare(b.date || '')); }
 function checkHtml(team, centre) {
-  const all = visitsToCheck(team, centre), list = USER.admin ? all : all.filter(visitMine), wait = list.filter(v => visitState(v) === 'wait');
+  const all = visitsToCheck(team, centre), back = all.filter(v => visitState(v) === 'back'), wait = all.filter(v => visitState(v) === 'wait'), list = USER.admin ? wait.concat(back) : back.concat(wait);
   const item = v => { const c = child(v.childId), st = visitState(v), ph = visitPhotos(v);
     return `<div class="chk"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)} ${visitChip(v)}<div class="sub">${esc(fmtDate(v.date))} · ${esc(teamLabel(visitTeam(v)))} · ${esc(v.purpose || '')} · ${esc(staffName(v.by))}${v.successful === 'No' ? ' · nobody found' : ''}${v.metWith ? ' · met ' + esc(v.metWith) : ''}${v.place ? ' · ' + esc(v.place) : ''}</div>${v.findings ? `<div>${esc(v.findings.slice(0, 200))}${v.findings.length > 200 ? '…' : ''}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}</div>` : ''}</div>
       <div class="chka">${ph.length ? `<button class="btn sm" data-dact="open" data-id="${esc(ph[ph.length - 1])}" data-name="Visit ${esc(fullName(c))} ${esc(v.date)}">See the photo</button>` : '<span class="chip c-orange">No photo</span>'}<a class="btn sm pri" href="#/visitrep/${esc(v.id)}">Open the report</a>${USER.admin && st === 'wait' ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button><input class="in" name="note" placeholder="What is missing" aria-label="What is missing"><button class="btn sm" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}${st === 'back' && USER.admin ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button>` : ''}</div></div>`; };
-  return `<section class="card" id="checkbox"><h2>${USER.admin ? 'Visits to validate' : 'My visits to be validated'} · ${wait.length}</h2><p class="sub" style="margin:2px 0 6px">The reports count the visits validated by the supervisor. Visits before ${esc(fmtDate(VALID_FROM))} count as they are.</p>${list.length ? list.map(item).join('') : '<p class="empty">Nothing to validate.</p>'}</section>`;
+  return `<section class="card" id="checkbox"><h2>${USER.admin ? 'Visits to validate · ' + wait.length : back.length ? 'Sent back · ' + back.length : 'Waiting for the supervisor · ' + wait.length}</h2><p class="sub" style="margin:2px 0 6px">The reports count the visits validated by the supervisor. Visits before ${esc(fmtDate(VALID_FROM))} count as they are.</p>${list.length ? list.map(item).join('') : '<p class="empty">Nothing to validate.</p>'}</section>`;
 }
 
 /* ---------- the report of one visit on a full page: what the supervisor reads before validating ---------- */
@@ -4477,7 +4525,7 @@ function fileImgs() {
 }
 function visitRows(v) {
   const school = v.purpose === 'School visit';
-  const rows = [['Date', fmtDate(v.date)], ['Section', teamLabel(visitTeam(v))], ['Visited by', staffName(v.by)], v.enteredBy && v.enteredBy !== v.by ? ['Written by', staffName(v.enteredBy)] : null, ['Purpose', v.purpose], ['Where', school ? visitSchool(v) : [v.where, v.place].filter(Boolean).join(' · ')], [school ? 'Did the visit take place?' : 'Was somebody found?', v.successful === 'No' ? 'No, nobody found' : 'Yes'], ['Met with', v.metWith], ['Still living at home', v.stillHome]];
+  const rows = [['Date', fmtDate(v.date)], ['Section', teamLabel(visitTeam(v))], ['Visited by', staffName(v.by)], v.recordedBy && v.recordedBy !== v.by ? ['Written by', staffName(v.recordedBy)] : null, ['Purpose', v.purpose], ['Where', school ? visitSchool(v) : [v.where, v.place].filter(Boolean).join(' · ')], [school ? 'Did the visit take place?' : 'Was somebody found?', v.successful === 'No' ? 'No, nobody found' : 'Yes'], ['Met with', v.metWith], ['Still living at home', v.stillHome]];
   if (school) rows.push(['Grade teacher', [v.teacher, v.teacherPhone].filter(Boolean).join(' · ')], ['Attendance', v.schAtt], ['Academic performance', [v.perf, v.perfNote].filter(Boolean).join(' · ')], ['Co-curriculum activities', v.cocurr], ['General behaviour', v.behaviour], ['Interaction with the teachers', v.intTeachers], ['Interaction with the schoolmates', v.intMates], ["Teacher's comment", v.teacherComment], ['Weaknesses and/or challenges', v.weak], ['Strengths', v.strong], ['Name of class teacher', v.classTeacher], ['Comparison with the last visit', v.trend], ['Optional subject chosen', v.abaOptional], ['Exams: statement of results', v.abaExam], ['Suggestion from the teacher: academic performance', v.abaSugAcad], ['Change in the academic performance of the last three years', v.aba3y], ['Suggestion from the teacher: social behaviour', v.abaSugSoc]);
   else rows.push(['What was found', v.findings]);
   rows.push([school ? 'Interventions and way forward' : 'Follow-up action', v.action ? v.action + (v.actionDone ? ' (done)' : '') : '']);
@@ -4495,13 +4543,15 @@ function vVisitRep(r) {
   return `<div class="top"><div><h1>Visit report</h1><p class="lead">${childLink(c)} ${centreChip(c)} ${visitChip(v)}</p></div><div><a class="btn" href="#" data-dact="goback">Back</a></div></div>
   <section class="card" id="visitrep"><dl class="dl vdl">${visitRows(v).map(([k, x]) => `<dt>${esc(k)}</dt><dd>${esc(x)}</dd>`).join('')}</dl></section>
   <section class="card"><h2>Photo</h2>${ph.length ? ph.map(id => `<div class="vphw" data-fimg="${esc(id)}" data-name="${esc(nm)}">Opening the photo…</div>`).join('') : '<p style="margin:4px 0"><span class="chip c-orange">No photo</span></p>'}</section>
-  ${st === 'old' ? '' : `<section class="card" id="visitval"><h2>Validation</h2>${trail.length ? trail.map(tl).join('') : '<p class="sub" style="margin:4px 0">Not validated yet.</p>'}${check}${again}</section>`}`;
+  ${st === 'old' ? '' : `<section class="card" id="visitval"><h2>Validation</h2>${trail.length ? trail.map(tl).join('') : '<p class="sub" style="margin:4px 0">Not validated yet.</p>'}${check}${again}</section>`}
+  ${visitCanCancel(v) ? `<p style="margin:14px 0 0"><button class="btn danger" data-dact="cancelvisit" data-id="${esc(v.id)}">Cancel this visit</button></p>` : ''}`;
 }
 FORMS.visitagain = function (o) {
   const v = S.visits.find(x => x.id === o.id); if (!v || GUEST) return; const note = String(o.note || '').trim(), ph = fileKeep('again', v.childId, 'Visit photo');
   if (!note && !ph) return toast(visitState(v) === 'back' ? 'Write what you add or choose the photo' : 'Choose the photo first');
   S.events.push({ id: uid('e'), childId: String(v.childId), type: 'Visit sent again', ref: v.id, date: today(), ts: Date.now(), note, file: ph ? ph.id : '', by: USER.id }); save(); toast(ph && !note ? 'Photo added' : 'Sent again'); render();
 };
+function backLine(lines, team) { const n = visitsToCheck(team, 'all').filter(v => visitState(v) === 'back').length; if (n) lines.unshift({ n, text: n === 1 ? 'visit sent back by the supervisor' : 'visits sent back by the supervisor', href: '#/visits?vt=' + team + '&vtab=check', lvl: 'red' }); return lines; }
 function checkLine(lines) { const n = visitsToCheck('all', 'all').filter(v => visitState(v) === 'wait').length; if (n) lines.unshift({ n, text: n === 1 ? 'visit to validate' : 'visits to validate', href: '#/visits?vt=all&vtab=check', lvl: 'red' }); return lines; }
 
 /* ====================================================================
@@ -4632,6 +4682,20 @@ function renameChild(oldId, newId) {
 }
 
 /* add what another device recorded */
+/* terms, monthly reports and documents are lists inside the file of the child: two devices that add to the same file both keep their lines */
+const KID_LISTS = [['terms', x => x.y + '|' + x.t], ['monthly', x => x.m], ['docs', x => x.id]];
+function joinKidLists(mine, ic, icNewer) {
+  const out = { docsGone: uniq((mine.docsGone || []).concat(ic.docsGone || [])) }, gone = new Set(out.docsGone);
+  for (const [k, key] of KID_LISTS) { const map = new Map();
+    for (const [list, wins] of [[mine[k] || [], !icNewer], [ic[k] || [], icNewer]]) for (const x of list) { const id = key(x), old = map.get(id); if (!old || (x.ts || 0) > (old.x.ts || 0) || ((x.ts || 0) === (old.x.ts || 0) && wins)) map.set(id, { x }); }
+    out[k] = Array.from(map.values()).map(e => e.x).filter(x => k !== 'docs' || !gone.has(x.id)); }
+  return out;
+}
+function putKidLists(c, j, ic) {
+  const sig = o => JSON.stringify([KID_LISTS.map(([k, key]) => (o[k] || []).map(x => key(x) + ':' + (x.ts || 0) + ':' + (x.checkedOn || '')).sort()), (o.docsGone || []).slice().sort()]);
+  for (const [k] of KID_LISTS) { if (j[k].length || c[k]) c[k] = j[k]; } if (j.docsGone.length) c.docsGone = j.docsGone;
+  return sig(c) !== sig(ic);
+}
 function mergeIncoming(inc, opt) {
   opt = opt || {};
   if (!inc || (inc.format !== 'cyp-edu-changes' && inc.format !== 'cicetekelo-phone-file')) throw new Error('this is not a file of changes made by this app');
@@ -4650,7 +4714,8 @@ function mergeIncoming(inc, opt) {
     if (mine && String(mine.id) !== target && opt.sync) { const other = child(target); if (other && other !== mine) moveAway(target); renameChild(mine.id, target); }
     if (mine) target = String(mine.id);
     if (target !== String(ic.id)) idMap[String(ic.id)] = target;
-    if (mine) { if ((ic.updatedTs || 0) > (mine.updatedTs || 0)) { Object.assign(mine, ic, { id: mine.id }); out.updated++; } }
+    if (mine) { const newer = (ic.updatedTs || 0) > (mine.updatedTs || 0), joined = joinKidLists(mine, ic, newer); if (newer) { Object.assign(mine, ic, { id: mine.id }); out.updated++; }
+      if (putKidLists(mine, joined, ic)) { mine.updatedTs = Date.now(); m.kids[mine.id] = mine.updatedTs; if (!newer) out.updated++; } }
     else { const nc = Object.assign({}, ic, { id: target }); S.children.push(nc); if (nc.uid) byUid[nc.uid] = nc; out.children++; }
   }
   for (const [id, src] of Object.entries(inc.photos || {})) { const t = mapId(id); if (child(t)) { photos()[t] = src; out.photos++; } }
