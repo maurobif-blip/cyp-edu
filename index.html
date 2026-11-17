@@ -481,6 +481,8 @@ td.ph{width:52px;text-align:right}
 
 .refact{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
 
+.daybar.next{background:var(--prisoft);border-color:var(--pri)}.daybar.next .dbt{color:var(--pri2)}
+
 </style>
 </head>
 <body>
@@ -493,7 +495,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.5';
+const VERSION = 'alpha 5.6';
 const BUILD_DATE = '2026-11-17'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
@@ -1270,6 +1272,12 @@ function demoBar() { return `<div class="demobar"><button class="btn sm pri" dat
 function chip(status) { return `<span class="chip ${STATUS_CHIP[status] || ''}">${esc(STATUS_LABEL[status] || status)}</span>`; }
 function secChip(s) { const d = SECTIONS[s]; return d ? `<span class="chip" style="background:${d.color}1F;color:${d.color}">${esc(d.label)}</span>` : ''; }
 function childLink(c) { return `<a href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}`; }
+/* the month of a plan, large and in the middle: green this month, blue a month to come, orange a past month */
+function monthBar(m, key) {
+  const k = key || 'm', t = thisMonth(), cls = m === t ? '' : m > t ? ' next' : ' other';
+  const lab = m === t ? 'This month' : m === addMonths(t, 1) ? 'Next month' : m === addMonths(t, -1) ? 'Last month' : m > t ? 'A month to come' : 'A past month';
+  return `<div class="daybar${cls}" role="group" aria-label="Month of the plan"><a href="#" data-q="${k}=${addMonths(m, -1)}" aria-label="Previous month">‹</a><div class="dbm"><span class="dbt">${lab}</span><b>${esc(fmtMonth(m))}</b>${m === t ? '' : `<a href="#" class="btn sm" data-q="${k}=${t}">Back to this month</a>`}</div><a href="#" data-q="${k}=${addMonths(m, 1)}" aria-label="Next month">›</a></div>`;
+}
 function monthPicker(m, key) {
   const k = key || 'm';
   return `<div class="seg" role="group" aria-label="Month"><a href="#" data-q="${k}=${addMonths(m, -1)}" aria-label="Previous month">‹</a><a href="#" class="on" data-q="${k}=${thisMonth()}">${esc(fmtMonth(m))}</a><a href="#" data-q="${k}=${addMonths(m, 1)}" aria-label="Next month">›</a></div>`;
@@ -1641,7 +1649,7 @@ function vVisits(r) {
   let body;
   if (tab === 'check') body = checkHtml(team, centre);
   else if (tab === 'need') body = referTeamBox(team, centre) + needHtml(r, team, centre, N);
-  else if (tab === 'plan') body = planReminder() + referTeamBox(team, centre) + planCard(m, team, centre);
+  else if (tab === 'plan') body = monthBar(m) + planReminder() + referTeamBox(team, centre) + planCard(m, team, centre);
   else if (tab === 'actions') body = actionsHtml(acts);
   else {
     const base = visitsBase(q), vs = filteredVisits(q), any = VISIT_FK.some(k => q.get(k)), per = q.get('vper') || '', yy = String(m).slice(0, 4);
@@ -1667,7 +1675,7 @@ function vVisits(r) {
   </div>
   <div class="card" style="padding:6px 8px"><p class="sub" style="margin:4px 4px 6px"><b>${vs.length}</b> of ${base.length} visits shown${any ? ' · <a href="#" data-q="' + VISIT_FK.map(k => k + '=').join('&') + '">clear the filters</a>' : ''} · tap a column title to sort</p>${vs.length ? `<div class="tw"><table class="vtab"><thead><tr>${th('date', 'Date')}${th('team', 'Section', 'mh')}${th('centre', 'Centre', 'mh')}${th('child', 'Child')}${th('purpose', 'Purpose')}${th('where', 'Where', 'mh')}${th('ok', 'Found')}${th('by', 'By', 'mh')}${schoolCols ? '<th class="mh">Attendance</th><th class="mh">Performance</th>' : ''}<th class="mh">Findings</th></tr></thead><tbody>${vs.map(v => { const c = child(v.childId); return `<tr><td><a href="#/visitrep/${esc(v.id)}">${esc(fmtDate(v.date))}</a></td><td class="mh">${esc(teamLabel(visitTeam(v)))}</td><td class="mh">${c ? centreChip(c) : ''}</td><td>${c ? childLink(c) : esc(v.childId)}${c && isAba(c) ? ' <span class="chip c-green">ABA</span>' : ''}<div class="sub mo">${esc(teamLabel(visitTeam(v)))} · ${esc(staffName(v.by))}</div></td><td>${esc(v.purpose)}</td><td class="mh">${esc(v.where || '')}${v.place ? ' · ' + esc(v.place) : ''}</td><td>${v.successful === 'No' ? '<span class="chip c-red">No</span>' : 'Yes'}</td><td class="mh">${esc(staffName(v.by))}</td>${schoolCols ? `<td class="mh">${esc(v.schAtt || '')}</td><td class="mh">${esc(v.perf || '')}${v.trend ? ' · ' + esc(v.trend) : ''}</td>` : ''}<td class="mh">${esc((v.findings || '').slice(0, 120))}${v.action ? `<div class="sub">Action${v.actionDone ? ' (done)' : ''}: ${esc(v.action.slice(0, 80))}</div>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">No visits match.</p>'}</div>`;
   }
-  return `<div class="top"><div><h1>Monitoring</h1><p class="lead">Blue button: record a visit.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' || tab === 'plan' ? monthPicker(m) : ''}${team === 'School' || team === 'all' ? '<a class="btn" href="#/school">Pupils by school</a>' : ''}<a class="btn" href="#/referrals${TEAM_KEYS.includes(team) ? '?to=' + team : ''}">Referrals${referOpen(TEAM_KEYS.includes(team) ? team : '').length ? ' · ' + referOpen(TEAM_KEYS.includes(team) ? team : '').length : ''}</a><a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a></div></div>
+  return `<div class="top"><div><h1>Monitoring</h1><p class="lead">Blue button: record a visit.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' ? monthPicker(m) : ''}${team === 'School' || team === 'all' ? '<a class="btn" href="#/school">Pupils by school</a>' : ''}<a class="btn" href="#/referrals${TEAM_KEYS.includes(team) ? '?to=' + team : ''}">Referrals${referOpen(TEAM_KEYS.includes(team) ? team : '').length ? ' · ' + referOpen(TEAM_KEYS.includes(team) ? team : '').length : ''}</a><a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a></div></div>
   <div class="vtabs" id="vtabs" role="tablist">${tabs.map(([k, l, n]) => `<a href="#" role="tab" data-q="vtab=${k === 'done' ? '' : k}&all=&lall=" class="${tab === k ? 'on' : ''}">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</a>`).join('')}</div>
   ${visitChooser(q, m)}
   ${body}`;
@@ -2926,7 +2934,7 @@ function planCard(m, team, centre) {
   return `<section class="card" id="plan"${centre !== 'all' ? ` style="border-top:4px solid ${CENTRE_COLOR[centre]}"` : ''}>
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><h2>Plan of visits · ${esc(who)}${esc(fmtMonth(m))}</h2>
       <p class="sub" style="margin:2px 0 0">${list.length ? `${list.length} ${list.length === 1 ? 'child' : 'children'} planned: ${n('done')} done, ${n('tried')} tried, ${n('planned')} to do.` : 'Nobody planned yet.'} A recorded visit ticks the child off.</p></div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">${m !== addMonths(thisMonth(), 1) ? `<a class="btn sm" href="#" data-q="m=${addMonths(thisMonth(), 1)}">Go to ${esc(fmtMonth(addMonths(thisMonth(), 1)))}</a>` : ''}<button class="btn sm" data-pact="xlplan" data-m="${m}" data-team="${team}" data-centre="${centre}">Export in Excel</button></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-pact="xlplan" data-m="${m}" data-team="${team}" data-centre="${centre}">Export in Excel</button></div></div>
     ${past ? '' : planPicker(m, team, centre)}
     ${list.length && !past ? '<p class="sec" style="margin:18px 0 0">In the plan · ' + list.length + '</p>' : ''}
     ${CENTRES.map(block).join('')}
