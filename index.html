@@ -454,6 +454,9 @@ img.cph{cursor:zoom-in}button img.cph,[data-pact] img.cph,.qrow img.cph{cursor:i
 .refdone{display:flex;gap:6px;flex:1 1 260px;align-items:center}.refdone .in{flex:1;min-width:0}
 details.marks{margin-top:12px}details.marks summary{cursor:pointer;font-weight:600;padding:6px 0}details.marks table .in{min-width:64px;padding:6px 8px}
 
+.chk{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;padding:10px 2px;border-top:1px solid var(--line2)}.chk:first-of-type{border-top:0}
+.chk .w{flex:1 1 300px;min-width:0}.chka{display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1 1 300px}.chka .in{flex:1;min-width:120px}
+
 </style>
 </head>
 <body>
@@ -466,7 +469,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 4.6';
+const VERSION = 'alpha 4.7';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9' },
@@ -1086,7 +1089,7 @@ const REPORTS = {
     label: 'Family Section', cols: ['Female', 'Male', 'Total'], by: 'Family',
     rows(m) {
       const { a, b } = monthCtx(m);
-      const vs = S.visits.filter(v => inRange(v.date, a, b) && visitTeam(v) === 'Family');
+      const vsRec = S.visits.filter(v => inRange(v.date, a, b) && visitTeam(v) === 'Family'), vs = vsRec.filter(visitCounts);
       const kids = distinctChildren(vs.map(v => v.childId));
       const withP = p => kids.filter(c => (c.programmes || []).includes(p));
       const reint = distinctChildren(movesIn('reintegrated', a, b).map(x => x.childId));
@@ -1099,6 +1102,7 @@ const REPORTS = {
       const target = Number((S.settings.targets[m] || {}).homeVisits) || 0;
       const ok = vs.filter(v => v.successful !== 'No').length;
       rows.push(['', 'Visits made (target ' + (target || 'not set') + ')', [null, null, vs.length], null]);
+      if (vsRec.length !== vs.length) rows.push(['', 'Visits recorded, not validated yet', [null, null, vsRec.length - vs.length], null]);
       rows.push(['', 'Successful / unsuccessful visits', [null, null, ok + ' / ' + (vs.length - ok)], null]);
       rows.push(['', 'Home follow-ups', [null, null, vs.filter(v => v.purpose === 'Follow-up').length], null]);
       rows.push(['', 'Emergencies', [null, null, vs.filter(v => v.purpose === 'Emergency').length], null]);
@@ -1113,7 +1117,7 @@ const REPORTS = {
       const { a, b } = monthCtx(m);
       const act = S.children.filter(c => inCareOn(c, b) && c.status !== 'Closed' && c.schoolType && c.schoolType !== 'Not in school');
       const split = l => { const n = l.filter(c => c.section === 'Nkwazi').length, mi = l.filter(c => c.section === 'UCC' || c.section === 'Youth').length; return [n, mi, l.length]; };
-      const sv = S.visits.filter(v => v.purpose === 'School visit' && inRange(v.date, a, b));
+      const svRec = S.visits.filter(v => v.purpose === 'School visit' && inRange(v.date, a, b)), sv = svRec.filter(visitCounts);
       const seen = distinctChildren(sv.map(v => v.childId));
       const t = S.settings.targets[m] || {};
       const rows = [
@@ -1125,6 +1129,7 @@ const REPORTS = {
         ['SCH', 'Visited at school this month', seen], ['SCH', 'Under ABA (distance adoption)', act.filter(isAba)], ['SCH', 'Under ABA, visited at school this month', seen.filter(isAba)], ['SCH', 'Semi-active', act.filter(c => c.status === 'Semi-active')]
       ].map(r => [r[0], r[1], split(r[2]), r[2]]);
       rows.push(['', 'School visits made (target ' + (Number(t.schoolVisits) || 'not set') + ')', [null, null, sv.length], null]);
+      if (svRec.length !== sv.length) rows.push(['', 'School visits recorded, not validated yet', [null, null, svRec.length - sv.length], null]);
       rows.push(['', 'Schools visited', [null, null, uniq(sv.map(v => (v.place || '').trim().toLowerCase()).filter(Boolean)).length], null]);
       return rows;
     },
@@ -1265,9 +1270,9 @@ function vHome(r) {
   const followList = S.children.filter(c => c.status === 'Follow-up' && f(c));
   const follow = followList.length;
   const closed = movesIn('closed', a, b).length;
-  const vs = S.visits.filter(v => inRange(v.date, a, b) && visitTeam(v) === 'Family');
-  const lvs = S.visits.filter(v => inRange(v.date, a, b) && visitTeam(v) === 'Luigi');
-  const sv = S.visits.filter(v => inRange(v.date, a, b) && v.purpose === 'School visit');
+  const vs = S.visits.filter(v => inRange(v.date, a, b) && visitTeam(v) === 'Family' && visitCounts(v));
+  const lvs = S.visits.filter(v => inRange(v.date, a, b) && visitTeam(v) === 'Luigi' && visitCounts(v));
+  const sv = S.visits.filter(v => inRange(v.date, a, b) && v.purpose === 'School visit' && visitCounts(v));
   const t = S.settings.targets[m] || {};
   const tv = Number(t.homeVisits) || 0, ts = Number(t.schoolVisits) || 0;
   const done = vs.length;
@@ -1441,7 +1446,7 @@ function vChild(r) {
   const vi = visitInfo(c);
   const hist = [];
   for (const v of visitsOf(c.id)) hist.push({ d: v.date, t: `<b>${esc(v.purpose)}</b> visit${v.where ? ' · ' + esc(v.where) : ''}${v.successful === 'No' ? ' · <span class="chip c-red">nobody found</span>' : ''}${v.stillHome ? ' · still at home: ' + esc(v.stillHome) : ''} <span class="sub">by ${esc(staffName(v.by))} · ${esc(teamLabel(visitTeam(v)))}</span>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}${v.actionDone ? ' (done)' : ''}</div>` : ''}` });
-  for (const e of S.events.filter(e => String(e.childId) === String(c.id))) hist.push({ d: e.date, t: eventLine(e) });
+  for (const e of S.events.filter(e => String(e.childId) === String(c.id))) { const t = eventLine(e); if (t) hist.push({ d: e.date, t }); }
   for (const m of movesOf(c.id)) hist.push({ d: m.date, t: `<b>${esc(moveLabel(m))}</b>${m.by ? ` <span class="sub">by ${esc(staffName(m.by))}</span>` : ''}${m.note ? `<div>${esc(m.note)}</div>` : ''}` });
   for (const s of S.sessions.filter(s => (s.children || []).map(String).includes(String(c.id)))) hist.push({ d: s.date, t: `<b>Counseling, ${esc(s.type.toLowerCase())} session</b> <span class="sub">by ${esc(staffName(s.by))}</span>${s.topic ? `<div>${esc(s.topic)}</div>` : ''}` });
   const met = S.outreach.filter(o => (o.children || []).map(String).includes(String(c.id)));
@@ -1462,6 +1467,7 @@ function vChild(r) {
   ${actBoxes(c)}
   ${schoolBox(c)}
   ${monthlyBox(c)}
+  ${docsBox(c)}
   ${c.sameAs && child(c.sameAs) ? `<div class="note">Probably the same child as <a href="#/child/${esc(c.sameAs)}">${esc(fullName(child(c.sameAs)))}, ID ${esc(c.sameAs)}</a> in ${esc(SECTIONS[child(c.sameAs).section].label)}: same name and a similar age. Check with the section before using two files.</div>` : ''}
   ${backAskHtml(c)}
   ${(c.toCheck || []).length ? `<div class="note"><b>To confirm with the Nkwazi team</b><ul style="margin:6px 0 8px 18px;padding:0">${c.toCheck.map(x => `<li>${esc(x)}</li>`).join('')}</ul><button class="btn sm" data-act="nkzchecked" data-id="${esc(c.id)}">Checked: remove this note</button></div>` : ''}
@@ -1546,6 +1552,7 @@ function vVisitForm(r) {
       ${field('What did you find?', 'findings', '', 'textarea', { wide: true, rows: 4 })}
       ${field('Follow-up action', 'action', '', 'text', { wide: true, hint: 'Stays in Visits, Actions still open, until done.' })}`}
       ${referFields()}
+      ${filePickField('visit', 'Photo of the visit')}
     </div>
     <div style="display:flex;gap:10px"><button class="btn pri">Save visit</button><a class="btn" href="${c ? '#/child/' + esc(c.id) : '#/visits'}">Cancel</a></div>
   </form>`;
@@ -1586,11 +1593,12 @@ const VISIT_COLS = [{ key: 'date', label: 'Date' }, { label: 'Visit made by (sec
 function vVisits(r) {
   if (r.id === 'new') return vVisitForm(r);
   const q = r.q, m = q.get('m') || thisMonth(), { team, centre } = visitSel(q);
-  const tab = ['need', 'plan', 'actions'].includes(q.get('vtab')) ? q.get('vtab') : 'done';
+  const tab = ['need', 'plan', 'actions', 'check'].includes(q.get('vtab')) ? q.get('vtab') : 'done';
   const N = visitNeed(team, centre), acts = visitActions(team, centre);
-  const tabs = [['done', 'Visits done', ''], ['need', 'Who needs a visit', N.count], ['plan', 'Plan of the month', planFor(tab === 'plan' ? m : planMonth(), team, centre).length], ['actions', 'Actions still open', acts.length]];
+  const tabs = [['done', 'Visits done', ''], ['need', 'Who needs a visit', N.count], ['plan', 'Plan of the month', planFor(tab === 'plan' ? m : planMonth(), team, centre).length], ['actions', 'Actions still open', acts.length], ['check', 'To validate', visitsToCheck(team, centre).filter(v => visitState(v) === 'wait' && (USER.admin || v.by === USER.id || v.enteredBy === USER.id)).length]];
   let body;
-  if (tab === 'need') body = needHtml(r, team, centre, N);
+  if (tab === 'check') body = checkHtml(team, centre);
+  else if (tab === 'need') body = needHtml(r, team, centre, N);
   else if (tab === 'plan') body = planReminder() + planCard(m, team, centre);
   else if (tab === 'actions') body = actionsHtml(acts);
   else {
@@ -1997,6 +2005,7 @@ const FORMS = {
     if (!o.team) return toast('Choose the section that made the visit');
     const v = { id: uid('v'), childId: String(o.childId), team: TEAM_KEYS.includes(o.team) ? o.team : teamFor(child(o.childId)), date: o.date, purpose: o.purpose, where: o.where, by: o.by || USER.id, successful: o.successful, metWith: o.metWith, place: o.place, stillHome: o.purpose === 'Follow-up' ? o.stillHome : '', findings: o.findings, action: (o.action || '').trim(), actionDone: false, recordedBy: USER.id, recordedOn: today() };
     if (v.purpose === 'School visit') { for (const k of SCH_KEYS) if (o[k]) v[k] = String(o[k]).trim(); if (!v.findings) v.findings = schoolFindings(o); }
+    { const ph = fileKeep('visit', v.childId, 'Visit photo'); if (ph) v.photo = ph.id; }
     S.visits.push(v); if (o.referTo) referAdd(v.childId, v.team, o.referTo, o.referWhy, o.referNote, v.date, v.id);
     save(); toast(o.referTo ? 'Visit saved. Referred to ' + referLabel(o.referTo) : 'Visit saved'); go('#/visits?vt=' + v.team + '&m=' + v.date.slice(0, 7));
   },
@@ -3140,7 +3149,7 @@ function overviewData() {
     if (P.withIssues) lines.push(L(P.withIssues, 'open files with information missing', '#/children?go=records', 'orange'));
     if (P.review) lines.push(L(P.review, 'open files of children who seem to have left', '#/review', 'orange'));
     if (S.children.length && (P.backupDays == null || P.backupDays > 7)) lines.push(L(P.backupDays == null ? '!' : P.backupDays, P.backupDays == null ? 'No backup made on this computer yet' : 'days since the last backup', USER && USER.admin ? '#/staff/data' : '#/help', 'red'));
-    cards.push({ k: 'Admin', title: 'Education office', color: '#37352F', lines }); }
+    checkLine(lines); cards.push({ k: 'Admin', title: 'Education office', color: '#37352F', lines }); }
   return cards;
 }
 /* the red number in the menu: supervisors count everything, the others only their own sections */
@@ -4094,6 +4103,7 @@ function referOpen(to) { return S.events.filter(e => e.type === 'Referral' && !r
 function referAdd(childId, from, to, reason, note, date, visitId) { S.events.push({ id: uid('e'), childId: String(childId), type: 'Referral', date: date || today(), from: from || '', to, reason: reason || '', note: note || '', by: USER.id, visitId: visitId || '' }); }
 function referLine(lines, k) { const n = referOpen(k).length; if (n) lines.unshift({ n, text: n === 1 ? 'child referred by another section' : 'children referred by other sections', href: '#/referrals?to=' + k, lvl: 'red' }); return lines; }
 function eventLine(e) {
+  if (e.type === 'Visit validated' || e.type === 'Visit sent back') return '';
   if (e.type === 'Referral') { const cl = referClosed(e.id); return `<b>Referred to ${esc(referLabel(e.to))}</b>${e.from ? ' by ' + esc(referLabel(e.from)) : ''}: ${esc(e.reason || '')} ${cl ? '<span class="chip c-green">Done</span>' : '<span class="chip c-orange">Open</span>'} <span class="sub">${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`; }
   if (e.type === 'Referral closed') return `<b>Referral closed</b> <span class="sub">${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`;
   return `<b>${esc(e.type)}</b> <span class="sub">recorded by ${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`;
@@ -4284,7 +4294,7 @@ function monthFacts(c, m) {
   if (T) out.push(['Last term result', 'Term ' + T.t + ' ' + T.y + (T.perf ? ', ' + T.perf.toLowerCase() : '') + (T.pos ? ', position ' + T.pos : '')]);
   const hv = visitsOf(c.id).filter(v => v.purpose !== 'School visit' && inRange(v.date, a, b)); if (hv.length) out.push(['Home visits this month', hv.map(v => fmtDate(v.date)).join(', ')]);
   const ses = S.sessions.filter(s => inRange(s.date, a, b) && (s.children || []).map(String).includes(key)); if (ses.length) out.push(['Counselling this month', ses.length + (ses.length === 1 ? ' session' : ' sessions')]);
-  const ev = S.events.filter(e => String(e.childId) === key && inRange(e.date, a, b) && !/^Referral/.test(e.type)); if (ev.length) out.push(['Happened this month', ev.map(e => e.type + (e.note ? ': ' + e.note : '')).join('; ')]);
+  const ev = S.events.filter(e => String(e.childId) === key && inRange(e.date, a, b) && !/^Referral|^Visit /.test(e.type)); if (ev.length) out.push(['Happened this month', ev.map(e => e.type + (e.note ? ': ' + e.note : '')).join('; ')]);
   const rf = referOpen().filter(e => String(e.childId) === key); if (rf.length) out.push(['Referred, still open', rf.map(e => referLabel(e.to) + ': ' + e.reason).join('; ')]);
   return out;
 }
@@ -4331,6 +4341,112 @@ document.addEventListener('click', e => {
   const c = child(b.dataset.id), r = c && monthlyOf(c, b.dataset.m); if (!r) return; r.checkedBy = USER.id; r.checkedOn = today(); c.updatedAt = today(); save(); toast('Checked'); render();
 });
 function monthlyLine(lines, centre) { const m = centre === 'Minsundu' ? monthDue() : ''; if (!m) return lines; const kids = monthlyKids(null), left = kids.filter(c => !monthlyOf(c, m)).length; if (left) lines.push({ n: left, text: 'monthly reports of ' + fmtMonth(m) + ' to write (residents)', href: '#/monthly?m=' + m, lvl: 'orange' }); return lines; }
+
+/* ====================================================================
+   Documents of the child and photos of the visits.
+   The file of the child keeps only the list (c.docs); the files are kept apart:
+   on this device until they are sent, then on Drive through the database script (file_put, file_get, file_del).
+   ==================================================================== */
+const DOC_KINDS = ['Birth certificate', 'Case study', 'School report', 'Other document'];
+const FILE_MAX = 3 * 1024 * 1024;
+const FILE_PICK = {};
+function fileStore(mode, fn) { return idb().then(db => new Promise((res, rej) => { const tx = db.transaction(DB_STORE, mode), rq = fn(tx.objectStore(DB_STORE)); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); })); }
+function fileLocalPut(rec) { return fileStore('readwrite', s => s.put(rec, 'file:' + rec.id)); }
+function fileLocalGet(id) { return fileStore('readonly', s => s.get('file:' + id)).catch(() => null); }
+function fileLocalDel(id) { return fileStore('readwrite', s => s.delete('file:' + id)).catch(() => null); }
+function filesOut() { try { return JSON.parse(lsGet('cyp-files-out') || '[]'); } catch (e) { return []; } }
+function filesOutSet(l) { try { localStorage.setItem('cyp-files-out', JSON.stringify(l)); } catch (e) {} }
+function kb(n) { return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
+/* a photo is made smaller before it is kept: 1600 pixels on the long side is enough to read a certificate */
+function fileRead(file) {
+  return new Promise((res, rej) => {
+    const rd = new FileReader(); rd.onerror = () => rej(new Error('read'));
+    if (/^image\//.test(file.type)) {
+      rd.onload = () => { const im = new Image(); im.onerror = () => rej(new Error('image'));
+        im.onload = () => { const k = Math.min(1, 1600 / Math.max(im.width, im.height)), cv = document.createElement('canvas'); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); const u = cv.toDataURL('image/jpeg', 0.8), data = u.slice(u.indexOf(',') + 1); res({ name: file.name.replace(/\.[^.]+$/, '') + '.jpg', mime: 'image/jpeg', data, size: Math.round(data.length * 0.75) }); };
+        im.src = rd.result; };
+      rd.readAsDataURL(file);
+    } else {
+      if (file.size > FILE_MAX) return rej(new Error('big'));
+      rd.onload = () => { const u = String(rd.result), data = u.slice(u.indexOf(',') + 1); res({ name: file.name, mime: file.type || 'application/octet-stream', data, size: file.size }); };
+      rd.readAsDataURL(file);
+    }
+  });
+}
+function filePickField(slot, label) { return `<label class="f wide">${label}<input class="in" type="file" accept="image/*,application/pdf" data-file="${slot}"><span class="hint" data-fileinfo="${slot}">Photo or PDF, up to 3 MB.</span></label>`; }
+document.addEventListener('change', e => {
+  const inp = e.target; if (!inp.matches || !inp.matches('input[type="file"][data-file]')) return;
+  const slot = inp.dataset.file, info = document.querySelector(`[data-fileinfo="${slot}"]`), f = inp.files && inp.files[0]; delete FILE_PICK[slot]; if (!f) return;
+  if (info) info.textContent = 'Reading the file…';
+  fileRead(f).then(x => { FILE_PICK[slot] = x; if (info) info.textContent = 'Ready: ' + x.name + ' · ' + kb(x.size); }).catch(err => { inp.value = ''; if (info) info.textContent = err.message === 'big' ? 'Too big: the limit is 3 MB.' : 'This file cannot be read.'; });
+});
+/* keep the picked file on this device and put it in the queue to send */
+function fileKeep(slot, childId, kind) {
+  const x = FILE_PICK[slot]; if (!x) return null; delete FILE_PICK[slot];
+  const rec = { id: uid('f'), name: x.name, mime: x.mime, data: x.data, size: x.size, childId: String(childId || ''), kind: kind || '' };
+  filesOutSet(filesOut().concat(rec.id));
+  fileLocalPut(rec).then(() => filesFlush()).catch(() => { filesOutSet(filesOut().filter(x => x !== rec.id)); toast('The file could not be kept on this device'); });
+  return rec;
+}
+let FILES_BUSY = false;
+async function filesFlush() {
+  if (FILES_BUSY || !syncOn() || !navigator.onLine) return; FILES_BUSY = true;
+  try {
+    for (const id of filesOut()) {
+      const rec = await fileLocalGet(id); if (!rec) { filesOutSet(filesOut().filter(x => x !== id)); continue; }
+      const r = await syncPost({ action: 'file_put', id: rec.id, name: rec.name, mime: rec.mime, data: rec.data, childId: rec.childId, kind: rec.kind, user: USER ? USER.name : '' });
+      if (r && r.ok) { filesOutSet(filesOut().filter(x => x !== id)); await fileLocalDel(id); } else break;
+    }
+  } catch (e) {} finally { FILES_BUSY = false; if (document.querySelector('#docsbox, #checkbox')) render(); }
+}
+window.addEventListener('online', () => filesFlush());
+setInterval(() => { if (filesOut().length) filesFlush(); }, 60000);
+async function fileOpen(id, name) {
+  let rec = await fileLocalGet(id);
+  if (!rec) { if (!syncOn() || !navigator.onLine) return toast('Internet is needed to open this file'); toast('Opening…'); let r = null; try { r = await syncPost({ action: 'file_get', id }); } catch (e) {} if (!r || !r.ok) return toast(r && r.error === 'nofile' ? 'This file is not in the database' : 'The file could not be opened'); rec = r; }
+  if (/^image\//.test(rec.mime)) return photoBig('data:' + rec.mime + ';base64,' + rec.data, name || rec.name);
+  const bin = atob(rec.data), arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+  const url = URL.createObjectURL(new Blob([arr], { type: rec.mime })), a = document.createElement('a'); a.href = url; a.target = '_blank'; a.download = rec.name || name || 'document'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+function docsBox(c) {
+  if (GUEST) return '';
+  const list = (c.docs || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '')), out = new Set(filesOut()), has = k => list.some(d => d.kind === k);
+  return `<section class="card" id="docsbox"><h2>Documents</h2>
+    <p style="margin:4px 0 8px">Birth certificate: ${has('Birth certificate') ? '<span class="chip c-green">In the file</span>' : '<span class="chip c-orange">Missing</span>'}</p>
+    ${list.map(d => `<div class="it"><div class="w"><b>${esc(d.kind)}</b><span>${esc([d.note, d.name, kb(d.size || 0)].filter(Boolean).join(' · '))}</span><span class="sub">${esc(fmtDate(d.date))} · ${esc(staffName(d.by))}${out.has(d.id) ? ' · waiting for internet to be sent' : ''}</span></div><button class="btn sm" data-dact="open" data-id="${esc(d.id)}" data-name="${esc(d.kind + ' ' + fullName(c))}">Open</button>${USER.admin ? `<button class="btn sm" data-dact="del" data-id="${esc(d.id)}" data-child="${esc(c.id)}">Remove</button>` : ''}</div>`).join('')}
+    <form data-form="docadd" style="margin-top:10px"><input type="hidden" name="id" value="${esc(c.id)}"><div class="fs two">${field('Document', 'kind', '', 'select', { req: true, options: opt(DOC_KINDS, has('Birth certificate') ? 'Case study' : 'Birth certificate') })}${field('Date', 'date', today(), 'date', { req: true })}${field('Note', 'note', '', 'text', { wide: true })}${filePickField('doc', 'File')}</div><button class="btn pri" style="margin-top:10px">Add the document</button></form></section>`;
+}
+FORMS.docadd = function (o) {
+  const c = child(o.id); if (!c) return; if (!FILE_PICK.doc) return toast('Choose the file first');
+  const rec = fileKeep('doc', c.id, o.kind); c.docs = (c.docs || []).concat({ id: rec.id, kind: o.kind, name: rec.name, mime: rec.mime, size: rec.size, date: o.date || today(), note: (o.note || '').trim(), by: USER.id });
+  c.updatedAt = today(); save(); toast(syncOn() && navigator.onLine ? 'Document added' : 'Document added. It will be sent when internet is back'); render();
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-dact]'); if (!b) return; e.preventDefault();
+  if (b.dataset.dact === 'open') return void fileOpen(b.dataset.id, b.dataset.name);
+  if (b.dataset.dact === 'del') { const c = child(b.dataset.child); if (!c || !USER.admin || !confirm('Remove this document? The file is deleted for everyone.')) return; c.docs = (c.docs || []).filter(d => d.id !== b.dataset.id); c.updatedAt = today(); save(); filesOutSet(filesOut().filter(x => x !== b.dataset.id)); fileLocalDel(b.dataset.id); if (syncOn()) syncPost({ action: 'file_del', id: b.dataset.id }).catch(() => {}); render(); }
+  if (b.dataset.dact === 'valid' || b.dataset.dact === 'back') {
+    if (!USER.admin) return; const v = S.visits.find(x => x.id === b.dataset.id); if (!v) return; let note = '';
+    if (b.dataset.dact === 'back') { const inp = b.closest('.chk').querySelector('input[name="note"]'); note = inp ? inp.value.trim() : ''; if (!note) { toast('Write what is missing'); if (inp) inp.focus(); return; } }
+    S.events.push({ id: uid('e'), childId: String(v.childId), type: b.dataset.dact === 'valid' ? 'Visit validated' : 'Visit sent back', ref: v.id, date: today(), ts: Date.now(), note, by: USER.id }); save(); toast(b.dataset.dact === 'valid' ? 'Validated' : 'Sent back'); render();
+  }
+});
+
+/* ---------- validation of the visits: the reports count only what the supervisor has validated ---------- */
+const VALID_FROM = '2026-11-17';
+function visitCheck(v) { let last = null; for (const e of S.events) if (e.ref === v.id && (e.type === 'Visit validated' || e.type === 'Visit sent back') && (!last || (e.ts || 0) >= (last.ts || 0))) last = e; return last; }
+function visitState(v) { if ((v.date || '') < VALID_FROM) return 'old'; const e = visitCheck(v); return !e ? 'wait' : e.type === 'Visit validated' ? 'ok' : 'back'; }
+function visitCounts(v) { const s = visitState(v); return s === 'old' || s === 'ok'; }
+function visitChip(v) { const s = visitState(v), e = visitCheck(v); return s === 'ok' ? `<span class="chip c-green">Validated by ${esc(staffName(e.by))}</span>` : s === 'back' ? `<span class="chip c-red">Sent back: ${esc(e.note || '')}</span>` : s === 'wait' ? '<span class="chip c-orange">To validate</span>' : ''; }
+function visitsToCheck(team, centre) { return S.visits.filter(v => { const s = visitState(v); return (s === 'wait' || s === 'back') && tmatch(visitTeam(v), team) && vcIn(child(v.childId), team, centre) && child(v.childId); }).sort((a, b) => (a.date || '').localeCompare(b.date || '')); }
+function checkHtml(team, centre) {
+  const all = visitsToCheck(team, centre), list = USER.admin ? all : all.filter(v => v.by === USER.id || v.enteredBy === USER.id), wait = list.filter(v => visitState(v) === 'wait');
+  const item = v => { const c = child(v.childId), st = visitState(v);
+    return `<div class="chk"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)} ${visitChip(v)}<div class="sub">${esc(fmtDate(v.date))} · ${esc(teamLabel(visitTeam(v)))} · ${esc(v.purpose || '')} · ${esc(staffName(v.by))}${v.successful === 'No' ? ' · nobody found' : ''}${v.metWith ? ' · met ' + esc(v.metWith) : ''}${v.place ? ' · ' + esc(v.place) : ''}</div>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}</div>` : ''}</div>
+      <div class="chka">${v.photo ? `<button class="btn sm" data-dact="open" data-id="${esc(v.photo)}" data-name="Visit ${esc(fullName(c))} ${esc(v.date)}">See the photo</button>` : '<span class="sub">No photo</span>'}${USER.admin && st === 'wait' ? `<button class="btn sm pri" data-dact="valid" data-id="${esc(v.id)}">Validate</button><input class="in" name="note" placeholder="What is missing" aria-label="What is missing"><button class="btn sm" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}${st === 'back' ? `<a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${esc(visitTeam(v))}">Record it again</a>${USER.admin ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button>` : ''}` : ''}</div></div>`; };
+  return `<section class="card" id="checkbox"><h2>${USER.admin ? 'Visits to validate' : 'My visits to be validated'} · ${wait.length}</h2><p class="sub" style="margin:2px 0 6px">The reports count the visits validated by the supervisor. Visits before ${esc(fmtDate(VALID_FROM))} count as they are.</p>${list.length ? list.map(item).join('') : '<p class="empty">Nothing to validate.</p>'}</section>`;
+}
+function checkLine(lines) { const n = visitsToCheck('all', 'all').filter(v => visitState(v) === 'wait').length; if (n) lines.unshift({ n, text: n === 1 ? 'visit to validate' : 'visits to validate', href: '#/visits?vt=all&vtab=check', lvl: 'red' }); return lines; }
 
 /* ====================================================================
    PIN for the staff
