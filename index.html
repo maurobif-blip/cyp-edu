@@ -479,6 +479,8 @@ td.ph{width:52px;text-align:right}
 
 .ptile.refer img,.ptile.refer .av{box-shadow:0 0 0 2px #FFFFFF,0 0 0 5px #8E5A9B}.ptile small.rf{color:var(--purple);font-weight:600}
 
+.refact{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+
 </style>
 </head>
 <body>
@@ -491,7 +493,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.4';
+const VERSION = 'alpha 5.5';
 const BUILD_DATE = '2026-11-17'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
@@ -4218,7 +4220,7 @@ function eventLine(e) {
 }
 function referItem(e) {
   const c = child(e.childId);
-  return `<div class="refit"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)}<div>${esc(referLabel(e.from) || 'A section')} → <b>${esc(referLabel(e.to))}</b>: ${esc(e.reason || '')}</div>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}<div class="sub">${esc(staffName(e.by))} · since ${esc(fmtDate(e.date))}</div>${TEAM_KEYS.includes(e.to) ? `<div style="margin-top:6px"><a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${esc(e.to)}">Record a visit</a></div>` : ''}</div>
+  return `<div class="refit"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)}<div>${esc(referLabel(e.from) || 'A section')} → <b>${esc(referLabel(e.to))}</b>: ${esc(e.reason || '')}</div>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}<div class="sub">${esc(staffName(e.by))} · since ${esc(fmtDate(e.date))}</div>${TEAM_KEYS.includes(e.to) ? `<div class="refact"><a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${esc(e.to)}">Record a visit</a><span class="sub">Plan for</span>${[0, 1, 2].map(i => { const m = addMonths(thisMonth(), i), inp = plans().some(p => String(p.childId) === String(c.id) && p.month === m && planTeam(p) === e.to); return inp ? `<span class="chip c-green">${esc(fmtMonth(m))} ✓</span>` : `<button type="button" class="btn sm" data-pact="plan" data-id="${esc(c.id)}" data-m="${m}" data-team="${esc(e.to)}">${esc(fmtMonth(m))}</button>`; }).join('')}</div>` : ''}</div>
     <form data-form="referdone" class="refdone"><input type="hidden" name="id" value="${esc(e.id)}"><input class="in" name="note" placeholder="What was done" aria-label="What was done" required><button class="btn sm pri">Done</button></form></div>`;
 }
 /* what the colleagues asked of a section: shown where that section works (Monitoring, Activities) */
