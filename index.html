@@ -457,6 +457,9 @@ details.marks{margin-top:12px}details.marks summary{cursor:pointer;font-weight:6
 .chk{display:flex;gap:10px;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;padding:10px 2px;border-top:1px solid var(--line2)}.chk:first-of-type{border-top:0}
 .chk .w{flex:1 1 300px;min-width:0}.chka{display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1 1 300px}.chka .in{flex:1;min-width:120px}
 
+.vph{display:block;max-width:100%;max-height:72vh;border-radius:10px;border:1px solid var(--line2)}.vphw{margin:6px 0;color:var(--muted)}.vdl{font-size:16px;grid-template-columns:230px minmax(0,1fr)}
+@media (max-width:700px){.vdl{grid-template-columns:1fr}}
+
 </style>
 </head>
 <body>
@@ -469,7 +472,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 4.7';
+const VERSION = 'alpha 4.8';
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9' },
@@ -1445,7 +1448,7 @@ function vChild(r) {
   if (r.sub === 'month') return vMonthly1(c);
   const vi = visitInfo(c);
   const hist = [];
-  for (const v of visitsOf(c.id)) hist.push({ d: v.date, t: `<b>${esc(v.purpose)}</b> visit${v.where ? ' · ' + esc(v.where) : ''}${v.successful === 'No' ? ' · <span class="chip c-red">nobody found</span>' : ''}${v.stillHome ? ' · still at home: ' + esc(v.stillHome) : ''} <span class="sub">by ${esc(staffName(v.by))} · ${esc(teamLabel(visitTeam(v)))}</span>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}${v.actionDone ? ' (done)' : ''}</div>` : ''}` });
+  for (const v of visitsOf(c.id)) hist.push({ d: v.date, t: `<b>${esc(v.purpose)}</b> visit${v.where ? ' · ' + esc(v.where) : ''}${v.successful === 'No' ? ' · <span class="chip c-red">nobody found</span>' : ''}${v.stillHome ? ' · still at home: ' + esc(v.stillHome) : ''} <span class="sub">by ${esc(staffName(v.by))} · ${esc(teamLabel(visitTeam(v)))}</span>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}${v.actionDone ? ' (done)' : ''}</div>` : ''}<div><a href="#/visitrep/${esc(v.id)}">Open the report</a> ${visitChip(v)}</div>` });
   for (const e of S.events.filter(e => String(e.childId) === String(c.id))) { const t = eventLine(e); if (t) hist.push({ d: e.date, t }); }
   for (const m of movesOf(c.id)) hist.push({ d: m.date, t: `<b>${esc(moveLabel(m))}</b>${m.by ? ` <span class="sub">by ${esc(staffName(m.by))}</span>` : ''}${m.note ? `<div>${esc(m.note)}</div>` : ''}` });
   for (const s of S.sessions.filter(s => (s.children || []).map(String).includes(String(c.id)))) hist.push({ d: s.date, t: `<b>Counseling, ${esc(s.type.toLowerCase())} session</b> <span class="sub">by ${esc(staffName(s.by))}</span>${s.topic ? `<div>${esc(s.topic)}</div>` : ''}` });
@@ -1623,7 +1626,7 @@ function vVisits(r) {
     ${txt('vf', 'Findings', 'A word')}
     ${hasSchool ? sel('vsn', opt(Object.keys(names).sort((x, y) => x.localeCompare(y)).map(k => ({ v: k, l: k + ' · ' + names[k] })), q.get('vsn'), 'Every school'), 'School') + sel('vsa', opt(SCH_ATT, q.get('vsa'), 'Any'), 'School attendance') + sel('vsp', opt(PERF, q.get('vsp'), 'Any'), 'Performance') + sel('vst', opt(TREND, q.get('vst'), 'Any'), 'Compared with the last visit') : ''}
   </div>
-  <div class="card" style="padding:6px 8px"><p class="sub" style="margin:4px 4px 6px"><b>${vs.length}</b> of ${base.length} visits shown${any ? ' · <a href="#" data-q="' + VISIT_FK.map(k => k + '=').join('&') + '">clear the filters</a>' : ''} · tap a column title to sort</p>${vs.length ? `<div class="tw"><table class="vtab"><thead><tr>${th('date', 'Date')}${th('team', 'Section', 'mh')}${th('centre', 'Centre', 'mh')}${th('child', 'Child')}${th('purpose', 'Purpose')}${th('where', 'Where', 'mh')}${th('ok', 'Found')}${th('by', 'By', 'mh')}${schoolCols ? '<th class="mh">Attendance</th><th class="mh">Performance</th>' : ''}<th class="mh">Findings</th></tr></thead><tbody>${vs.map(v => { const c = child(v.childId); return `<tr><td>${esc(fmtDate(v.date))}</td><td class="mh">${esc(teamLabel(visitTeam(v)))}</td><td class="mh">${c ? centreChip(c) : ''}</td><td>${c ? childLink(c) : esc(v.childId)}${c && isAba(c) ? ' <span class="chip c-green">ABA</span>' : ''}<div class="sub mo">${esc(teamLabel(visitTeam(v)))} · ${esc(staffName(v.by))}</div></td><td>${esc(v.purpose)}</td><td class="mh">${esc(v.where || '')}${v.place ? ' · ' + esc(v.place) : ''}</td><td>${v.successful === 'No' ? '<span class="chip c-red">No</span>' : 'Yes'}</td><td class="mh">${esc(staffName(v.by))}</td>${schoolCols ? `<td class="mh">${esc(v.schAtt || '')}</td><td class="mh">${esc(v.perf || '')}${v.trend ? ' · ' + esc(v.trend) : ''}</td>` : ''}<td class="mh">${esc((v.findings || '').slice(0, 120))}${v.action ? `<div class="sub">Action${v.actionDone ? ' (done)' : ''}: ${esc(v.action.slice(0, 80))}</div>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">No visits match.</p>'}</div>`;
+  <div class="card" style="padding:6px 8px"><p class="sub" style="margin:4px 4px 6px"><b>${vs.length}</b> of ${base.length} visits shown${any ? ' · <a href="#" data-q="' + VISIT_FK.map(k => k + '=').join('&') + '">clear the filters</a>' : ''} · tap a column title to sort</p>${vs.length ? `<div class="tw"><table class="vtab"><thead><tr>${th('date', 'Date')}${th('team', 'Section', 'mh')}${th('centre', 'Centre', 'mh')}${th('child', 'Child')}${th('purpose', 'Purpose')}${th('where', 'Where', 'mh')}${th('ok', 'Found')}${th('by', 'By', 'mh')}${schoolCols ? '<th class="mh">Attendance</th><th class="mh">Performance</th>' : ''}<th class="mh">Findings</th></tr></thead><tbody>${vs.map(v => { const c = child(v.childId); return `<tr><td><a href="#/visitrep/${esc(v.id)}">${esc(fmtDate(v.date))}</a></td><td class="mh">${esc(teamLabel(visitTeam(v)))}</td><td class="mh">${c ? centreChip(c) : ''}</td><td>${c ? childLink(c) : esc(v.childId)}${c && isAba(c) ? ' <span class="chip c-green">ABA</span>' : ''}<div class="sub mo">${esc(teamLabel(visitTeam(v)))} · ${esc(staffName(v.by))}</div></td><td>${esc(v.purpose)}</td><td class="mh">${esc(v.where || '')}${v.place ? ' · ' + esc(v.place) : ''}</td><td>${v.successful === 'No' ? '<span class="chip c-red">No</span>' : 'Yes'}</td><td class="mh">${esc(staffName(v.by))}</td>${schoolCols ? `<td class="mh">${esc(v.schAtt || '')}</td><td class="mh">${esc(v.perf || '')}${v.trend ? ' · ' + esc(v.trend) : ''}</td>` : ''}<td class="mh">${esc((v.findings || '').slice(0, 120))}${v.action ? `<div class="sub">Action${v.actionDone ? ' (done)' : ''}: ${esc(v.action.slice(0, 80))}</div>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">No visits match.</p>'}</div>`;
   }
   return `<div class="top"><div><h1>Monitoring</h1><p class="lead">Blue button: record a visit.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' || tab === 'plan' ? monthPicker(m) : ''}${team === 'School' || team === 'all' ? '<a class="btn" href="#/school">Pupils by school</a>' : ''}<a class="btn" href="#/referrals${TEAM_KEYS.includes(team) ? '?to=' + team : ''}">Referrals${referOpen(TEAM_KEYS.includes(team) ? team : '').length ? ' · ' + referOpen(TEAM_KEYS.includes(team) ? team : '').length : ''}</a><a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a></div></div>
   <div class="vtabs" id="vtabs" role="tablist">${tabs.map(([k, l, n]) => `<a href="#" role="tab" data-q="vtab=${k === 'done' ? '' : k}&all=&lall=" class="${tab === k ? 'on' : ''}">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</a>`).join('')}</div>
@@ -1961,6 +1964,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'feedback': body = vFeedback(r); active = 'staff'; break;
       case 'activities': body = vActivities(r); break;
       case 'logframe': body = vLogframe(r); break;
+      case 'visitrep': body = vVisitRep(r); active = 'visits'; break;
       case 'school': body = vSchool(r); active = 'visits'; break;
       case 'referrals': body = vReferrals(r); active = 'visits'; break;
       case 'monthly': body = vMonthly(r); active = 'children'; break;
@@ -4103,7 +4107,7 @@ function referOpen(to) { return S.events.filter(e => e.type === 'Referral' && !r
 function referAdd(childId, from, to, reason, note, date, visitId) { S.events.push({ id: uid('e'), childId: String(childId), type: 'Referral', date: date || today(), from: from || '', to, reason: reason || '', note: note || '', by: USER.id, visitId: visitId || '' }); }
 function referLine(lines, k) { const n = referOpen(k).length; if (n) lines.unshift({ n, text: n === 1 ? 'child referred by another section' : 'children referred by other sections', href: '#/referrals?to=' + k, lvl: 'red' }); return lines; }
 function eventLine(e) {
-  if (e.type === 'Visit validated' || e.type === 'Visit sent back') return '';
+  if (VISIT_EV.includes(e.type)) return '';
   if (e.type === 'Referral') { const cl = referClosed(e.id); return `<b>Referred to ${esc(referLabel(e.to))}</b>${e.from ? ' by ' + esc(referLabel(e.from)) : ''}: ${esc(e.reason || '')} ${cl ? '<span class="chip c-green">Done</span>' : '<span class="chip c-orange">Open</span>'} <span class="sub">${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`; }
   if (e.type === 'Referral closed') return `<b>Referral closed</b> <span class="sub">${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`;
   return `<b>${esc(e.type)}</b> <span class="sub">recorded by ${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`;
@@ -4397,7 +4401,7 @@ async function filesFlush() {
       const r = await syncPost({ action: 'file_put', id: rec.id, name: rec.name, mime: rec.mime, data: rec.data, childId: rec.childId, kind: rec.kind, user: USER ? USER.name : '' });
       if (r && r.ok) { filesOutSet(filesOut().filter(x => x !== id)); await fileLocalDel(id); } else break;
     }
-  } catch (e) {} finally { FILES_BUSY = false; if (document.querySelector('#docsbox, #checkbox')) render(); }
+  } catch (e) {} finally { FILES_BUSY = false; if (document.querySelector('#docsbox, #checkbox, #visitrep')) render(); }
 }
 window.addEventListener('online', () => filesFlush());
 setInterval(() => { if (filesOut().length) filesFlush(); }, 60000);
@@ -4425,27 +4429,79 @@ document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-dact]'); if (!b) return; e.preventDefault();
   if (b.dataset.dact === 'open') return void fileOpen(b.dataset.id, b.dataset.name);
   if (b.dataset.dact === 'del') { const c = child(b.dataset.child); if (!c || !USER.admin || !confirm('Remove this document? The file is deleted for everyone.')) return; c.docs = (c.docs || []).filter(d => d.id !== b.dataset.id); c.updatedAt = today(); save(); filesOutSet(filesOut().filter(x => x !== b.dataset.id)); fileLocalDel(b.dataset.id); if (syncOn()) syncPost({ action: 'file_del', id: b.dataset.id }).catch(() => {}); render(); }
+  if (b.dataset.dact === 'goback') { if (history.length > 1) history.back(); else go('#/visits?vtab=check'); return; }
   if (b.dataset.dact === 'valid' || b.dataset.dact === 'back') {
-    if (!USER.admin) return; const v = S.visits.find(x => x.id === b.dataset.id); if (!v) return; let note = '';
-    if (b.dataset.dact === 'back') { const inp = b.closest('.chk').querySelector('input[name="note"]'); note = inp ? inp.value.trim() : ''; if (!note) { toast('Write what is missing'); if (inp) inp.focus(); return; } }
-    S.events.push({ id: uid('e'), childId: String(v.childId), type: b.dataset.dact === 'valid' ? 'Visit validated' : 'Visit sent back', ref: v.id, date: today(), ts: Date.now(), note, by: USER.id }); save(); toast(b.dataset.dact === 'valid' ? 'Validated' : 'Sent back'); render();
+    if (!USER.admin) return; const v = S.visits.find(x => x.id === b.dataset.id); if (!v) return; let note = b.dataset.note || '';
+    if (b.dataset.dact === 'back' && !note) { const inp = b.closest('.chk').querySelector('input[name="note"]'); note = inp ? inp.value.trim() : ''; if (!note) { toast('Write what is missing'); if (inp) inp.focus(); return; } }
+    S.events.push({ id: uid('e'), childId: String(v.childId), type: b.dataset.dact === 'valid' ? 'Visit validated' : 'Visit sent back', ref: v.id, date: today(), ts: Date.now(), note, by: USER.id }); save(); toast(b.dataset.dact === 'valid' ? 'Validated' : 'Sent back');
+    if (route().path === 'visitrep' && history.length > 1) history.back(); else render();
   }
 });
 
 /* ---------- validation of the visits: the reports count only what the supervisor has validated ---------- */
 const VALID_FROM = '2026-11-17';
-function visitCheck(v) { let last = null; for (const e of S.events) if (e.ref === v.id && (e.type === 'Visit validated' || e.type === 'Visit sent back') && (!last || (e.ts || 0) >= (last.ts || 0))) last = e; return last; }
-function visitState(v) { if ((v.date || '') < VALID_FROM) return 'old'; const e = visitCheck(v); return !e ? 'wait' : e.type === 'Visit validated' ? 'ok' : 'back'; }
+const VISIT_EV = ['Visit validated', 'Visit sent back', 'Visit sent again'];
+function visitTrail(v) { return S.events.filter(e => e.ref === v.id && VISIT_EV.includes(e.type)).sort((x, y) => (x.ts || 0) - (y.ts || 0)); }
+function visitCheck(v) { let last = null; for (const e of S.events) if (e.ref === v.id && VISIT_EV.includes(e.type) && (!last || (e.ts || 0) >= (last.ts || 0))) last = e; return last; }
+function visitState(v) { if ((v.date || '') < VALID_FROM) return 'old'; const e = visitCheck(v); return !e || e.type === 'Visit sent again' ? 'wait' : e.type === 'Visit validated' ? 'ok' : 'back'; }
 function visitCounts(v) { const s = visitState(v); return s === 'old' || s === 'ok'; }
 function visitChip(v) { const s = visitState(v), e = visitCheck(v); return s === 'ok' ? `<span class="chip c-green">Validated by ${esc(staffName(e.by))}</span>` : s === 'back' ? `<span class="chip c-red">Sent back: ${esc(e.note || '')}</span>` : s === 'wait' ? '<span class="chip c-orange">To validate</span>' : ''; }
+function visitPhotos(v) { return [v.photo].concat(visitTrail(v).map(e => e.file)).filter(Boolean); }
+function visitMine(v) { return v.by === USER.id || v.enteredBy === USER.id; }
 function visitsToCheck(team, centre) { return S.visits.filter(v => { const s = visitState(v); return (s === 'wait' || s === 'back') && tmatch(visitTeam(v), team) && vcIn(child(v.childId), team, centre) && child(v.childId); }).sort((a, b) => (a.date || '').localeCompare(b.date || '')); }
 function checkHtml(team, centre) {
-  const all = visitsToCheck(team, centre), list = USER.admin ? all : all.filter(v => v.by === USER.id || v.enteredBy === USER.id), wait = list.filter(v => visitState(v) === 'wait');
-  const item = v => { const c = child(v.childId), st = visitState(v);
-    return `<div class="chk"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)} ${visitChip(v)}<div class="sub">${esc(fmtDate(v.date))} · ${esc(teamLabel(visitTeam(v)))} · ${esc(v.purpose || '')} · ${esc(staffName(v.by))}${v.successful === 'No' ? ' · nobody found' : ''}${v.metWith ? ' · met ' + esc(v.metWith) : ''}${v.place ? ' · ' + esc(v.place) : ''}</div>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}</div>` : ''}</div>
-      <div class="chka">${v.photo ? `<button class="btn sm" data-dact="open" data-id="${esc(v.photo)}" data-name="Visit ${esc(fullName(c))} ${esc(v.date)}">See the photo</button>` : '<span class="sub">No photo</span>'}${USER.admin && st === 'wait' ? `<button class="btn sm pri" data-dact="valid" data-id="${esc(v.id)}">Validate</button><input class="in" name="note" placeholder="What is missing" aria-label="What is missing"><button class="btn sm" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}${st === 'back' ? `<a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${esc(visitTeam(v))}">Record it again</a>${USER.admin ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button>` : ''}` : ''}</div></div>`; };
+  const all = visitsToCheck(team, centre), list = USER.admin ? all : all.filter(visitMine), wait = list.filter(v => visitState(v) === 'wait');
+  const item = v => { const c = child(v.childId), st = visitState(v), ph = visitPhotos(v);
+    return `<div class="chk"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)} ${visitChip(v)}<div class="sub">${esc(fmtDate(v.date))} · ${esc(teamLabel(visitTeam(v)))} · ${esc(v.purpose || '')} · ${esc(staffName(v.by))}${v.successful === 'No' ? ' · nobody found' : ''}${v.metWith ? ' · met ' + esc(v.metWith) : ''}${v.place ? ' · ' + esc(v.place) : ''}</div>${v.findings ? `<div>${esc(v.findings.slice(0, 200))}${v.findings.length > 200 ? '…' : ''}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}</div>` : ''}</div>
+      <div class="chka">${ph.length ? `<button class="btn sm" data-dact="open" data-id="${esc(ph[ph.length - 1])}" data-name="Visit ${esc(fullName(c))} ${esc(v.date)}">See the photo</button>` : '<span class="chip c-orange">No photo</span>'}<a class="btn sm pri" href="#/visitrep/${esc(v.id)}">Open the report</a>${USER.admin && st === 'wait' ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button><input class="in" name="note" placeholder="What is missing" aria-label="What is missing"><button class="btn sm" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}${st === 'back' && USER.admin ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button>` : ''}</div></div>`; };
   return `<section class="card" id="checkbox"><h2>${USER.admin ? 'Visits to validate' : 'My visits to be validated'} · ${wait.length}</h2><p class="sub" style="margin:2px 0 6px">The reports count the visits validated by the supervisor. Visits before ${esc(fmtDate(VALID_FROM))} count as they are.</p>${list.length ? list.map(item).join('') : '<p class="empty">Nothing to validate.</p>'}</section>`;
 }
+
+/* ---------- the report of one visit on a full page: what the supervisor reads before validating ---------- */
+const FILE_MEM = new Map();
+async function fileData(id) {
+  if (FILE_MEM.has(id)) return FILE_MEM.get(id);
+  let rec = await fileLocalGet(id);
+  if (!rec && syncOn() && navigator.onLine) { try { const r = await syncPost({ action: 'file_get', id }); if (r && r.ok) rec = r; } catch (e) {} }
+  if (rec) { FILE_MEM.set(id, rec); if (FILE_MEM.size > 8) FILE_MEM.delete(FILE_MEM.keys().next().value); }
+  return rec;
+}
+function fileImgs() {
+  document.querySelectorAll('[data-fimg]').forEach(async el => {
+    if (el.dataset.done) return; el.dataset.done = '1';
+    const rec = await fileData(el.dataset.fimg); if (!el.isConnected) return;
+    if (!rec) { el.textContent = syncOn() && !navigator.onLine ? 'Internet is needed to see the photo.' : 'The photo could not be opened.'; return; }
+    if (/^image\//.test(rec.mime)) el.innerHTML = `<img class="cph vph" src="data:${esc(rec.mime)};base64,${rec.data}" data-name="${esc(el.dataset.name || '')}" alt="Photo of the visit">`;
+    else el.innerHTML = `<button class="btn" data-dact="open" data-id="${esc(el.dataset.fimg)}" data-name="${esc(el.dataset.name || '')}">Open ${esc(rec.name || 'the file')}</button>`;
+  });
+}
+function visitRows(v) {
+  const school = v.purpose === 'School visit';
+  const rows = [['Date', fmtDate(v.date)], ['Section', teamLabel(visitTeam(v))], ['Visited by', staffName(v.by)], v.enteredBy && v.enteredBy !== v.by ? ['Written by', staffName(v.enteredBy)] : null, ['Purpose', v.purpose], ['Where', school ? visitSchool(v) : [v.where, v.place].filter(Boolean).join(' · ')], [school ? 'Did the visit take place?' : 'Was somebody found?', v.successful === 'No' ? 'No, nobody found' : 'Yes'], ['Met with', v.metWith], ['Still living at home', v.stillHome]];
+  if (school) rows.push(['Grade teacher', [v.teacher, v.teacherPhone].filter(Boolean).join(' · ')], ['Attendance', v.schAtt], ['Academic performance', [v.perf, v.perfNote].filter(Boolean).join(' · ')], ['Co-curriculum activities', v.cocurr], ['General behaviour', v.behaviour], ['Interaction with the teachers', v.intTeachers], ['Interaction with the schoolmates', v.intMates], ["Teacher's comment", v.teacherComment], ['Weaknesses and/or challenges', v.weak], ['Strengths', v.strong], ['Name of class teacher', v.classTeacher], ['Comparison with the last visit', v.trend], ['Optional subject chosen', v.abaOptional], ['Exams: statement of results', v.abaExam], ['Suggestion from the teacher: academic performance', v.abaSugAcad], ['Change in the academic performance of the last three years', v.aba3y], ['Suggestion from the teacher: social behaviour', v.abaSugSoc]);
+  else rows.push(['What was found', v.findings]);
+  rows.push([school ? 'Interventions and way forward' : 'Follow-up action', v.action ? v.action + (v.actionDone ? ' (done)' : '') : '']);
+  for (const e of S.events) if (e.type === 'Referral' && String(e.childId) === String(v.childId) && e.date === v.date) rows.push(['Referred to', [referLabel(e.to), e.reason, e.note].filter(Boolean).join(' · ')]);
+  return rows.filter(r => r && r[1]);
+}
+function vVisitRep(r) {
+  const v = S.visits.find(x => x.id === r.id), c = v && child(v.childId);
+  if (!v || !c) return '<div class="top"><div><h1>Visit report</h1></div></div><div class="card"><p class="empty">This visit is not in the database.</p></div>';
+  const st = visitState(v), ph = visitPhotos(v), trail = visitTrail(v), nm = 'Visit ' + fullName(c) + ' ' + v.date, mine = visitMine(v);
+  const tl = e => `<div class="it"><div class="w"><b>${e.type === 'Visit validated' ? 'Validated' : e.type === 'Visit sent back' ? 'Sent back' : 'Sent again'}</b> <span class="sub">${esc(fmtDate(e.date))} · ${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}${e.file ? '<div class="sub">Photo added</div>' : ''}</div></div>`;
+  const check = USER.admin && (st === 'wait' || st === 'back') ? `<div class="chk" style="border:0;padding-bottom:0"><div class="chka" style="width:100%"><button class="btn pri" data-dact="valid" data-id="${esc(v.id)}">Validate</button>${st === 'wait' ? `${ph.length ? '' : `<button class="btn" data-dact="back" data-id="${esc(v.id)}" data-note="Photo missing">Send back: photo missing</button>`}<input class="in" name="note" placeholder="What is missing" aria-label="What is missing" style="flex:1;min-width:160px"><button class="btn" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}</div></div>` : '';
+  const again = !GUEST && mine && (st === 'back' || (st === 'wait' && !ph.length)) ? `<form data-form="visitagain" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;max-width:640px"><input type="hidden" name="id" value="${esc(v.id)}">${st === 'back' ? field('What you add', 'note', '', 'textarea', { wide: true, rows: 3 }) : ''}${filePickField('again', 'Photo of the visit')}<div><button class="btn pri">${st === 'back' ? 'Send again' : 'Add the photo'}</button></div></form>` : '';
+  setTimeout(fileImgs, 0);
+  return `<div class="top"><div><h1>Visit report</h1><p class="lead">${childLink(c)} ${centreChip(c)} ${visitChip(v)}</p></div><div><a class="btn" href="#" data-dact="goback">Back</a></div></div>
+  <section class="card" id="visitrep"><dl class="dl vdl">${visitRows(v).map(([k, x]) => `<dt>${esc(k)}</dt><dd>${esc(x)}</dd>`).join('')}</dl></section>
+  <section class="card"><h2>Photo</h2>${ph.length ? ph.map(id => `<div class="vphw" data-fimg="${esc(id)}" data-name="${esc(nm)}">Opening the photo…</div>`).join('') : '<p style="margin:4px 0"><span class="chip c-orange">No photo</span></p>'}</section>
+  ${st === 'old' ? '' : `<section class="card" id="visitval"><h2>Validation</h2>${trail.length ? trail.map(tl).join('') : '<p class="sub" style="margin:4px 0">Not validated yet.</p>'}${check}${again}</section>`}`;
+}
+FORMS.visitagain = function (o) {
+  const v = S.visits.find(x => x.id === o.id); if (!v || GUEST) return; const note = String(o.note || '').trim(), ph = fileKeep('again', v.childId, 'Visit photo');
+  if (!note && !ph) return toast(visitState(v) === 'back' ? 'Write what you add or choose the photo' : 'Choose the photo first');
+  S.events.push({ id: uid('e'), childId: String(v.childId), type: 'Visit sent again', ref: v.id, date: today(), ts: Date.now(), note, file: ph ? ph.id : '', by: USER.id }); save(); toast(ph && !note ? 'Photo added' : 'Sent again'); render();
+};
 function checkLine(lines) { const n = visitsToCheck('all', 'all').filter(v => visitState(v) === 'wait').length; if (n) lines.unshift({ n, text: n === 1 ? 'visit to validate' : 'visits to validate', href: '#/visits?vt=all&vtab=check', lvl: 'red' }); return lines; }
 
 /* ====================================================================
