@@ -13,7 +13,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-:root{--ink:#37352F;--muted:#73726E;--soft:#5A5955;--line:#E9E9E7;--line2:#D3D1CB;--fill:#F7F6F3;--fill2:#F1F1EF;--pri:#1C6FC1;--pri2:#155A9E;--prisoft:#E7F3F8;
+:root{--ink:#37352F;--muted:#6B6A66;--soft:#5A5955;--line:#E9E9E7;--line2:#D3D1CB;--fill:#F7F6F3;--fill2:#F1F1EF;--pri:#1C6FC1;--pri2:#155A9E;--prisoft:#E7F3F8;
 --green:#3D6626;--greensoft:#EDF3EC;--yellow:#6B5D00;--yellowsoft:#FBF3DB;--orange:#8A4A12;--orangesoft:#FBECDD;--red:#8E2F27;--redsoft:#FDEBEC;--purple:#6A3A60;--purplesoft:#F6F3F9}
 *{box-sizing:border-box}
 html,body{margin:0;background:#FFFFFF;color:var(--ink);font:400 14.5px/1.45 -apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Helvetica,Arial,sans-serif}
@@ -483,6 +483,26 @@ td.ph{width:52px;text-align:right}
 
 .daybar.next{background:var(--prisoft);border-color:var(--pri)}.daybar.next .dbt{color:var(--pri2)}
 
+/* review of 17 Nov: tap targets of 44 px on the phone, visible focus, dialog */
+a.cname{font-weight:600;color:var(--ink);text-decoration:none}a.cname:hover{text-decoration:underline}
+a:focus-visible,summary:focus-visible,.seg a:focus-visible,.vtabs a:focus-visible,.daybar a:focus-visible,tr.click:focus-visible{outline:2px solid var(--pri);outline-offset:2px;border-radius:4px}
+.btn.link.sub{min-height:36px;padding:6px 8px}
+#dlg{position:fixed;inset:0;z-index:1100;background:rgba(15,15,15,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+#dlg .dlgin{background:#FFFFFF;border-radius:14px;padding:18px;max-width:440px;width:100%;display:flex;flex-direction:column;gap:12px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+#dlg h2{margin:0;font-size:19px}#dlg p{margin:0;color:var(--soft);line-height:1.45}
+#dlg .dlgb{display:flex;gap:10px;flex-wrap:wrap}#dlg .dlgb .btn{flex:1 1 150px;min-height:48px;justify-content:center}
+@media (max-width:760px){
+  #fbbtn{min-height:44px;padding:11px 16px}
+  .vtabs a{min-height:48px}.seg a,.seg button{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  details>summary{padding-top:11px;padding-bottom:11px}
+  .btn.link.sub,a.sub[data-q]{min-height:44px;display:inline-flex;align-items:center}
+  .refit{flex-direction:column}.refit .w,.refdone{flex:1 1 auto;width:100%}.refdone{flex-wrap:wrap}.refdone .in{flex:1 1 100%;min-height:44px}.refdone .btn{flex:1 1 100%}
+  main details>summary{padding-top:12px!important;padding-bottom:12px!important}
+  .qchips a,.qtop a[data-q]{min-height:44px;display:inline-flex;align-items:center}
+  select.in{min-height:44px}
+  .btn.sm{min-height:44px}
+}
+
 </style>
 </head>
 <body>
@@ -495,13 +515,13 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.6';
+const VERSION = 'alpha 5.7';
 const BUILD_DATE = '2026-11-17'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
-  Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
-  UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9' },
-  Nkwazi: { phase: 3, centre: 'Nkwazi',   label: 'Nkwazi Centre',              color: '#448361' },
-  Youth:  { phase: 4, centre: 'Minsundu', label: 'Minsundu · Youth',          color: '#9065B0' }
+  Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
+  UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9', ink: '#2D7198' },
+  Nkwazi: { phase: 3, centre: 'Nkwazi',   label: 'Nkwazi Centre',              color: '#448361', ink: '#3D7557' },
+  Youth:  { phase: 4, centre: 'Minsundu', label: 'Minsundu · Youth',          color: '#9065B0', ink: '#815A9E' }
 };
 const SECTION_KEYS = ['Luigi', 'UCC', 'Nkwazi', 'Youth'];
 const FAMILY_SECTIONS = ['UCC', 'Youth', 'Nkwazi'];
@@ -1270,7 +1290,7 @@ function shell(active, body) {
 }
 function demoBar() { return `<div class="demobar"><button class="btn sm pri" data-tour="start" style="margin-right:10px"><span class="dlong">Start the guided tour</span><span class="dshort">Guided tour</span></button><b>Demo version.</b> <span class="dshort">Invented children.</span><span class="dlong">All children, visits and attendance are invented. The 2026 report figures are the real ones from the section reports. Try everything: nothing here is real and nothing leaves this computer. <a href="#/help">What we want to know from you</a> · <button class="btn link" data-act="resetdemo">Start the demo again</button></span></div>`; }
 function chip(status) { return `<span class="chip ${STATUS_CHIP[status] || ''}">${esc(STATUS_LABEL[status] || status)}</span>`; }
-function secChip(s) { const d = SECTIONS[s]; return d ? `<span class="chip" style="background:${d.color}1F;color:${d.color}">${esc(d.label)}</span>` : ''; }
+function secChip(s) { const d = SECTIONS[s]; return d ? `<span class="chip" style="background:${d.color}1F;color:${d.ink || d.color}">${esc(d.label)}</span>` : ''; }
 function childLink(c) { return `<a href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}`; }
 /* the month of a plan, large and in the middle: green this month, blue a month to come, orange a past month */
 function monthBar(m, key) {
@@ -1290,7 +1310,7 @@ function vLogin() {
   const st = activeStaff();
   return `<div class="login">
     <img src="${LOGO}" alt="Cicetekelo Youth Project logo" style="width:72px">${logoSvg(46)}
-    ${IS_DEMO ? '<div class="demobar" style="border-radius:8px">Demo version with invented children. Choose any name to try it, then click "Start the guided tour" at the top of the page.</div>' : ''}
+    ${IS_DEMO ? '<div class="demobar" style="border-radius:8px">Demo version with invented children. Choose any name to try it, then tap "Start the guided tour" at the top of the page.</div>' : ''}
     <div><h1>Who is using this ${isPhone() ? 'phone' : 'computer'}?</h1><p class="lead">CYP EDU ${VERSION} · Cicetekelo Youth Project, Education Department. Tap your name.</p></div>
     <div style="width:100%"><button class="stile gtile" data-act="guest"><span class="av">G</span>Guest<small>For visitors. Names, photos and personal details of the children are hidden. View only.</small></button>${loginTiles()}</div>
     <p class="sub" style="max-width:560px"></p>
@@ -1307,7 +1327,7 @@ function vHome(r) {
   if (!S.children.length) {
     return `<div class="top"><div><h1>Welcome</h1><p class="lead">There are no children in the records yet.</p></div></div>
     <div class="card"><h2>Start</h2><p>Load the starter pack: one file with the children of the Minsundu tool (same ID numbers), the Luigi name list and the figures of the 2026 section reports. Or add children one by one.</p>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">${USER.admin ? `<a class="btn pri" href="#/staff/data">Load the starter pack</a>` : `<span class="note">Ask an administrator to import the data.</span>`}<a class="btn" href="#/child/new">Add a child</a></div></div>`;
+    <div style="display:flex;gap:10px;flex-wrap:wrap">${USER.admin ? `<a class="btn pri" href="#/staff/data">Load the starter pack</a>` : `<span class="note">Ask an Education admin to import the data.</span>`}<a class="btn" href="#/child/new">Add a child</a></div></div>`;
   }
   const f = c => filt === 'all' ? true : filt === 'res' ? c.residence === 'Resident' : filt === 'tra' ? c.residence === 'In transit' : filt === 'non' ? !sleepsHere(c) : true;
   const cur = S.children.filter(c => isCurrent(c) && f(c));
@@ -1343,7 +1363,7 @@ function vHome(r) {
   ${homeBirthdays()}
   ${homeTodo()}
   ${syncReminder()}
-  ${(() => { if (typeof syncOn === 'function' && syncOn()) return ''; const dev = isPhone() ? 'phone' : 'computer', d = S.meta.lastBackup ? daysBetween(S.meta.lastBackup, today()) : null; return (d == null || d > 7) ? `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span>${d == null ? 'No copy of the records has been saved from this ' + dev + ' yet.' : 'The last copy of the records is ' + d + ' days old.'} If this ${dev} breaks, what was recorded since is lost.</span>${USER.admin ? '<button class="btn" data-act="backup">Save a copy now</button>' : '<span>Ask an administrator to save a copy.</span>'}</div>` : ''; })()}
+  ${(() => { if (typeof syncOn === 'function' && syncOn()) return ''; const dev = isPhone() ? 'phone' : 'computer', d = S.meta.lastBackup ? daysBetween(S.meta.lastBackup, today()) : null; return (d == null || d > 7) ? `<div class="warn" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span>${d == null ? 'No copy of the records has been saved from this ' + dev + ' yet.' : 'The last copy of the records is ' + d + ' days old.'} If this ${dev} breaks, what was recorded since is lost.</span>${USER.admin ? '<button class="btn" data-act="backup">Save a copy now</button>' : '<span>Ask an Education admin to save a copy.</span>'}</div>` : ''; })()}
   <section class="card">
     <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:10px"><span class="big">${tot}</span><span style="color:var(--soft)">children and youth active in the programme today</span><span class="chip">${sexText([].concat(...perList))}</span></div>
     <div class="bar" style="height:16px;margin:16px 0 12px">${SECTION_KEYS.map((k, i) => `<div style="width:${pct(per[i], tot)}%;background:${SECTIONS[k].color}" title="${esc(SECTIONS[k].label)}: ${per[i]}"></div>`).join('')}</div>
@@ -1401,7 +1421,7 @@ function filteredChildren(q) {
 function childRows(list) {
   if (!list.length) return '<p class="empty">No child matches.</p>';
   return `<div class="tw"><table><thead><tr><th class="mh">ID</th><th>Name</th><th class="mh">Sex</th><th class="n mh">Age</th><th class="mh">Education</th><th>Centre</th><th class="mh">Resident or not</th><th>Status</th><th class="mh">Last home visit</th><th><span class="vh">Photo</span></th></tr></thead><tbody>
-  ${list.map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td><b>${esc(fullName(c))}</b>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td><td class="ph">${avatar(c, 40)}</td></tr>`; }).join('')}
+  ${list.map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td><a class="cname" href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td><td class="ph">${avatar(c, 40)}</td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
 function vChildren(r) {
@@ -1497,7 +1517,7 @@ function vChild(r) {
   for (const v of visitsOf(c.id)) hist.push({ d: v.date, t: `<b>${esc(v.purpose)}</b> visit${v.where ? ' · ' + esc(v.where) : ''}${v.successful === 'No' ? ' · <span class="chip c-red">nobody found</span>' : ''}${v.stillHome ? ' · still at home: ' + esc(v.stillHome) : ''} <span class="sub">by ${esc(staffName(v.by))} · ${esc(teamLabel(visitTeam(v)))}</span>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}${v.actionDone ? ' (done)' : ''}</div>` : ''}<div><a href="#/visitrep/${esc(v.id)}">Open the report</a> ${visitChip(v)}</div>` });
   for (const e of S.events.filter(e => String(e.childId) === String(c.id))) { const t = eventLine(e); if (t) hist.push({ d: e.date, t: t + cancelBtn('event', e) }); }
   for (const m of movesOf(c.id)) hist.push({ d: m.date, t: `<b>${esc(moveLabel(m))}</b>${m.by ? ` <span class="sub">by ${esc(staffName(m.by))}</span>` : ''}${m.note ? `<div>${esc(m.note)}</div>` : ''}${cancelBtn('move', m)}` });
-  for (const s of S.sessions.filter(s => (s.children || []).map(String).includes(String(c.id)))) hist.push({ d: s.date, t: `<b>Counseling, ${esc(s.type.toLowerCase())} session</b> <span class="sub">by ${esc(staffName(s.by))}</span>${s.topic ? `<div>${esc(s.topic)}</div>` : ''}${cancelBtn('session', s)}` });
+  for (const s of S.sessions.filter(s => (s.children || []).map(String).includes(String(c.id)))) hist.push({ d: s.date, t: `<b>Counselling, ${esc(s.type.toLowerCase())} session</b> <span class="sub">by ${esc(staffName(s.by))}</span>${s.topic ? `<div>${esc(s.topic)}</div>` : ''}${cancelBtn('session', s)}` });
   const met = S.outreach.filter(o => (o.children || []).map(String).includes(String(c.id)));
   if (met.length > 12) {
     const byM = {};
@@ -1541,8 +1561,8 @@ function vChild(r) {
       <section class="card" id="happened"><h2>Something happened</h2>
         <form data-form="event" style="display:grid;grid-template-columns:1fr 150px;gap:8px">
           <input type="hidden" name="childId" value="${esc(c.id)}">
-          <select class="in" name="type">${opt(EVENT_TYPES)}</select><input class="in" type="date" name="date" value="${today()}" required>
-          <textarea class="in" name="note" id="evnote" rows="3" placeholder="What happened" style="grid-column:1/-1"></textarea><button class="btn pri" style="grid-column:1/-1">Save in the history</button>
+          <select class="in" name="type" aria-label="What happened">${opt(EVENT_TYPES)}</select><input class="in" type="date" name="date" value="${today()}" max="${today()}" aria-label="Date" required>
+          <textarea class="in" name="note" id="evnote" rows="3" placeholder="What happened" aria-label="Details" style="grid-column:1/-1"></textarea><button class="btn pri" style="grid-column:1/-1">Save in the history</button>
         </form></section>
       <section class="card"><h2>History</h2><div class="tl" style="margin-top:12px">${hist.length ? hist.map(h => `<div class="e"><div class="sub">${esc(fmtDate(h.d) || 'date not recorded')}</div>${h.t}</div>`).join('') : '<p class="empty">Nothing recorded yet.</p>'}</div></section>
     </div>
@@ -1596,7 +1616,7 @@ function vVisitForm(r) {
       ${field('Where', 'where', '', 'select', { options: opt(VISIT_WHERE, school ? 'School' : 'Home') })}
       ${field('Visited by', 'by', '', 'select', { options: opt(activeStaff().map(s => ({ v: s.id, l: s.name })), USER.id) })}
       ${field('Was somebody found?', 'successful', '', 'select', { options: opt([{ v: 'Yes', l: 'Yes, the visit took place' }, { v: 'No', l: 'No, nobody found' }], 'Yes') })}
-      ${field('Met with', 'metWith', '', 'text', { hint: 'Mother, guardian, teacher...' })}
+      ${field('Met with', 'metWith', '', 'text', { hint: 'Mother, guardian, teacher…' })}
       ${field('School or place', 'place', '', 'text', { hint: 'For school visits: the school name' })}
       ${field('Follow-up only: is the child still living at home?', 'stillHome', '', 'select', { options: opt(['Yes', 'No'], '', 'Not a follow-up visit'), hint: 'Feeds logframe SO1.1' })}
       ${field('What did you find?', 'findings', '', 'textarea', { wide: true, rows: 4 })}
@@ -1735,7 +1755,7 @@ function vAttendance(r) {
     <label class="f">Show<select class="in" data-filter="only">${opt([{ v: 'unmarked', l: 'Not marked yet' }].concat(attMarks(centre, grp).map(k => ({ v: k, l: ATT_L[k] }))), only, 'Everyone')}</select></label>
   </div>
   <div class="card" style="padding:6px 8px">
-    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px"><button class="btn sm" data-act="xl" data-k="${month ? 'attmonth' : 'attday'}">Export in Excel</button>${month ? `<span class="sub" style="align-self:center">${esc(fmtMonth(d.slice(0, 7)))} · click a box to mark or change</span>` : `<button class="btn sm" data-act="allpresent" data-d="${d}" data-g="${grp}" data-c="${centre}">Mark everyone not marked as present</button>`}</div>
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px"><button class="btn sm" data-act="xl" data-k="${month ? 'attmonth' : 'attday'}">Export in Excel</button>${month ? `<span class="sub" style="align-self:center">${esc(fmtMonth(d.slice(0, 7)))} · tap a box to mark or change</span>` : `<button class="btn sm" data-act="allpresent" data-d="${d}" data-g="${grp}" data-c="${centre}">Mark everyone not marked as present</button>`}</div>
     <div id="attTable">${month ? attMonthTable(q) : attTable(q)}</div>
   </div>`}
   ${attCheckList(centre)}
@@ -1763,7 +1783,7 @@ function vCounseling(r) {
   const m = r.q.get('m') || thisMonth(); const { a, b } = monthCtx(m);
   const ss = S.sessions.filter(s => inRange(s.date, a, b)).sort((x, y) => y.date.localeCompare(x.date));
   const opts = S.children.filter(x => x.status !== 'Closed').sort((p, q) => fullName(p).localeCompare(fullName(q))).map(x => ({ v: x.id, l: fullName(x) + ' · ' + x.id }));
-  return `<div class="top"><div><h1>Counseling</h1><p class="lead">${ss.length} sessions in ${esc(fmtMonth(m))}.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(m)}<button class="btn" data-act="xl" data-k="sessions">Export in Excel</button></div></div>
+  return `<div class="top"><div><h1>Counselling</h1><p class="lead">${ss.length} sessions in ${esc(fmtMonth(m))}.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(m)}<button class="btn" data-act="xl" data-k="sessions">Export in Excel</button></div></div>
   ${counselActions()}
   <div class="grid g2" style="align-items:start">
     <form class="card" data-form="session" style="display:flex;flex-direction:column;gap:12px"><h2>Record a session</h2>
@@ -1785,7 +1805,7 @@ function reportTable(def, m) {
   if (!def.rows) return '';
   const rows = def.rows(m);
   return `<div class="tw"><table id="rtable"><thead><tr><th>Code</th><th>Indicator</th>${def.cols.map(c => `<th class="n">${esc(c)}</th>`).join('')}<th class="nx"></th></tr></thead><tbody>
-  ${rows.map((r, i) => `<tr><td class="sub">${esc(r[0])}</td><td>${esc(r[1])}</td>${r[2].map(v => `<td class="n">${v == null ? '' : esc(v)}</td>`).join('')}<td class="nx">${r[3] && r[3].length ? `<button class="btn link sub" data-act="names" data-i="${i}">names</button>` : ''}</td></tr><tr class="hide" id="names${i}"><td></td><td colspan="${def.cols.length + 2}" class="sub">${r[3] ? r[3].map(c => esc(fullName(c)) + ' (' + esc(c.id) + ')').join(', ') : ''}</td></tr>`).join('')}
+  ${rows.map((r, i) => `<tr><td class="sub">${esc(r[0])}</td><td>${esc(r[1])}</td>${r[2].map(v => `<td class="n">${v == null ? '' : esc(v)}</td>`).join('')}<td class="nx">${r[3] && r[3].length ? `<button class="btn link sub" data-act="names" data-i="${i}">Names</button>` : ''}</td></tr><tr class="hide" id="names${i}"><td></td><td colspan="${def.cols.length + 2}" class="sub">${r[3] ? r[3].map(c => esc(fullName(c)) + ' (' + esc(c.id) + ')').join(', ') : ''}</td></tr>`).join('')}
   </tbody></table></div>`;
 }
 function vReports(r) {
@@ -1837,7 +1857,7 @@ function vHistory(r) {
 }
 
 function vStaff(r) {
-  if (!USER.admin) return `<h1>Admin</h1><p>Only administrators see this page.</p>`;
+  if (!USER.admin) return `<h1>Admin</h1><p>Only Education admins see this page.</p>`;
   if (r.id === 'data') return vData();
   return `<div class="top"><div><h1>Admin</h1><p class="lead">Who works where.</p></div><a class="btn" href="#/staff/data">Data: import, backup, export</a></div>
   <section class="card" style="padding:6px 8px">${staffTable()}</section>
@@ -1859,19 +1879,19 @@ function vData() {
   return `<div class="top"><div><h1>Data</h1><p class="lead">Import, backup and export.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn pri" href="#/sync">Shared database</a><a class="btn" href="#/staff">Back to staff</a></div></div>
   <div class="grid g2" style="align-items:start">
     ${IS_DEMO ? `<section class="card" style="grid-column:1/-1;border:2px solid var(--orange)"><h2>Demo version</h2><p class="sub">Loading real data is turned off here: this file is for trying the app with invented children. The real version is a separate file.</p><button class="btn" style="margin-top:10px" data-act="resetdemo">Start the demo again</button></section>` : ''}
-    <section class="card${IS_DEMO ? ' hide' : ''}" style="grid-column:1/-1;border:2px solid var(--pri)"><h2>First start: load the starter pack</h2><p class="sub">One file with everything collected so far: the 179 children of the Minsundu tool (same IDs), the children of the Luigi tool with photos and the 2026 day and night attendance (Luigi IDs get an L in front, because both tools start at 5000), the Nkwazi children from the register of October 2026 and the Data Tool (IDs with an N in front; a child already in the Luigi or Minsundu tool keeps one file), and the figures of the 2026 section reports (School, UCC, Youth, Nkwazi, Luigi, Family, Counseling, Table 6.0). Loading it twice does not create duplicates.${S.meta.starterPack ? ' Loaded already: pack of ' + esc(fmtDate(S.meta.starterPack)) + ', version ' + (S.meta.starterPackVersion || 1) + ' (' + S.history.length + ' report tables).' : ''}</p>
-      <input type="file" accept=".json,application/json" id="starterfile" class="in" style="margin-top:10px"><div id="startermsg" style="margin-top:10px"></div></section>
+    <section class="card${IS_DEMO ? ' hide' : ''}" style="grid-column:1/-1;border:2px solid var(--pri)"><h2>First start: load the starter pack</h2><p class="sub">One file with what was collected before the app. Minsundu: the 179 children of the Minsundu tool, same IDs. Luigi: the children with photos and the 2026 day and night attendance; their IDs get an L in front. Nkwazi: the children of the October 2026 register and of the Data Tool; their IDs get an N in front. A child already in another tool keeps one file. Also the figures of the 2026 section reports. Loading it twice does not create duplicates.${S.meta.starterPack ? ' Loaded already: pack of ' + esc(fmtDate(S.meta.starterPack)) + ', version ' + (S.meta.starterPackVersion || 1) + ' (' + S.history.length + ' report tables).' : ''}</p>
+      <input type="file" accept=".json,application/json" id="starterfile" class="in" style="margin-top:10px" aria-label="Starter pack file"><div id="startermsg" style="margin-top:10px"></div></section>
     <section class="card${IS_DEMO ? ' hide' : ''}"><h2>Import from the Minsundu tool</h2><p class="sub">In Riccardo's tool, export the children to CSV (users_export.csv), then choose the file here. IDs stay the same (5000 and up). Running it again adds new children and fills empty fields; it never overwrites what was recorded here.</p>
-      <input type="file" accept=".csv,text/csv" id="importfile" class="in" style="margin-top:10px"><div id="importmsg" style="margin-top:10px"></div></section>
+      <input type="file" accept=".csv,text/csv" id="importfile" class="in" style="margin-top:10px" aria-label="File to import"><div id="importmsg" style="margin-top:10px"></div></section>
     <section class="card${IS_DEMO ? ' hide' : ''}"><h2>Import a Luigi list (Excel)</h2><p class="sub">The monthly Luigi statistics file with the list of names (NAME, SEX, AGE, PLACE). Children already in the records under the same name and a similar age are not created twice: they are linked. The month is read from the title ("Luigi statistics for ..."). Use the most recent list.</p>
-      <input type="file" accept=".xlsx" id="luigifile" class="in" style="margin-top:10px"><div id="luigimsg" style="margin-top:10px"></div></section>
+      <input type="file" accept=".xlsx" id="luigifile" class="in" style="margin-top:10px" aria-label="Luigi list file"><div id="luigimsg" style="margin-top:10px"></div></section>
     <section class="card" style="grid-column:1/-1"><h2>Add photos from files</h2><p class="sub">Choose the pictures. The file name must be the name of the child. Check, then save.</p>
-      <input type="file" accept="image/*" multiple id="photosfile" class="in" style="margin-top:10px"><div id="photosmsg" style="margin-top:10px"></div></section>
+      <input type="file" accept="image/*" multiple id="photosfile" class="in" style="margin-top:10px" aria-label="Photos file"><div id="photosmsg" style="margin-top:10px"></div></section>
     <section class="card"><h2>Backup</h2><p class="sub">Download a full copy of the data. Keep it on a USB key or Google Drive (not shared publicly: it contains children's personal data). ${S.meta.lastBackup ? 'Last backup: ' + esc(fmtDate(S.meta.lastBackup)) + '.' : 'No backup made yet.'}</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn pri" data-act="backup">Download backup</button><label class="btn">Restore a backup<input type="file" accept=".json,application/json" id="restorefile" class="hide"></label></div></section>
     <section class="card"><h2>Export in Excel</h2><p class="sub">Everything in one Excel file (one sheet per table), or one table at a time. Every list in the app has its own "Export in Excel" button: it exports what is on the screen, with the filters you chose.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn pri" data-act="export" data-k="all">Everything</button>${['children', 'visits', 'events', 'moves', 'sessions', 'outreach', 'attendance'].map(k => `<button class="btn" data-act="export" data-k="${k}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('')}</div></section>
-    <section class="card"><h2>Start again</h2><p class="sub">Deletes all data on this computer. Make a backup first.</p><button class="btn danger" style="margin-top:10px" data-act="wipe">Delete all data on this computer</button></section>
+    <section class="card"><h2>Start again</h2><p class="sub">Deletes all data on this ${isPhone() ? 'phone' : 'computer'}. Make a backup first.</p><button class="btn danger" style="margin-top:10px" data-act="wipe">Delete all data on this ${isPhone() ? 'phone' : 'computer'}</button></section>
   </div>`;
 }
 
@@ -1894,7 +1914,7 @@ function vHelp() {
       'Text half written stays on the device until you save it.'])}</ul></section>
     <section class="card"><h2>Visits</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6">${li([
       'Each section plans and records its own visits. Home visits to Minsundu and Nkwazi children are made by the Family Section.',
-      'The supervisor opens the report of each visit and validates it, or sends it back.',
+      'The Education office opens the report of each visit and validates it, or sends it back.',
       'A visit sent back: open it, add what is missing, send it again.',
       'The reports count the validated visits.',
       'Before it is validated you can change it: open its report, Change the report.',
@@ -2210,7 +2230,7 @@ document.addEventListener('click', e => {
   else if (act === 'exportlist') { const list = filteredChildren(route().q); downloadXlsx('children-' + today(), [{ name: 'Children', rows: colsToRows(list, CHILD_COLS) }]); }
   else if (act === 'xl') { const f = XL[b.dataset.k]; if (f) f(); }
   else if (act === 'resetdemo') { if (IS_DEMO && !GUEST && confirm('Start the demo again? Everything entered in the demo is replaced by the invented data.')) { noStamp(); S = Object.assign(blankState(), demoState()); save(); toast('Demo data restored'); go('#/home'); } }
-  else if (act === 'wipe') { if (confirm('Delete all data on this computer? This cannot be undone.')) { const staff = S.staff; S = blankState(); S.staff = staff; save(); toast('All data deleted'); go('#/home'); } }
+  else if (act === 'wipe') { if (confirm('Delete all data on this ' + (isPhone() ? 'phone' : 'computer') + '? This cannot be undone.')) { const staff = S.staff; S = blankState(); S.staff = staff; save(); toast('All data deleted'); go('#/home'); } }
 });
 function copyText(t) {
   const done = () => toast('Table copied: paste it into Word or Excel');
@@ -2256,7 +2276,7 @@ document.addEventListener('change', e => {
   if (el.id === 'restorefile' && el.files[0]) {
     const rd = new FileReader();
     rd.onload = () => {
-      try { const d = JSON.parse(rd.result); if (!d || !Array.isArray(d.children)) throw new Error('not a backup of this app'); if (!confirm('Replace all data on this computer with this backup (' + d.children.length + ' children)?')) return; noStamp(); S = Object.assign(blankState(), d); mergeStaff(); save(); USER = S.staff.find(s => s.id === (USER && USER.id)) || null; toast('Backup restored'); render(); }
+      try { const d = JSON.parse(rd.result); if (!d || !Array.isArray(d.children)) throw new Error('not a backup of this app'); if (!confirm('Replace all data on this ' + (isPhone() ? 'phone' : 'computer') + ' with this backup (' + d.children.length + ' children)?')) return; noStamp(); S = Object.assign(blankState(), d); mergeStaff(); save(); USER = S.staff.find(s => s.id === (USER && USER.id)) || null; toast('Backup restored'); render(); }
       catch (err) { toast('Could not restore: ' + err.message); }
     };
     rd.readAsText(el.files[0]);
@@ -2545,7 +2565,7 @@ function luigiStaffHtml(d, sh) {
   const names = ids.map(staffName).join(', ') || (s && s.staff) || '';
   return `<details class="lstaff"${!isPhone() || UI.lstOpen ? ' open' : ''}><summary><span class="lbl">Who did the ${esc(sh.label.toLowerCase())} on this day?</span> ${names ? `<b>${esc(names)}</b>` : (n ? '<span class="chip c-orange">Tick the names</span>' : '<span class="sub">nobody ticked yet</span>')}${s && (s.notes || s.findings) ? ' <span class="chip c-green">notes written</span>' : ''}<span class="btn sm lstchg">Staff, notes, findings</span></summary>
     <div class="checks">${base.concat(extra).map(x => `<label><input type="checkbox" data-lstaff="${sh.k}" data-d="${d}" value="${esc(x.id)}"${ids.includes(x.id) ? ' checked' : ''}>${esc(x.name)}</label>`).join('')}
-      <select class="in" data-lstaffadd="${sh.k}" data-d="${d}" style="width:auto;min-height:32px" aria-label="Add another person"><option value="">Add another person</option>${others.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
+      <select class="in" data-lstaffadd="${sh.k}" data-d="${d}" style="width:auto;min-height:44px" aria-label="Add another person"><option value="">Add another person</option>${others.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
     ${s && s.staff && !ids.length ? `<div class="sub">Recorded before as: ${esc(s.staff)}</div>` : ''}
     <div class="fs two" style="margin-top:8px"><label class="f">Places and facts of the day<textarea class="in" rows="2" data-lnote="${sh.k}" data-lf="notes" data-d="${d}" placeholder="Where you went, what happened">${esc(s ? s.notes || '' : '')}</textarea></label>
     <label class="f">Findings: what is your assessment?<textarea class="in" rows="2" data-lnote="${sh.k}" data-lf="findings" data-d="${d}" placeholder="What you understood today about the children and the street: new faces, changes, risks, what to do next">${esc(s ? s.findings || '' : '')}</textarea></label></div>${s && !GUEST ? `<p style="margin:10px 0 0"><button type="button" class="btn sm danger" data-dact="clearsheet" data-k="${sh.k}" data-d="${d}">Cancel this sheet</button></p>` : ''}</details>`;
@@ -2606,7 +2626,7 @@ function luigiSummary(year) {
     <label class="f">Last met<select class="in" data-filter="fl">${opt([{ v: 'month', l: 'This month' }, { v: 'before', l: 'Before this month' }, { v: 'never', l: 'Never in ' + year }], q.get('fl'), 'Any time')}</select></label>
     <label class="f">Days not met<select class="in" data-filter="fg">${opt([{ v: 'lt7', l: 'Less than 7' }, { v: '7', l: '7 or more' }, { v: '30', l: '30 or more' }, { v: 'never', l: 'Never met' }], q.get('fg'), 'Any')}</select></label>
   </div>
-  <div class="card" style="padding:6px 8px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px;align-items:center"><span class="sub"><b>${rows.length}</b> of ${total} children shown${any ? ' · <a href="#" data-q="fcat=&fc=&fs=&fn=&fl=&fg=">clear the filters</a>' : ''} · click a column title to sort</span><button class="btn sm" data-act="xl" data-k="lsum">Export in Excel</button></div><div class="tw"><table id="lsumtable"><thead><tr>${th('name', 'Name')}${th('cat', 'Situation')}${th('c', 'Days in centre', 1)}${th('s', 'Days met on the street', 1)}${th('n', 'Nights on the street', 1)}${th('last', 'Last met')}${th('gone', 'Days not met', 1)}</tr></thead><tbody>
+  <div class="card" style="padding:6px 8px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px;align-items:center"><span class="sub"><b>${rows.length}</b> of ${total} children shown${any ? ' · <a href="#" data-q="fcat=&fc=&fs=&fn=&fl=&fg=">clear the filters</a>' : ''} · tap a column title to sort</span><button class="btn sm" data-act="xl" data-k="lsum">Export in Excel</button></div><div class="tw"><table id="lsumtable"><thead><tr>${th('name', 'Name')}${th('cat', 'Situation')}${th('c', 'Days in centre', 1)}${th('s', 'Days met on the street', 1)}${th('n', 'Nights on the street', 1)}${th('last', 'Last met')}${th('gone', 'Days not met', 1)}</tr></thead><tbody>
   ${rows.map(({ c, r, gone }) => `<tr><td>${childLink(c)}<div class="sub">ID ${esc(c.id)}${c.status === 'Closed' ? ' · ' + esc(c.closeReason || 'closed') : ''}</div></td><td>${esc(c.streetCat || '')}</td><td class="n">${r.c || ''}</td><td class="n">${r.s || ''}</td><td class="n">${r.n || ''}</td><td>${esc(fmtDate(r.last))}</td><td class="n" style="${gone >= 30 ? 'color:var(--red);font-weight:700' : gone >= 7 ? 'color:var(--red)' : ''}">${gone == null ? 'never' : gone}</td></tr>`).join('') || '<tr><td colspan="7" class="empty">No child matches these filters.</td></tr>'}
   </tbody></table></div></div>`;
 }
@@ -2654,7 +2674,7 @@ function vLuigiAtt(r) {
     when = monthPicker(m, 'lm');
     filters = `<div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:2fr 1fr 1fr">${search}${filtBtn()}${catSel}<label class="f">Show<select class="in" data-filter="lseen">${opt([{ v: '1', l: 'Only children marked this month' }], q.get('lseen'), 'All children in town')}</select></label></div>`;
     body = `<div class="card" style="padding:6px 8px">
-      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px;align-items:center"><span class="sub">${night ? 'Click a cell: <b class="lc S" style="padding:1px 6px">S</b> slept on the street, click again to clear.' : 'Click a cell: <b class="lc C" style="padding:1px 6px">C</b> came to the centre, <b class="lc S" style="padding:1px 6px">S</b> met on the street, then empty.'} ${seen.length} of ${kids.length} children marked this month (${sexText(seen)}; A ${seen.filter(c => c.streetCat === 'A').length} · B ${seen.filter(c => c.streetCat === 'B').length}).</span><button class="btn sm" data-lact="xlmonth">Export in Excel</button></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px;align-items:center"><span class="sub">${night ? 'Tap a cell: <b class="lc S" style="padding:1px 6px">S</b> slept on the street, tap again to clear.' : 'Tap a cell: <b class="lc C" style="padding:1px 6px">C</b> came to the centre, <b class="lc S" style="padding:1px 6px">S</b> met on the street, then empty.'} ${seen.length} of ${kids.length} children marked this month (${sexText(seen)}; A ${seen.filter(c => c.streetCat === 'A').length} · B ${seen.filter(c => c.streetCat === 'B').length}).</span><button class="btn sm" data-lact="xlmonth">Export in Excel</button></div>
       <div id="lattBody">${luigiGrid(m, night)}</div></div>`;
   }
   const lead = tab === 'today' ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : tab === 'sum' ? 'Year ' + m.slice(0, 4) : fmtMonth(m) + '. Same sheets as the Luigi tool.';
@@ -2663,7 +2683,7 @@ function vLuigiAtt(r) {
   <div class="attctl"><div style="display:flex;gap:8px;flex-wrap:wrap">${centreSeg('Luigi')}${when}</div></div>
   ${tabs}
   <section class="card soft knowncard"><h2>New face? Check first if the child is already known</h2><p class="sub hidem" style="margin:2px 0 8px">Type a name or nickname.</p>
-    <input class="in" id="knownq" data-ctx="luigi" placeholder="Name or nickname" autocomplete="off"><div id="knownbox" style="margin-top:8px"></div></section>
+    <input class="in" id="knownq" data-ctx="luigi" placeholder="Name or nickname" autocomplete="off" aria-label="Name or nickname of the child"><div id="knownbox" style="margin-top:8px"></div></section>
   ${tab === 'today' ? '' : filters}${body}`;
 }
 
@@ -2804,7 +2824,8 @@ function myCentre() { const a = USER ? staffAreas(USER) : [], c = CENTRES.filter
 function teamFor(c) { return myTeam() || (c && c.section === 'Luigi' ? 'Luigi' : 'Family'); }
 function visitTeam(v) { if (TEAM_KEYS.includes(v.team)) return v.team; if (v.purpose === 'School visit') return 'School'; const c = child(v.childId); return c && c.section === 'Luigi' ? 'Luigi' : 'Family'; }
 function planTeam(p) { if (TEAM_KEYS.includes(p.team)) return p.team; const c = child(p.childId); return c && c.section === 'Luigi' ? 'Luigi' : 'Family'; }
-function centreChip(c) { const k = centreOf(c); return k ? `<span class="cchip" style="background:${CENTRE_COLOR[k]}">${esc(k)}</span>` : ''; }
+const CENTRE_INK = { Luigi: SECTIONS.Luigi.ink, Minsundu: SECTIONS.UCC.ink, Nkwazi: SECTIONS.Nkwazi.ink };
+function centreChip(c) { const k = centreOf(c); return k ? `<span class="cchip" style="background:${CENTRE_INK[k]}">${esc(k)}</span>` : ''; }
 /* the two choices on the Visits page: section doing the visits, centre of the child */
 function visitSel(q) {
   const mt = myTeam(), t = q.get('vt') || (mt === 'Family' || mt === 'School' ? mt : mt ? 'Others' : 'Family');
@@ -2867,7 +2888,7 @@ function visitChooser(q, m) {
   const tBtn = (k, l) => `<a href="#" data-q="vt=${k}&vc=" class="${team === k ? 'on' : ''}">${esc(l)}</a>`;
   const cBtn = (k, l, col) => `<a href="#" data-q="vc=${k}" class="cbtn${centre === k ? ' on' : ''}" style="--c:${col}"><b>${esc(l)}</b><span>${nPlan(k)} in the plan</span></a>`;
   return `<details class="card vchoose" id="vchoose"${isPhone() ? '' : ' open'}>
-    <summary><span class="vnow">You are looking at: <b>${esc(team === 'all' ? 'all sections' : team === 'Others' ? 'Others' : teamLabel(team))}</b> · <b>${esc(centre === 'all' ? 'children of all centres' : 'children of ' + CENTRE_LABEL[centre])}</b> · <b>${esc(fmtMonth(m))}</b></span><span class="btn sm vchg">Change centre</span></summary>
+    <summary><span class="vnow">You are looking at: <b>${esc(team === 'all' ? 'all sections' : team === 'Others' ? 'Others' : teamLabel(team))}</b> · <b>${esc(centre === 'all' ? 'children of all centres' : 'children of ' + CENTRE_LABEL[centre])}</b></span><span class="btn sm vchg">Change centre</span></summary>
     <div><p class="sec" style="margin:0 0 6px">1 · Who does the visits?</p><div class="seg big" role="group" aria-label="Who does the visits">${tBtn('Family', 'Family Section')}${tBtn('School', 'School Section')}<a href="#" data-q="vt=Others&vc=" class="${team !== 'Family' && team !== 'School' && team !== 'all' ? 'on' : ''}">Others</a>${tBtn('all', 'All')}</div></div>
     <div><p class="sec" style="margin:0 0 6px">2 · Children of which centre?</p><div class="cbtns" role="group" aria-label="Centre of the child">${['Luigi', 'Minsundu', 'Nkwazi'].filter(k => !(noLuigi(team) && k === 'Luigi')).map(k => cBtn(k, CENTRE_LABEL[k], CENTRE_COLOR[k])).join('')}${cBtn('all', 'All centres', '#73726E')}</div></div>
   </details>`;
@@ -2926,7 +2947,7 @@ function planCard(m, team, centre) {
   const P = pendingData(), due = (team === 'all' || team === 'Family') ? P.due.filter(x => vcIn(x.c, 'Family', centre) && !plans().some(p => String(p.childId) === String(x.c.id) && p.month === m && planTeam(p) === 'Family')) : [];
   const chipOf = st => st.k === 'done' ? `<span class="chip c-green">Done ${esc(fmtDate(st.v.date))}</span>` : st.k === 'tried' ? `<span class="chip c-orange">Tried ${esc(fmtDate(st.v.date))}, nobody found</span>` : '<span class="chip">To do</span>';
   const past = m < thisMonth();
-  const row = ({ p, c, st }) => `<div class="it">${avatar(c, 34)}<div class="w"><b>${childLink(c)}</b><span>${team === 'all' ? '<em class="tm">' + esc(teamLabel(planTeam(p))) + '</em> · ' : ''}${esc(SECTIONS[c.section].label)} · ${esc(p.purpose)}${c.familyAddress ? ' · ' + esc(c.familyAddress) : ''}${c.guardianName ? ' · ' + esc(c.guardianName) : ''}${c.contact ? ' · ' + esc(c.contact) : ''}</span></div>${chipOf(st)}${st.k !== 'done' ? `<a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${planTeam(p)}">Record visit</a>` : ''}${st.k === 'planned' ? `<button class="btn sm" data-pact="unplan" data-id="${esc(p.id)}" aria-label="Remove ${esc(fullName(c))} from the plan">Remove</button>` : ''}</div>`;
+  const row = ({ p, c, st }) => `<div class="it">${avatar(c, 34)}<div class="w"><b>${childLink(c)}</b><span>${team === 'all' ? '<em class="tm">' + esc(teamLabel(planTeam(p))) + '</em> · ' : ''}${esc(SECTIONS[c.section].label)} · ${esc(p.purpose)}${c.familyAddress ? ' · ' + esc(c.familyAddress) : ''}${c.guardianName ? ' · ' + esc(c.guardianName) : ''}${c.contact ? ' · ' + esc(c.contact) : ''}</span></div>${chipOf(st)}${st.k !== 'done' ? `<a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${planTeam(p)}">Record a visit</a>` : ''}${st.k === 'planned' ? `<button class="btn sm" data-pact="unplan" data-id="${esc(p.id)}" aria-label="Remove ${esc(fullName(c))} from the plan">Remove</button>` : ''}</div>`;
   const block = k => { const l = list.filter(x => centreOf(x.c) === k); if (!l.length) return centre === k ? '' : '';
     const groups = {}; for (const x of l) (groups[place(x.c)] = groups[place(x.c)] || []).push(x);
     return `<div class="cgrp" style="--c:${CENTRE_COLOR[k]}"><b>${esc(CENTRE_LABEL[k])}</b><span>${l.length} ${l.length === 1 ? 'child' : 'children'} · ${l.filter(x => x.st.k === 'done').length} done</span></div>` + Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([g, gl]) => `<div class="grp">${esc(g)} · ${gl.length}</div>` + gl.map(row).join('')).join(''); };
@@ -2995,7 +3016,7 @@ function centreGuide(full) {
       <details class="more" style="margin-top:10px"><summary>Other centres and sections</summary><div class="grid g${Math.min(3, rest.length)}" style="align-items:stretch;margin-top:10px">${rest.map(g => box(g, false, false)).join('')}</div></details></div>`;
   }
   return `<div id="guide"><p class="sec" style="margin:0 0 8px">Where to go${full ? ', by centre' : mine.length ? '' : ' · choose your centre'}</p><div class="grid g4" style="align-items:stretch">${G.map(g => box(g, false, false)).join('')}</div>
-    ${full || mine.length ? '' : '<p class="sub" style="margin:8px 0 0">An administrator can set your areas of work on the Admin page: then this page starts with your own centres.</p>'}</div>`;
+    ${full || mine.length ? '' : '<p class="sub" style="margin:8px 0 0">An Education admin can set your areas of work on the Admin page: then this page starts with your own centres.</p>'}</div>`;
 }
 
 /* ---------- events ---------- */
@@ -3137,7 +3158,7 @@ function abaSheet(year) {
 /* ---------- Children page: records to complete ---------- */
 function recordsPanel() {
   const P = pendingData(); if (!P.withIssues) return '';
-  return `<details class="card more" id="records"${route().q.get('issue') ? ' open' : ''}><summary><b>${P.withIssues} open files</b> miss information that a report needs. Click to see what.</summary>
+  return `<details class="card more" id="records"${route().q.get('issue') ? ' open' : ''}><summary><b>${P.withIssues} open files</b> miss information that a report needs. Tap to see what.</summary>
     <div style="margin-top:8px">${Object.entries(P.issueCount).map(([k, n]) => `<div class="it"><div class="w"><b>${esc(ISSUES[k])}</b></div><span class="chip">${n}</span><a class="btn sm" href="#" data-q="issue=${k}">Show these children</a></div>`).join('')}</div></details>`;
 }
 
@@ -3160,7 +3181,7 @@ function needHtml(r, team, centre, N) {
   const fam = N.fam ? `<section class="card" id="need"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><h2>Home visits due · Family Section · ${list.length}</h2>${list.length > LIM ? `<a href="#" data-q="all=${showAll ? '' : '1'}" class="sub">${showAll ? 'Show fewer' : 'Show all ' + list.length}</a>` : ''}</div>
       <p class="sub" style="margin:2px 0 6px">${N.due.length} late, ${N.never.length} never visited. Grouped by compound. The button puts the child in the plan of ${esc(fmtMonth(pm))}. Residents every ${S.settings.interval.Resident} days, non-residents every ${S.settings.interval['Non-resident']}, follow-up every ${S.settings.interval['Follow-up']}.</p>
       ${list.length ? html : '<p class="empty">No home visit is due.</p>'}</section>
-      ${N.followEnd.length ? `<section class="card" id="followend"><h2>2-year follow-up completed · ${N.followEnd.length}</h2><p class="sub" style="margin:2px 0 6px">Reintegrated more than two years ago: the file can be closed.</p>${N.followEnd.map(c => `<div class="it"><div class="w"><b>${childLink(c)}</b><span>Reintegrated ${esc(fmtDate(c.reintegrationDate))}</span></div><a class="btn sm" href="#/child/${esc(c.id)}/status">Close file</a></div>`).join('')}</section>` : ''}` : '';
+      ${N.followEnd.length ? `<section class="card" id="followend"><h2>2-year follow-up completed · ${N.followEnd.length}</h2><p class="sub" style="margin:2px 0 6px">Reintegrated more than two years ago: the file can be closed.</p>${N.followEnd.map(c => `<div class="it"><div class="w"><b>${childLink(c)}</b><span>Reintegrated ${esc(fmtDate(c.reintegrationDate))}</span></div><a class="btn sm" href="#/child/${esc(c.id)}/status">Close the file</a></div>`).join('')}</section>` : ''}` : '';
   const lui = N.lui ? luigiStepsCard(r) : '';
   return (fam + lui) || `<section class="card"><p class="empty">No automatic list for ${esc(teamLabel(team))}${centre === 'all' ? '' : ' in ' + esc(CENTRE_LABEL[centre])}. Use "Plan of the month" to choose who to visit.</p></section>`;
 }
@@ -3256,13 +3277,13 @@ function overviewData() {
   // Counseling
   { const lines = [], a2 = S.sessions.filter(s => s.action && !s.actionDone).length; if (a2) lines.push(L(a2, 'actions from sessions still open', '#/counseling?go=cactions'));
     lines.push(L(S.sessions.filter(s => inRange(s.date, a, b)).length, `sessions recorded in ${fmtMonth(m)}`, '#/counseling', 'info'));
-    referLine(lines, 'Counseling'); backLine(lines, 'Counseling'); cards.push({ k: 'Counseling', title: 'Counseling', color: '#73726E', lines }); }
+    referLine(lines, 'Counseling'); backLine(lines, 'Counseling'); cards.push({ k: 'Counseling', title: 'Counselling', color: '#73726E', lines }); }
   // Education office
   { const lines = [];
     for (const x of P.reports) lines.push(L('', `${REPORTS[x.key].short || REPORTS[x.key].label} report of ${fmtMonth(x.month)}: ${x.st.prepared ? 'to check' : 'not prepared'}`, `#/reports?s=${x.key}&m=${x.month}`, x.st.prepared ? 'orange' : 'red'));
     if (P.withIssues) lines.push(L(P.withIssues, 'open files with information missing', '#/children?go=records', 'orange'));
     if (P.review) lines.push(L(P.review, 'open files of children who seem to have left', '#/review', 'orange'));
-    if (S.children.length && (P.backupDays == null || P.backupDays > 7)) lines.push(L(P.backupDays == null ? '!' : P.backupDays, P.backupDays == null ? 'No backup made on this computer yet' : 'days since the last backup', USER && USER.admin ? '#/staff/data' : '#/help', 'red'));
+    if (S.children.length && (P.backupDays == null || P.backupDays > 7)) lines.push(L(P.backupDays == null ? '!' : P.backupDays, P.backupDays == null ? 'No backup made on this ' + (isPhone() ? 'phone' : 'computer') + ' yet' : 'days since the last backup', USER && USER.admin ? '#/staff/data' : '#/help', 'red'));
     { const sl = referLine([], 'Sports'); if (sl.length) cards.push({ k: 'Sports', title: 'Sports', color: '#73726E', lines: sl }); }
     checkLine(lines); cards.push({ k: 'Admin', title: 'Education office', color: '#37352F', lines }); }
   return cards;
@@ -3375,7 +3396,7 @@ function childPickInner(name, id) {
   const c = id ? child(id) : null;
   return `<input type="hidden" name="${name}" value="${c ? esc(c.id) : ''}">` + (c
     ? `<div class="cpsel">${avatar(c, 40)}<div class="w"><b>${esc(fullName(c))}${c.nickname ? ' "' + esc(c.nickname) + '"' : ''}</b><span>${centreChip(c)} ${esc(SECTIONS[c.section].label)} · ID ${esc(c.id)}</span></div><button type="button" class="btn sm" data-cp="clear">Change</button></div>`
-    : `<input class="in" data-cp="q" placeholder="Type the name, nickname or ID" autocomplete="off" autocapitalize="words"><div class="cpres"></div>`);
+    : `<input class="in" data-cp="q" placeholder="Type the name, nickname or ID" aria-label="Find the child: name, nickname or ID" autocomplete="off" autocapitalize="words"><div class="cpres"></div>`);
 }
 function childPickResults(text) {
   const t = String(text || '').trim().toLowerCase(); if (t.length < 2) return '';
@@ -4372,7 +4393,7 @@ function vSchool(r) {
   <div class="grid g4">${tile(rows.length, 'Pupils')}${tile(vis + ' / ' + rows.length, 'Visited this term')}${tile(doneS + ' / ' + schools.length, 'Schools done')}${tile(cnt('Improving') + ' · ' + cnt('Decreasing'), 'Improving · decreasing')}</div>
   ${schools.map(([name, l]) => { const left = l.filter(r => !r.visited).length;
     return `<section class="card" style="padding:8px 10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;padding:2px 2px 6px"><h2 style="margin:0">${esc(name)} · ${l.length} <span class="sub">visited ${l.length - left} of ${l.length}</span></h2>${left ? `<button class="btn sm" data-sact="planschool" data-school="${esc(name)}" data-m="${pm}">Plan this school · ${esc(fmtMonth(pm))}</button>` : '<span class="chip c-green">Done this term</span>'}</div>
-      <div class="tw"><table class="mt"><thead><tr><th>Pupil</th><th>Grade</th><th>Last school visit</th><th>Attendance</th><th>Performance</th><th>Progress</th><th></th></tr></thead><tbody>${l.sort((a, b) => fullName(a.c).localeCompare(fullName(b.c))).map(r => `<tr><td>${childLink(r.c)} ${centreChip(r.c)}${r.ref ? ' <span class="chip c-orange">Referred</span>' : ''}</td><td>${esc(r.c.grade || '')}</td><td>${r.v ? esc(fmtDate(r.v.date)) : '<span class="sub">never</span>'}${r.visited ? '' : ' <span class="chip c-orange">not this term</span>'}</td><td>${esc((r.v && r.v.schAtt) || '')}</td><td>${esc((r.tr && r.tr.perf) || (r.v && r.v.perf) || '')}</td><td>${trendChip(r.pr)}</td><td><a class="btn sm" href="#/visit/new?child=${esc(r.c.id)}&t=School">Visit</a></td></tr>`).join('')}</tbody></table></div></section>`; }).join('') || '<p class="empty">No pupil here.</p>'}`;
+      <div class="tw"><table class="mt"><thead><tr><th>Pupil</th><th>Grade</th><th>Last school visit</th><th>Attendance</th><th>Performance</th><th>Progress</th><th></th></tr></thead><tbody>${l.sort((a, b) => fullName(a.c).localeCompare(fullName(b.c))).map(r => `<tr><td>${childLink(r.c)} ${centreChip(r.c)}${r.ref ? ' <span class="chip c-orange">Referred</span>' : ''}</td><td>${esc(r.c.grade || '')}</td><td>${r.v ? esc(fmtDate(r.v.date)) : '<span class="sub">never</span>'}${r.visited ? '' : ' <span class="chip c-orange">not this term</span>'}</td><td>${esc((r.v && r.v.schAtt) || '')}</td><td>${esc((r.tr && r.tr.perf) || (r.v && r.v.perf) || '')}</td><td>${trendChip(r.pr)}</td><td><a class="btn sm" href="#/visit/new?child=${esc(r.c.id)}&t=School">Record a visit</a></td></tr>`).join('')}</tbody></table></div></section>`; }).join('') || '<p class="empty">No pupil here.</p>'}`;
 }
 const SCHOOL_COLS = [{ label: 'School', get: r => r.school }, { label: 'ID', get: r => r.c.id }, { label: 'Name', get: r => fullName(r.c) }, { label: 'Sex', get: r => r.c.sex }, { label: 'Centre', get: r => centreOf(r.c) }, { label: 'Type of school', get: r => dayLabel(dayType(r.c)) }, { label: 'Grade', get: r => r.c.grade || '' },
   { label: 'Visited this term', get: r => r.visited ? 'Yes' : 'No' }, { label: 'Last school visit', get: r => r.v ? r.v.date : '' }, { label: 'Attendance', get: r => (r.v && r.v.schAtt) || '' }, { label: 'Performance (last visit)', get: r => (r.v && r.v.perf) || '' },
@@ -4569,21 +4590,24 @@ document.addEventListener('click', e => {
   if (b.dataset.dact === 'open') return void fileOpen(b.dataset.id, b.dataset.name);
   if (b.dataset.dact === 'del') { const c = child(b.dataset.child); if (!c || !USER.admin || !confirm('Remove this document? The file is deleted for everyone.')) return; c.docs = (c.docs || []).filter(d => d.id !== b.dataset.id); c.docsGone = (c.docsGone || []).concat(b.dataset.id); c.updatedAt = today(); save(); filesOutSet(filesOut().filter(x => x !== b.dataset.id)); fileLocalDel(b.dataset.id); if (syncOn()) syncPost({ action: 'file_del', id: b.dataset.id }).catch(() => {}); render(); }
   if (b.dataset.dact === 'cancelvisit') { const v = S.visits.find(x => x.id === b.dataset.id); if (!v || !visitCanCancel(v)) return;
-    const why = prompt('Cancel this visit? It leaves the lists and the reports.\nWhy is it cancelled?'); if (why == null) return; if (!why.trim()) return toast('Write why');
-    const ph = visitPhotos(v);
-    S.events.push({ id: uid('e'), childId: String(v.childId), type: 'Visit cancelled', ref: v.id, date: today(), ts: Date.now(), note: [fmtDate(v.date), teamLabel(visitTeam(v)), v.purpose, 'by ' + staffName(v.by)].filter(Boolean).join(' · ') + '. Why: ' + why.trim(), by: USER.id });
-    dropCancelled(); save(); for (const id of ph) { filesOutSet(filesOut().filter(x => x !== id)); fileLocalDel(id); if (syncOn() && navigator.onLine) syncPost({ action: 'file_del', id }).catch(() => {}); }
-    toast('Visit cancelled'); if (history.length > 1) history.back(); else go('#/visits'); return; }
+    askBox({ title: 'Cancel this visit?', body: [fmtDate(v.date), teamLabel(visitTeam(v)), v.purpose, 'by ' + staffName(v.by)].filter(Boolean).join(' · ') + '\nIt leaves the lists and the reports.', why: true, ok: 'Cancel the visit', keep: 'Keep the visit' }).then(why => { if (why == null) return;
+      const ph = visitPhotos(v);
+      S.events.push({ id: uid('e'), childId: String(v.childId), type: 'Visit cancelled', ref: v.id, date: today(), ts: Date.now(), note: [fmtDate(v.date), teamLabel(visitTeam(v)), v.purpose, 'by ' + staffName(v.by)].filter(Boolean).join(' · ') + '. Why: ' + why, by: USER.id });
+      dropCancelled(); save(); for (const id of ph) { filesOutSet(filesOut().filter(x => x !== id)); fileLocalDel(id); if (syncOn() && navigator.onLine) syncPost({ action: 'file_del', id }).catch(() => {}); }
+      toast('Visit cancelled'); if (history.length > 1) history.back(); else go('#/visits'); });
+    return; }
   if (b.dataset.dact === 'cancelrec') { const kind = b.dataset.kind, x = recFind(kind, b.dataset.id); if (!recCanCancel(kind, x)) return;
-    const why = prompt('Cancel this line? Are you sure?\n' + recText(kind, x) + '\n\nWrite why it is cancelled.'); if (why == null) return; if (!why.trim()) return toast('Write why');
-    if (kind === 'move') moveUndo(x);
-    S.events.push({ id: uid('e'), childId: String(x.childId || (x.children || [])[0] || ''), type: 'Record cancelled', ref: x.id, kind, date: today(), ts: Date.now(), note: recText(kind, x) + ' · by ' + staffName(x.by) + '. Why: ' + why.trim(), by: USER.id });
-    dropCancelled(); save(); toast('Cancelled'); render(); return; }
+    askBox({ title: 'Cancel this line?', body: recText(kind, x) + '\nIt leaves the history and the reports.', why: true, ok: 'Cancel the line', keep: 'Keep the line' }).then(why => { if (why == null) return;
+      if (kind === 'move') moveUndo(x);
+      S.events.push({ id: uid('e'), childId: String(x.childId || (x.children || [])[0] || ''), type: 'Record cancelled', ref: x.id, kind, date: today(), ts: Date.now(), note: recText(kind, x) + ' · by ' + staffName(x.by) + '. Why: ' + why, by: USER.id });
+      dropCancelled(); save(); toast('Cancelled'); render(); });
+    return; }
   if (b.dataset.dact === 'clearsheet') { const sh = lSheet(b.dataset.k), d = b.dataset.d, s = luigiSess(d, sh.type, false); if (!s || GUEST) return;
-    if (!confirm('Cancel the ' + sh.label.toLowerCase() + ' sheet of ' + fmtDate(d) + '? Are you sure?\nThe ' + (s.children || []).length + ' names, the staff and the notes of this sheet are removed.')) return;
-    for (const id of (s.children || []).slice()) luigiToggle(id, d, sh.type, false);
-    const t = touchSheet(d, sh.type); t.staff = 1; t.notes = 1; t.findings = 1; const s2 = luigiSess(d, sh.type, false); if (s2) { s2.staffIds = []; s2.staff = ''; s2.notes = ''; s2.findings = ''; } luigiClean();
-    save(); toast('Sheet cancelled'); render(); return; }
+    askBox({ title: 'Cancel the ' + sh.label.toLowerCase() + ' sheet of ' + fmtDate(d) + '?', body: 'The ' + (s.children || []).length + ' names, the staff and the notes of this sheet are removed.', ok: 'Cancel the sheet', keep: 'Keep the sheet' }).then(yes => { if (yes == null) return;
+      for (const id of (s.children || []).slice()) luigiToggle(id, d, sh.type, false);
+      const t = touchSheet(d, sh.type); t.staff = 1; t.notes = 1; t.findings = 1; const s2 = luigiSess(d, sh.type, false); if (s2) { s2.staffIds = []; s2.staff = ''; s2.notes = ''; s2.findings = ''; } luigiClean();
+      save(); toast('Sheet cancelled'); render(); });
+    return; }
   if (b.dataset.dact === 'goback') { if (history.length > 1) history.back(); else go('#/visits?vtab=check'); return; }
   if (b.dataset.dact === 'valid' || b.dataset.dact === 'back') {
     const v = S.visits.find(x => x.id === b.dataset.id); if (!v || !visitCanValidate(v)) return; let note = b.dataset.note || '';
@@ -4653,7 +4677,7 @@ function recCanCancel(kind, x) {
   if (kind === 'move') return moveCan(x);
   return kind === 'session';
 }
-function recText(kind, x) { return kind === 'event' ? fmtDate(x.date) + ' · ' + (x.type === 'Referral' ? 'Referred to ' + referLabel(x.to) : x.type) + (x.note ? ': ' + x.note : '') : kind === 'move' ? fmtDate(x.date) + ' · ' + moveLabel(x) : fmtDate(x.date) + ' · Counseling, ' + String(x.type || '').toLowerCase() + ' session' + (x.topic ? ': ' + x.topic : ''); }
+function recText(kind, x) { return kind === 'event' ? fmtDate(x.date) + ' · ' + (x.type === 'Referral' ? 'Referred to ' + referLabel(x.to) : x.type) + (x.note ? ': ' + x.note : '') : kind === 'move' ? fmtDate(x.date) + ' · ' + moveLabel(x) : fmtDate(x.date) + ' · Counselling, ' + String(x.type || '').toLowerCase() + ' session' + (x.topic ? ': ' + x.topic : ''); }
 function cancelBtn(kind, x) { return recCanCancel(kind, x) ? ` <button type="button" class="btn link sub cx" data-dact="cancelrec" data-kind="${kind}" data-id="${esc(x.id)}">Cancel</button>` : ''; }
 function visitPhotos(v) { return [v.photo].concat(visitTrail(v).map(e => e.file)).filter(Boolean); }
 function visitMine(v) { return v.by === USER.id || v.recordedBy === USER.id; }
@@ -4663,7 +4687,7 @@ function checkHtml(team, centre) {
   const item = v => { const c = child(v.childId), st = visitState(v), ph = visitPhotos(v);
     return `<div class="chk"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)} ${visitChip(v)}<div class="sub">${esc(fmtDate(v.date))} · ${esc(teamLabel(visitTeam(v)))} · ${esc(v.purpose || '')} · ${esc(staffName(v.by))}${v.successful === 'No' ? ' · nobody found' : ''}${v.metWith ? ' · met ' + esc(v.metWith) : ''}${v.place ? ' · ' + esc(v.place) : ''}</div>${v.findings ? `<div>${esc(v.findings.slice(0, 200))}${v.findings.length > 200 ? '…' : ''}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}</div>` : ''}</div>
       <div class="chka">${ph.length ? `<button class="btn sm" data-dact="open" data-id="${esc(ph[ph.length - 1])}" data-name="Visit ${esc(fullName(c))} ${esc(v.date)}">See the photo</button>` : '<span class="chip c-orange">No photo</span>'}<a class="btn sm pri" href="#/visitrep/${esc(v.id)}">Open the report</a>${visitCanValidate(v) && st === 'wait' ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button><input class="in" name="note" placeholder="What is missing" aria-label="What is missing"><button class="btn sm" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}${st === 'back' && visitCanValidate(v) ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button>` : ''}</div></div>`; };
-  return `<section class="card" id="checkbox"><h2>${USER.admin ? 'Visits to validate · ' + wait.length : back.length ? 'Sent back · ' + back.length : 'Waiting for the supervisor · ' + wait.length}</h2><p class="sub" style="margin:2px 0 6px">The reports count the visits validated by the supervisor. Visits written by a supervisor and visits before ${esc(fmtDate(VALID_FROM))} count as they are.</p>${list.length ? list.map(item).join('') : '<p class="empty">Nothing to validate.</p>'}</section>`;
+  return `<section class="card" id="checkbox"><h2>${USER.admin ? 'Visits to validate · ' + wait.length : back.length ? 'Sent back · ' + back.length : 'Waiting for the Education office · ' + wait.length}</h2><p class="sub" style="margin:2px 0 6px">The reports count the visits validated by the Education office. Visits written by the Education office and visits before ${esc(fmtDate(VALID_FROM))} count as they are.</p>${list.length ? list.map(item).join('') : '<p class="empty">Nothing to validate.</p>'}</section>`;
 }
 
 /* ---------- the report of one visit on a full page: what the supervisor reads before validating ---------- */
@@ -4698,7 +4722,7 @@ function vVisitRep(r) {
   if (!v || !c) return '<div class="top"><div><h1>Visit report</h1></div></div><div class="card"><p class="empty">This visit is not in the database.</p></div>';
   const st = visitState(v), ph = visitPhotos(v), trail = visitTrail(v), nm = 'Visit ' + fullName(c) + ' ' + v.date, mine = visitMine(v);
   const tl = e => `<div class="it"><div class="w"><b>${e.type === 'Visit validated' ? 'Validated' : e.type === 'Visit sent back' ? 'Sent back' : 'Sent again'}</b> <span class="sub">${esc(fmtDate(e.date))} · ${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}${e.file ? '<div class="sub">Photo added</div>' : ''}</div></div>`;
-  const check = USER.admin && visitMine(v) && (st === 'wait' || st === 'back') ? '<p class="sub" style="margin:8px 0 0">Your visit: another supervisor validates it.</p>' : visitCanValidate(v) && (st === 'wait' || st === 'back') ? `<div class="chk" style="border:0;padding-bottom:0"><div class="chka" style="width:100%"><button class="btn pri" data-dact="valid" data-id="${esc(v.id)}">Validate</button>${st === 'wait' ? `${ph.length ? '' : `<button class="btn" data-dact="back" data-id="${esc(v.id)}" data-note="Photo missing">Send back: photo missing</button>`}<input class="in" name="note" placeholder="What is missing" aria-label="What is missing" style="flex:1;min-width:160px"><button class="btn" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}</div></div>` : '';
+  const check = USER.admin && visitMine(v) && (st === 'wait' || st === 'back') ? '<p class="sub" style="margin:8px 0 0">Your visit: another person of the Education office validates it.</p>' : visitCanValidate(v) && (st === 'wait' || st === 'back') ? `<div class="chk" style="border:0;padding-bottom:0"><div class="chka" style="width:100%"><button class="btn pri" data-dact="valid" data-id="${esc(v.id)}">Validate</button>${st === 'wait' ? `${ph.length ? '' : `<button class="btn" data-dact="back" data-id="${esc(v.id)}" data-note="Photo missing">Send back: photo missing</button>`}<input class="in" name="note" placeholder="What is missing" aria-label="What is missing" style="flex:1;min-width:160px"><button class="btn" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}</div></div>` : '';
   const again = !GUEST && mine && (st === 'back' || (st === 'wait' && !ph.length)) ? `<form data-form="visitagain" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;max-width:640px"><input type="hidden" name="id" value="${esc(v.id)}">${st === 'back' ? field('What you add', 'note', '', 'textarea', { wide: true, rows: 3 }) : ''}${filePickField('again', 'Photo of the visit')}<div><button class="btn pri">${st === 'back' ? 'Send again' : 'Add the photo'}</button></div></form>` : '';
   setTimeout(fileImgs, 0);
   return `<div class="top"><div><h1>Visit report</h1><p class="lead">${childLink(c)} ${centreChip(c)} ${visitChip(v)}</p></div><div><a class="btn" href="#" data-dact="goback">Back</a></div></div>
@@ -4712,8 +4736,22 @@ FORMS.visitagain = function (o) {
   if (!note && !ph) return toast(visitState(v) === 'back' ? 'Write what you add or choose the photo' : 'Choose the photo first');
   S.events.push({ id: uid('e'), childId: String(v.childId), type: 'Visit sent again', ref: visitKey(v), date: today(), ts: Date.now(), note, file: ph ? ph.id : '', by: USER.id }); save(); toast(ph && !note ? 'Photo added' : 'Sent again'); render();
 };
-function backLine(lines, team) { const n = visitsToCheck(team, 'all').filter(v => visitState(v) === 'back').length; if (n) lines.unshift({ n, text: n === 1 ? 'visit sent back by the supervisor' : 'visits sent back by the supervisor', href: '#/visits?vt=' + team + '&vtab=check', lvl: 'red' }); return lines; }
+function backLine(lines, team) { const n = visitsToCheck(team, 'all').filter(v => visitState(v) === 'back').length; if (n) lines.unshift({ n, text: n === 1 ? 'visit sent back by the Education office' : 'visits sent back by the Education office', href: '#/visits?vt=' + team + '&vtab=check', lvl: 'red' }); return lines; }
 function checkLine(lines) { const n = visitsToCheck('all', 'all').filter(v => visitState(v) === 'wait').length; if (n) lines.unshift({ n, text: n === 1 ? 'visit to validate' : 'visits to validate', href: '#/visits?vt=all&vtab=check', lvl: 'red' }); return lines; }
+
+/* a question with two buttons that say what they do; with why:true it also asks the reason. Gives the reason (or '') on yes, null on no */
+function askBox(o) {
+  return new Promise(res => {
+    const old = document.getElementById('dlg'); if (old) old.remove();
+    const d = document.createElement('div'); d.id = 'dlg'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 'dlgt');
+    d.innerHTML = `<div class="dlgin"><h2 id="dlgt">${esc(o.title)}</h2>${o.body ? `<p>${esc(o.body).replace(/\n/g, '<br>')}</p>` : ''}${o.why ? '<label class="f">Why<textarea class="in" rows="2"></textarea></label>' : ''}<div class="dlgb"><button type="button" class="btn keep">${esc(o.keep || 'No')}</button><button type="button" class="btn danger ok">${esc(o.ok || 'Yes')}</button></div></div>`;
+    const back = document.activeElement, ta = () => d.querySelector('textarea');
+    const end = v => { d.remove(); document.removeEventListener('keydown', key, true); if (back && back.focus && back.isConnected) back.focus(); res(v); };
+    const key = e => { if (e.key === 'Escape') { e.preventDefault(); end(null); } else if (e.key === 'Tab') { const f = [...d.querySelectorAll('textarea, button')], i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); } };
+    d.addEventListener('click', e => { if (e.target === d || e.target.closest('.keep')) return end(null); if (e.target.closest('.ok')) { if (o.why && !ta().value.trim()) { toast('Write why'); ta().focus(); return; } end(o.why ? ta().value.trim() : ''); } });
+    document.addEventListener('keydown', key, true); document.body.appendChild(d); (o.why ? ta() : d.querySelector('.keep')).focus();
+  });
+}
 
 /* ====================================================================
    PIN for the staff
