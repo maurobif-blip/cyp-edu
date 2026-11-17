@@ -475,7 +475,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.0';
+const VERSION = 'alpha 5.1';
 const BUILD_DATE = '2026-11-17'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
@@ -4522,7 +4522,9 @@ function editFill() {
   for (const el of f.elements) { if (!el.name || el.type === 'file' || el.type === 'hidden' || el.name === 'team' || el.name.startsWith('refer')) continue; const val = v[el.name]; if (val == null) continue;
     if (el.tagName === 'SELECT') { if ([...el.options].some(x => x.value === String(val))) el.value = String(val); } else el.value = String(val); }
 }
-function visitState(v) { if ((v.recordedOn || v.date || '') < VALID_FROM) return 'old'; const e = visitCheck(v); return !e || e.type === 'Visit sent again' ? 'wait' : e.type === 'Visit validated' ? 'ok' : 'back'; }
+/* a visit written by an Education admin needs no validation: it counts as it is */
+function visitFree(v) { const s = S.staff.find(x => x.id === (v.recordedBy || v.by)); return !!(s && s.admin); }
+function visitState(v) { if ((v.recordedOn || v.date || '') < VALID_FROM || visitFree(v)) return 'old'; const e = visitCheck(v); return !e || e.type === 'Visit sent again' ? 'wait' : e.type === 'Visit validated' ? 'ok' : 'back'; }
 function visitCounts(v) { const s = visitState(v); return s === 'old' || s === 'ok'; }
 function visitChip(v) { const s = visitState(v), e = visitCheck(v); return s === 'ok' ? `<span class="chip c-green">Validated by ${esc(staffName(e.by))}</span>` : s === 'back' ? `<span class="chip c-red">Sent back: ${esc(e.note || '')}</span>` : s === 'wait' ? '<span class="chip c-orange">To validate</span>' : ''; }
 /* a visit recorded by mistake is cancelled: it leaves the lists, a line stays in the history of the child */
@@ -4576,7 +4578,7 @@ function checkHtml(team, centre) {
   const item = v => { const c = child(v.childId), st = visitState(v), ph = visitPhotos(v);
     return `<div class="chk"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)} ${visitChip(v)}<div class="sub">${esc(fmtDate(v.date))} · ${esc(teamLabel(visitTeam(v)))} · ${esc(v.purpose || '')} · ${esc(staffName(v.by))}${v.successful === 'No' ? ' · nobody found' : ''}${v.metWith ? ' · met ' + esc(v.metWith) : ''}${v.place ? ' · ' + esc(v.place) : ''}</div>${v.findings ? `<div>${esc(v.findings.slice(0, 200))}${v.findings.length > 200 ? '…' : ''}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}</div>` : ''}</div>
       <div class="chka">${ph.length ? `<button class="btn sm" data-dact="open" data-id="${esc(ph[ph.length - 1])}" data-name="Visit ${esc(fullName(c))} ${esc(v.date)}">See the photo</button>` : '<span class="chip c-orange">No photo</span>'}<a class="btn sm pri" href="#/visitrep/${esc(v.id)}">Open the report</a>${visitCanValidate(v) && st === 'wait' ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button><input class="in" name="note" placeholder="What is missing" aria-label="What is missing"><button class="btn sm" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}${st === 'back' && visitCanValidate(v) ? `<button class="btn sm" data-dact="valid" data-id="${esc(v.id)}">Validate</button>` : ''}</div></div>`; };
-  return `<section class="card" id="checkbox"><h2>${USER.admin ? 'Visits to validate · ' + wait.length : back.length ? 'Sent back · ' + back.length : 'Waiting for the supervisor · ' + wait.length}</h2><p class="sub" style="margin:2px 0 6px">The reports count the visits validated by the supervisor. Visits before ${esc(fmtDate(VALID_FROM))} count as they are.</p>${list.length ? list.map(item).join('') : '<p class="empty">Nothing to validate.</p>'}</section>`;
+  return `<section class="card" id="checkbox"><h2>${USER.admin ? 'Visits to validate · ' + wait.length : back.length ? 'Sent back · ' + back.length : 'Waiting for the supervisor · ' + wait.length}</h2><p class="sub" style="margin:2px 0 6px">The reports count the visits validated by the supervisor. Visits written by a supervisor and visits before ${esc(fmtDate(VALID_FROM))} count as they are.</p>${list.length ? list.map(item).join('') : '<p class="empty">Nothing to validate.</p>'}</section>`;
 }
 
 /* ---------- the report of one visit on a full page: what the supervisor reads before validating ---------- */
