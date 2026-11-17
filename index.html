@@ -489,7 +489,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.2';
+const VERSION = 'alpha 5.3';
 const BUILD_DATE = '2026-11-17'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
@@ -1136,28 +1136,41 @@ const REPORTS = {
     }
   },
   School: {
-    label: 'School Section', cols: ['Nkwazi', 'Minsundu', 'Total'], by: 'School',
+    label: 'School Section', cols: ['Female', 'Male', 'N/A', 'Total'], by: 'School',
     rows(m) {
       const { a, b } = monthCtx(m);
-      const act = S.children.filter(c => inCareOn(c, b) && c.status !== 'Closed' && c.schoolType && c.schoolType !== 'Not in school');
-      const split = l => { const n = l.filter(c => c.section === 'Nkwazi').length, mi = l.filter(c => c.section === 'UCC' || c.section === 'Youth').length; return [n, mi, l.length]; };
+      const act = S.children.filter(c => inCareOn(c, b) && c.status !== 'Closed' && dayType(c) && dayType(c) !== 'Not in school');
+      const sx = l => { const F = l.filter(c => c.sex === 'F').length, M = l.filter(c => c.sex === 'M').length; return [F, M, l.length - F - M, l.length]; };
+      const nk = c => c.section === 'Nkwazi', mi = c => c.section === 'UCC' || c.section === 'Youth', grz = c => dayType(c) === 'GRZ primary' || dayType(c) === 'GRZ secondary', semi = c => c.status === 'Semi-active';
+      const comN = c => dayType(c) === 'Nkwazi community school', comM = c => dayType(c) === LITERACY;
       const svRec = S.visits.filter(v => v.purpose === 'School visit' && inRange(v.date, a, b)), sv = svRec.filter(visitCounts);
       const seen = distinctChildren(sv.map(v => v.childId));
-      const t = S.settings.targets[m] || {};
+      const t = S.settings.targets[m] || {}, priv = act.filter(c => dayType(c) === 'Private school');
       const rows = [
-        ['SCH', 'Children supported in school', act],
-        ['SCH', 'In community school or literacy class', act.filter(c => ['Nkwazi community school', 'Literacy class (Minsundu)'].includes(dayType(c)))],
-        ['SCH', 'In GRZ primary school', act.filter(c => c.schoolType === 'GRZ primary')], ['SCH', 'In GRZ secondary school', act.filter(c => c.schoolType === 'GRZ secondary')],
-        ['SCH', 'In private school', act.filter(c => c.schoolType === 'Private school')], ['SCH', 'In college or skills training', act.filter(c => c.schoolType === 'College / skills training')],
-        ['SCH', 'In examination classes (grades 7, 9, 12)', act.filter(c => EXAM_GRADES.includes(String(c.grade)))],
-        ['SCH', 'Visited at school this month', seen], ['SCH', 'Under ABA (distance adoption)', act.filter(isAba)], ['SCH', 'Under ABA, visited at school this month', seen.filter(isAba)], ['SCH', 'Semi-active', act.filter(c => c.status === 'Semi-active')]
-      ].map(r => [r[0], r[1], split(r[2]), r[2]]);
-      rows.push(['', 'School visits made (target ' + (Number(t.schoolVisits) || 'not set') + ')', [null, null, sv.length], null]);
-      if (svRec.length !== sv.length) rows.push(['', 'School visits recorded, not validated yet', [null, null, svRec.length - sv.length], null]);
-      rows.push(['', 'Schools visited', [null, null, uniq(sv.map(v => (v.place || '').trim().toLowerCase()).filter(Boolean)).length], null]);
-      return rows;
+        ['SCH 1', 'Total number of children worked with this month', seen],
+        ['SCH 2', 'Number of children in community school under Nkwazi', act.filter(comN)],
+        ['SCH 3', 'Number of children in community school under Minsundu', act.filter(comM)],
+        ['SCH 4', 'Number of children in GRZ Primary School', act.filter(c => dayType(c) === 'GRZ primary')],
+        ['SCH 5', 'Number of children in GRZ secondary school', act.filter(c => dayType(c) === 'GRZ secondary')],
+        ['SCH 6', 'Number of children who are in colleges', act.filter(c => dayType(c) === 'College / skills training')],
+        ['SCH 7', 'Number of children who are in exam classes', act.filter(c => EXAM_GRADES.includes(String(c.grade)))],
+        ['SCH 8', 'Number of children under GRZ for Nkwazi', act.filter(c => grz(c) && nk(c))],
+        ['SCH 9', 'Number of children under GRZ for Minsundu', act.filter(c => grz(c) && mi(c))],
+        ['SCH 10', 'Number of children visited in GRZ school under Nkwazi', seen.filter(c => grz(c) && nk(c))],
+        ['SCH 11', 'Number of children visited in GRZ school under Minsundu', seen.filter(c => grz(c) && mi(c))],
+        ['SCH 12', 'Number of children in GRZ school who are semi active', act.filter(c => grz(c) && semi(c))],
+        ['SCH 13', 'Number of children in community school under Minsundu who are semi active', act.filter(c => comM(c) && semi(c))],
+        ['SCH 14', 'Number of children in community school under Nkwazi who are semi active', act.filter(c => comN(c) && semi(c))]
+      ];
+      if (priv.length) rows.push(['', 'In private school (not in the section template)', priv]);
+      rows.push(['', 'Under ABA (distance adoption)', act.filter(isAba)], ['', 'Under ABA, visited at school this month', seen.filter(isAba)]);
+      const out = rows.map(r => [r[0], r[1], sx(r[2]), r[2]]);
+      out.push(['', 'School visits made (target ' + (Number(t.schoolVisits) || 'not set') + ')', [null, null, null, sv.length], null]);
+      if (svRec.length !== sv.length) out.push(['', 'School visits recorded, not validated yet', [null, null, null, svRec.length - sv.length], null]);
+      out.push(['', 'Schools visited', [null, null, null, uniq(sv.map(v => visitSchool(v).toLowerCase()).filter(Boolean)).length], null]);
+      return out;
     },
-    note: 'SCH codes 1-12 to be aligned with the section template. Children are split by their current section.'
+    note: 'Codes SCH 1-14 and columns as in the monthly report of the School Section (October 2026). SCH 1 counts the children visited at school in the month. SCH 3 is the literacy class of Minsundu.'
   },
   Counseling: {
     label: 'Counselling', freq: 'quarterly', cols: ['Minsundu', 'Luigi', 'Nkwazi', 'Total'], by: 'Counseling',
@@ -1785,6 +1798,7 @@ function vReports(r) {
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="repbtns"><button class="btn sm pri" data-act="wordreport" data-title="${esc(def.label)}" data-period="${esc(def.quarterly ? quarterOf(m).label : rg.label)}" data-name="${esc(k + (aba ? '-ABA' : '') + '-report-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)))}">Download the report in Word</button><button class="btn sm" data-act="copytable">Copy table</button>${k === 'Luigi' ? '<button class="btn sm" data-lact="xlreport">Export in Excel</button><button class="btn sm" data-lact="xlreportn">Export in Excel with names</button>' : `<button class="btn sm" data-act="csvtable" data-name="${esc(k + (aba ? '-ABA' : '') + '-' + (p === 'M' ? m : rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7)))}">Export in Excel</button>${def.rows ? '<button class="btn sm" data-act="xlnames">Export in Excel with names</button>' : ''}`}${canAba ? `<button class="btn sm" data-mact="abasheet" data-y="${m.slice(0, 4)}">Export in Excel: scheda ABA ${m.slice(0, 4)} (italiano)</button>` : ''}<button class="btn sm" data-act="print">Print</button></div>
     </div>
     <div style="margin-top:12px">${body}</div>
+    ${k === 'School' && !aba && p === 'M' ? schoolReportLists(m) : ''}
   </section>
   ${historyForMonth(k, m).map(h => `<section class="card"><h2>What the section reported · ${esc(h.label)}</h2><p class="sub" style="margin:4px 0 10px">Copied from ${esc(h.source)}, as written.${h.note ? ' Note: ' + esc(h.note) : ''}</p>${historyTableHtml(h)}</section>`).join('')}
   ${def.quarterly || p !== 'M' || aba ? '' : `<section class="card soft" style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center">
@@ -2860,25 +2874,36 @@ function planPool(team, centre) {
   }).sort((a, b) => (a.last || '').localeCompare(b.last || '') || (a.c.entryDate || '').localeCompare(b.c.entryDate || '') || fullName(a.c).localeCompare(fullName(b.c)));
 }
 const PLAN_F = [['', 'All', () => true], ['late', 'Late', x => x.late], ['never', 'Never visited', x => x.never], ['follow', 'Follow-up', x => x.follow], ['action', 'Action open', x => x.action]];
+function planGrid(m, team, centre) {
+  const q = route().q, term = (UI.planq || '').trim().toLowerCase();
+  const pool = planPool(team, term ? 'all' : centre), pf = PLAN_F.some(f => f[0] === q.get('pf')) ? q.get('pf') : '';
+  const cmp = q.get('pcmp') || '';
+  /* a name typed in the box looks in every centre and ignores the other filters */
+  const list = term ? pool.filter(x => [x.c.id, x.c.name, x.c.surname, x.c.nickname, fullName(x.c)].join(' ').toLowerCase().includes(term)).sort((x, y) => fullName(x.c).localeCompare(fullName(y.c)))
+    : pool.filter(x => !cmp || planPlace(x.c) === cmp).filter(PLAN_F.find(f => f[0] === pf)[2]);
+  const LIM = term ? 48 : isPhone() ? 12 : 24, all = q.get('pall') === '1', shown = all ? list : list.slice(0, LIM);
+  const mine = id => plans().find(p => String(p.childId) === String(id) && p.month === m && tmatch(planTeam(p), team));
+  const tile = x => { const p = mine(x.c.id), st = p ? planStatus(p).k : '';
+    return `<button class="ptile${p ? ' in' : ''}${st && st !== 'planned' ? ' done' : ''}${x.late ? ' late' : x.never ? ' never' : ''}" data-pact="ptoggle" data-id="${esc(x.c.id)}" data-m="${m}" data-team="${team}" aria-pressed="${p ? 'true' : 'false'}">${avatar(x.c, 56)}<b>${esc(fullName(x.c))}</b><small>${esc(agoText(x.last))}${centre === 'all' || term ? ' · ' + esc(centreOf(x.c)) : ''}</small>${p ? '<i aria-hidden="true">✓</i>' : ''}</button>`; };
+  return `${shown.length ? `<div class="pgrid">${shown.map(tile).join('')}</div>` : `<p class="empty">${term ? 'No child with this name.' : 'No child here.'}</p>`}
+    ${!term && list.length > LIM ? `<div style="margin-top:8px"><a href="#" class="btn sm" data-q="pall=${all ? '' : '1'}">${all ? 'Show fewer' : 'Show all ' + list.length}</a></div>` : ''}`;
+}
 function planPicker(m, team, centre) {
   const q = route().q, pool = planPool(team, centre), pf = PLAN_F.some(f => f[0] === q.get('pf')) ? q.get('pf') : '';
   const places = {}; for (const x of pool) places[planPlace(x.c)] = (places[planPlace(x.c)] || 0) + 1;
   const cmp = places[q.get('pcmp')] ? q.get('pcmp') : '';
-  const base = pool.filter(x => !cmp || planPlace(x.c) === cmp), list = base.filter(PLAN_F.find(f => f[0] === pf)[2]);
-  const LIM = isPhone() ? 12 : 24, all = q.get('pall') === '1', shown = all ? list : list.slice(0, LIM);
-  const mine = id => plans().find(p => String(p.childId) === String(id) && p.month === m && tmatch(planTeam(p), team));
-  const tile = x => { const p = mine(x.c.id), st = p ? planStatus(p).k : '';
-    return `<button class="ptile${p ? ' in' : ''}${st && st !== 'planned' ? ' done' : ''}${x.late ? ' late' : x.never ? ' never' : ''}" data-pact="ptoggle" data-id="${esc(x.c.id)}" data-m="${m}" data-team="${team}" aria-pressed="${p ? 'true' : 'false'}">${avatar(x.c, 56)}<b>${esc(fullName(x.c))}</b><small>${esc(agoText(x.last))}${centre === 'all' ? ' · ' + esc(centreOf(x.c)) : ''}</small>${p ? '<i aria-hidden="true">✓</i>' : ''}</button>`; };
+  const base = pool.filter(x => !cmp || planPlace(x.c) === cmp);
   const centres = ['Luigi', 'Minsundu', 'Nkwazi'].filter(k => !(noLuigi(team) && k === 'Luigi'));
-  return `<div class="ppick" id="ppick">
+  return `<div class="ppick" id="ppick" data-m="${m}" data-team="${team}" data-centre="${centre}">
+    <input class="in qsearch" id="plansearch" type="search" autocomplete="off" placeholder="Type a name" aria-label="Find a child by name" value="${esc(UI.planq || '')}" style="margin-bottom:8px">
     <div class="pfil"><div class="seg" role="group" aria-label="Centre">${centres.map(k => `<a href="#" data-q="vc=${k}&pcmp=&pall=" class="${centre === k ? 'on' : ''}">${esc(CENTRE_LABEL[k])}</a>`).join('')}<a href="#" data-q="vc=all&pcmp=&pall=" class="${centre === 'all' ? 'on' : ''}">All centres</a></div>
       <div class="seg" role="group" aria-label="Which children">${PLAN_F.filter(([k, l, f]) => !k || k === pf || base.some(f)).map(([k, l, f]) => `<a href="#" data-q="pf=${k}&pall=" class="${pf === k ? 'on' : ''}">${l} · ${base.filter(f).length}</a>`).join('')}</div>
       <select class="in" data-filter="pcmp" aria-label="Compound" style="width:auto">${opt(Object.entries(places).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ v: k, l: k + ' · ' + n })), cmp, 'All compounds')}</select></div>
     <p class="sub" style="margin:8px 0 0">Longest without a visit first. Tap a face: in the plan. Tap again: out. Red ring: late. Orange ring: never visited.</p>
-    ${shown.length ? `<div class="pgrid">${shown.map(tile).join('')}</div>` : '<p class="empty">No child here.</p>'}
-    ${list.length > LIM ? `<div style="margin-top:8px"><a href="#" class="btn sm" data-q="pall=${all ? '' : '1'}">${all ? 'Show fewer' : 'Show all ' + list.length}</a></div>` : ''}
+    <div id="pgridbox">${planGrid(m, team, centre)}</div>
   </div>`;
 }
+document.addEventListener('input', e => { if (e.target.id !== 'plansearch') return; UI.planq = e.target.value; const box = document.getElementById('pgridbox'), pp = document.getElementById('ppick'); if (box && pp) box.innerHTML = planGrid(pp.dataset.m, pp.dataset.team, pp.dataset.centre); });
 function planCard(m, team, centre) {
   team = team || 'all'; centre = centre || 'all';
   const list = planFor(m, team, centre).map(p => ({ p, c: child(p.childId), st: planStatus(p) }));
@@ -4418,6 +4443,19 @@ document.addEventListener('click', e => {
   const c = child(b.dataset.id), r = c && monthlyOf(c, b.dataset.m); if (!r) return; r.checkedBy = USER.id; r.checkedOn = today(); r.ts = Date.now(); c.updatedAt = today(); save(); toast('Checked'); render();
 });
 function monthlyLine(lines, centre) { const m = centre === 'Minsundu' ? monthDue() : ''; if (!m) return lines; const kids = monthlyKids(null), left = kids.filter(c => !monthlyOf(c, m)).length; if (left) lines.push({ n: left, text: 'monthly reports of ' + fmtMonth(m) + ' to write (residents)', href: '#/monthly?m=' + m, lvl: 'orange' }); return lines; }
+
+/* ---------- lists of the School Section monthly report ---------- */
+function schoolReportLists(m) {
+  const { a, b } = monthCtx(m);
+  const col = S.children.filter(c => inCareOn(c, b) && c.status !== 'Closed' && dayType(c) === 'College / skills training').sort((x, y) => fullName(x).localeCompare(fullName(y)));
+  const sv = S.visits.filter(v => v.purpose === 'School visit' && inRange(v.date, a, b) && visitCounts(v)), by = {};
+  for (const v of sv) { const n = visitSchool(v) || 'School not written'; (by[n] = by[n] || new Set()).add(String(v.childId)); }
+  const schools = Object.entries(by).sort((x, y) => y[1].size - x[1].size || x[0].localeCompare(y[0]));
+  return `<h3 style="margin:18px 0 6px">Those in college, university or skills training · ${col.length}</h3>
+    ${col.length ? `<div class="tw"><table><thead><tr><th>Name</th><th>Year</th><th>College or university</th></tr></thead><tbody>${col.map(c => `<tr><td>${childLink(c)}</td><td>${esc(c.grade || '')}</td><td>${esc(schoolOf(c) || '')}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Nobody recorded in college or skills training.</p>'}
+    <h3 style="margin:18px 0 6px">Schools visited in ${esc(fmtMonth(m))} · ${schools.length}</h3>
+    ${schools.length ? `<div class="tw"><table><thead><tr><th>School</th><th class="n">Learners visited</th></tr></thead><tbody>${schools.map(([n, set]) => `<tr><td>${esc(n)}</td><td class="n">${set.size}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">No validated school visit this month.</p>'}`;
+}
 
 /* ====================================================================
    Documents of the child and photos of the visits.
