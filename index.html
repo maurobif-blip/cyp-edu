@@ -477,6 +477,8 @@ details.marks{margin-top:12px}details.marks summary{cursor:pointer;font-weight:6
 td.ph{width:52px;text-align:right}
 @media (max-width:760px){#childTable tr{position:relative;padding-right:72px;min-height:76px}#childTable td.ph{position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:0;width:auto}#childTable td.ph img,#childTable td.ph .av{width:58px!important;height:58px!important;font-size:19px!important}}
 
+.ptile.refer img,.ptile.refer .av{box-shadow:0 0 0 2px #FFFFFF,0 0 0 5px #8E5A9B}.ptile small.rf{color:var(--purple);font-weight:600}
+
 </style>
 </head>
 <body>
@@ -489,7 +491,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.3';
+const VERSION = 'alpha 5.4';
 const BUILD_DATE = '2026-11-17'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D' },
@@ -1636,8 +1638,8 @@ function vVisits(r) {
   const tabs = [['done', 'Visits done', ''], ['need', 'Who needs a visit', N.count], ['plan', 'Plan of the month', planFor(tab === 'plan' ? m : planMonth(), team, centre).length], ['actions', 'Actions still open', acts.length], ['check', 'To validate', visitsToCheck(team, centre).filter(v => visitState(v) === (USER.admin ? 'wait' : 'back')).length]];
   let body;
   if (tab === 'check') body = checkHtml(team, centre);
-  else if (tab === 'need') body = needHtml(r, team, centre, N);
-  else if (tab === 'plan') body = planReminder() + planCard(m, team, centre);
+  else if (tab === 'need') body = referTeamBox(team, centre) + needHtml(r, team, centre, N);
+  else if (tab === 'plan') body = planReminder() + referTeamBox(team, centre) + planCard(m, team, centre);
   else if (tab === 'actions') body = actionsHtml(acts);
   else {
     const base = visitsBase(q), vs = filteredVisits(q), any = VISIT_FK.some(k => q.get(k)), per = q.get('vper') || '', yy = String(m).slice(0, 4);
@@ -2008,7 +2010,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'logframe': body = vLogframe(r); break;
       case 'visitrep': body = vVisitRep(r); active = 'visits'; break;
       case 'school': body = vSchool(r); active = 'visits'; break;
-      case 'referrals': body = vReferrals(r); active = 'visits'; break;
+      case 'referrals': body = r.id === 'new' ? vReferNew(r) : vReferrals(r); active = 'visits'; break;
       case 'monthly': body = vMonthly(r); active = 'children'; break;
       case 'review': body = vReview(); active = 'pending'; break;
       case 'paths': body = vPaths(r); active = 'children'; break;
@@ -2867,13 +2869,15 @@ function lastSchoolVisit(c) { let last = ''; for (const v of visitsOf(c.id)) if 
 function planPool(team, centre) {
   const school = team === 'School';
   const act = new Set(S.visits.filter(v => v.action && !v.actionDone && tmatch(visitTeam(v), team)).map(v => String(v.childId)));
-  const kids = S.children.filter(c => vcIn(c, team, centre) && (school ? FAMILY_SECTIONS.includes(c.section) && isCurrent(c) && dayType(c) && dayType(c) !== 'Not in school' : team === 'Family' ? needsVisits(c) : needsVisits(c) || (c.section === 'Luigi' && isCurrent(c))));
+  /* a child referred to this section by a colleague is in the list even when the usual rule would leave it out */
+  const ref = new Map(); for (const e of referFor(team, centre)) if (!ref.has(String(e.childId))) ref.set(String(e.childId), e);
+  const kids = S.children.filter(c => ref.has(String(c.id)) || (vcIn(c, team, centre) && (school ? FAMILY_SECTIONS.includes(c.section) && isCurrent(c) && dayType(c) && dayType(c) !== 'Not in school' : team === 'Family' ? needsVisits(c) : needsVisits(c) || (c.section === 'Luigi' && isCurrent(c)))));
   return kids.map(c => {
     const vi = !school && needsVisits(c) ? visitInfo(c) : null, last = school ? lastSchoolVisit(c) : vi ? vi.last : lastHomeVisit(c);
-    return { c, last, never: !last, late: !!(vi && !vi.never && vi.late >= 0), follow: c.status === 'Follow-up', action: act.has(String(c.id)) };
-  }).sort((a, b) => (a.last || '').localeCompare(b.last || '') || (a.c.entryDate || '').localeCompare(b.c.entryDate || '') || fullName(a.c).localeCompare(fullName(b.c)));
+    return { c, last, never: !last, late: !!(vi && !vi.never && vi.late >= 0), follow: c.status === 'Follow-up', action: act.has(String(c.id)), refer: ref.get(String(c.id)) || null };
+  }).sort((a, b) => (b.refer ? 1 : 0) - (a.refer ? 1 : 0) || (a.last || '').localeCompare(b.last || '') || (a.c.entryDate || '').localeCompare(b.c.entryDate || '') || fullName(a.c).localeCompare(fullName(b.c)));
 }
-const PLAN_F = [['', 'All', () => true], ['late', 'Late', x => x.late], ['never', 'Never visited', x => x.never], ['follow', 'Follow-up', x => x.follow], ['action', 'Action open', x => x.action]];
+const PLAN_F = [['', 'All', () => true], ['refer', 'Referred', x => !!x.refer], ['late', 'Late', x => x.late], ['never', 'Never visited', x => x.never], ['follow', 'Follow-up', x => x.follow], ['action', 'Action open', x => x.action]];
 function planGrid(m, team, centre) {
   const q = route().q, term = (UI.planq || '').trim().toLowerCase();
   const pool = planPool(team, term ? 'all' : centre), pf = PLAN_F.some(f => f[0] === q.get('pf')) ? q.get('pf') : '';
@@ -2884,7 +2888,7 @@ function planGrid(m, team, centre) {
   const LIM = term ? 48 : isPhone() ? 12 : 24, all = q.get('pall') === '1', shown = all ? list : list.slice(0, LIM);
   const mine = id => plans().find(p => String(p.childId) === String(id) && p.month === m && tmatch(planTeam(p), team));
   const tile = x => { const p = mine(x.c.id), st = p ? planStatus(p).k : '';
-    return `<button class="ptile${p ? ' in' : ''}${st && st !== 'planned' ? ' done' : ''}${x.late ? ' late' : x.never ? ' never' : ''}" data-pact="ptoggle" data-id="${esc(x.c.id)}" data-m="${m}" data-team="${team}" aria-pressed="${p ? 'true' : 'false'}">${avatar(x.c, 56)}<b>${esc(fullName(x.c))}</b><small>${esc(agoText(x.last))}${centre === 'all' || term ? ' · ' + esc(centreOf(x.c)) : ''}</small>${p ? '<i aria-hidden="true">✓</i>' : ''}</button>`; };
+    return `<button class="ptile${p ? ' in' : ''}${st && st !== 'planned' ? ' done' : ''}${x.refer ? ' refer' : x.late ? ' late' : x.never ? ' never' : ''}" data-pact="ptoggle" data-id="${esc(x.c.id)}" data-m="${m}" data-team="${team}" aria-pressed="${p ? 'true' : 'false'}">${avatar(x.c, 56)}<b>${esc(fullName(x.c))}</b>${x.refer ? `<small class="rf">${esc(referLabel(x.refer.from) || 'A colleague')}: ${esc(x.refer.reason || 'referred')}</small>` : ''}<small>${esc(agoText(x.last))}${centre === 'all' || term ? ' · ' + esc(centreOf(x.c)) : ''}</small>${p ? '<i aria-hidden="true">✓</i>' : ''}</button>`; };
   return `${shown.length ? `<div class="pgrid">${shown.map(tile).join('')}</div>` : `<p class="empty">${term ? 'No child with this name.' : 'No child here.'}</p>`}
     ${!term && list.length > LIM ? `<div style="margin-top:8px"><a href="#" class="btn sm" data-q="pall=${all ? '' : '1'}">${all ? 'Show fewer' : 'Show all ' + list.length}</a></div>` : ''}`;
 }
@@ -2899,7 +2903,7 @@ function planPicker(m, team, centre) {
     <div class="pfil"><div class="seg" role="group" aria-label="Centre">${centres.map(k => `<a href="#" data-q="vc=${k}&pcmp=&pall=" class="${centre === k ? 'on' : ''}">${esc(CENTRE_LABEL[k])}</a>`).join('')}<a href="#" data-q="vc=all&pcmp=&pall=" class="${centre === 'all' ? 'on' : ''}">All centres</a></div>
       <div class="seg" role="group" aria-label="Which children">${PLAN_F.filter(([k, l, f]) => !k || k === pf || base.some(f)).map(([k, l, f]) => `<a href="#" data-q="pf=${k}&pall=" class="${pf === k ? 'on' : ''}">${l} · ${base.filter(f).length}</a>`).join('')}</div>
       <select class="in" data-filter="pcmp" aria-label="Compound" style="width:auto">${opt(Object.entries(places).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ v: k, l: k + ' · ' + n })), cmp, 'All compounds')}</select></div>
-    <p class="sub" style="margin:8px 0 0">Longest without a visit first. Tap a face: in the plan. Tap again: out. Red ring: late. Orange ring: never visited.</p>
+    <p class="sub" style="margin:8px 0 0">Longest without a visit first. Tap a face: in the plan. Tap again: out. Purple ring: referred by a colleague. Red ring: late. Orange ring: never visited.</p>
     <div id="pgridbox">${planGrid(m, team, centre)}</div>
   </div>`;
 }
@@ -3249,6 +3253,7 @@ function overviewData() {
     if (P.withIssues) lines.push(L(P.withIssues, 'open files with information missing', '#/children?go=records', 'orange'));
     if (P.review) lines.push(L(P.review, 'open files of children who seem to have left', '#/review', 'orange'));
     if (S.children.length && (P.backupDays == null || P.backupDays > 7)) lines.push(L(P.backupDays == null ? '!' : P.backupDays, P.backupDays == null ? 'No backup made on this computer yet' : 'days since the last backup', USER && USER.admin ? '#/staff/data' : '#/help', 'red'));
+    { const sl = referLine([], 'Sports'); if (sl.length) cards.push({ k: 'Sports', title: 'Sports', color: '#73726E', lines: sl }); }
     checkLine(lines); cards.push({ k: 'Admin', title: 'Education office', color: '#37352F', lines }); }
   return cards;
 }
@@ -4048,12 +4053,13 @@ function vActivities(r) {
   const open = S.children.filter(c => c.status !== 'Closed'), enr = x => open.filter(c => actOf(c).includes(x)).length;
   const head = `<div class="top"><div><h1>Activities <span class="chip c-orange">Draft</span></h1><p class="lead">Sports and VET training.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Attendance or enrolment"><a href="#" data-q="t=" class="${tab === 'att' ? 'on' : ''}">Attendance</a><a href="#" data-q="t=enrol" class="${tab === 'enrol' ? 'on' : ''}">Enrolment</a></div>${tab === 'att' ? `<input class="in" type="date" id="actdate" value="${d}" max="${today()}" style="width:auto" aria-label="Day">` : ''}<button class="btn sm" data-act="actxl">Export in Excel</button></div></div>`;
   const search = `<input class="in qsearch" id="actsearch" type="search" autocomplete="off" placeholder="${tab === 'att' ? 'Type a name, tap it' : 'Type a name'}" aria-label="Find a name" value="${esc(UI.actq || '')}">`;
-  if (tab === 'enrol') return head + `<div class="qtop">${search}<div class="qcount"><span>Tap a discipline to enrol. Tap again to remove.</span><span><b>${open.filter(c => actOf(c).length).length}</b> children enrolled</span></div></div>
+  const refs = referTeamBox('Sports');
+  if (tab === 'enrol') return head + refs + `<div class="qtop">${search}<div class="qcount"><span>Tap a discipline to enrol. Tap again to remove.</span><span><b>${open.filter(c => actOf(c).length).length}</b> children enrolled</span></div></div>
   <div class="card" style="padding:0 8px"><div id="actlist">${actEnrolList()}</div></div>`;
   const n = Object.keys(day).filter(k => k.endsWith(suf)).length;
   const days = Object.keys(S.attendance).filter(x => x.slice(0, 7) === m && Object.keys(S.attendance[x]).some(k => k.endsWith(suf))).length;
   const mk = uniq(actIds(a, m + '-01', monthEnd(m)).map(id => child(id)).filter(Boolean));
-  return head + Object.entries(G).map(([g, L]) => `<p class="sec" style="margin:6px 0 4px">${esc(g)}</p><div class="qchips">${L.map(x => `<a href="#" data-q="a=${esc(x)}" class="${x === a ? 'on' : ''}">${esc(x)} · ${enr(x)}</a>`).join('')}</div>`).join('') + `
+  return head + refs + Object.entries(G).map(([g, L]) => `<p class="sec" style="margin:6px 0 4px">${esc(g)}</p><div class="qchips">${L.map(x => `<a href="#" data-q="a=${esc(x)}" class="${x === a ? 'on' : ''}">${esc(x)} · ${enr(x)}</a>`).join('')}</div>`).join('') + `
   <div class="qtop">${search}<div class="qcount"><span><b>${esc(a)}</b> · ${esc(fmtDate(d))} · <b>${n}</b> present of ${enr(a)} enrolled</span><span>${esc(fmtMonth(m))}: ${days} ${days === 1 ? 'day' : 'days'} · ${mk.length} children (F ${mk.filter(c => c.sex === 'F').length}, M ${mk.filter(c => c.sex === 'M').length})</span></div></div>
   <div class="card" style="padding:0 8px"><div id="actlist">${actList(q)}</div></div>`;
 }
@@ -4158,8 +4164,8 @@ const PERF = ['Above average', 'Average', 'Below average'];
 const SCH_ATT = ['Regular', 'Irregular', 'Absent'];
 const TREND = ['Improving', 'The same', 'Decreasing'];
 const YEAR_END = ['Promoted to the next grade', 'Repeats the grade', 'Completed school', 'Stopped school', 'Results not out yet'];
-const REFER_TO = [['Family', 'Family Section'], ['School', 'School Section'], ['Counseling', 'Counselling'], ['Luigi', 'Luigi'], ['Minsundu', 'Minsundu'], ['Nkwazi', 'Nkwazi Centre']];
-const REFER_WHY = ['Not attending school', 'School performance going down', 'Behaviour', 'Problem at home', 'Health', 'Needs school support', 'Other'];
+const REFER_TO = [['Family', 'Family Section'], ['School', 'School Section'], ['Counseling', 'Counselling'], ['Luigi', 'Luigi'], ['Minsundu', 'Minsundu'], ['Nkwazi', 'Nkwazi Centre'], ['Sports', 'Sports']];
+const REFER_WHY = ['Home visit suggested', 'Not attending school', 'School performance going down', 'Behaviour', 'Problem at home', 'Health', 'Needs school support', 'Other'];
 const SCH_KEYS = ['teacher', 'teacherPhone', 'schAtt', 'perf', 'perfNote', 'cocurr', 'behaviour', 'intTeachers', 'intMates', 'teacherComment', 'weak', 'strong', 'classTeacher', 'trend', 'abaOptional', 'abaExam', 'abaSugAcad', 'aba3y', 'abaSugSoc'];
 function referLabel(k) { const x = REFER_TO.find(r => r[0] === k); return x ? x[1] : (k || ''); }
 
@@ -4202,7 +4208,7 @@ function attLast(c, key, days) {
 function referClosed(id) { return S.events.find(e => e.type === 'Referral closed' && e.ref === id); }
 function referOpen(to) { return S.events.filter(e => e.type === 'Referral' && !referClosed(e.id) && (!to || e.to === to) && child(e.childId)).sort((a, b) => (a.date || '').localeCompare(b.date || '')); }
 function referAdd(childId, from, to, reason, note, date, visitId) { S.events.push({ id: uid('e'), childId: String(childId), type: 'Referral', date: date || today(), from: from || '', to, reason: reason || '', note: note || '', by: USER.id, visitId: visitId || '' }); }
-function referLine(lines, k) { const n = referOpen(k).length; if (n) lines.unshift({ n, text: n === 1 ? 'child referred by another section' : 'children referred by other sections', href: '#/referrals?to=' + k, lvl: 'red' }); return lines; }
+function referLine(lines, k) { const n = referOpen(k).length; if (n) lines.unshift({ n, text: n === 1 ? 'child referred by colleagues' : 'children referred by colleagues', href: '#/referrals?to=' + k, lvl: 'red' }); return lines; }
 function eventLine(e) {
   if (VISIT_EV.includes(e.type) || e.type === 'Visit corrected') return '';
   if (e.type === 'Record cancelled' || e.type === 'Visit cancelled') return `<b>Cancelled</b> <span class="sub">by ${esc(staffName(e.by))}</span>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}`;
@@ -4212,9 +4218,21 @@ function eventLine(e) {
 }
 function referItem(e) {
   const c = child(e.childId);
-  return `<div class="refit"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)}<div>${esc(referLabel(e.from) || 'A section')} → <b>${esc(referLabel(e.to))}</b>: ${esc(e.reason || '')}</div>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}<div class="sub">${esc(staffName(e.by))} · since ${esc(fmtDate(e.date))}</div></div>
+  return `<div class="refit"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)}<div>${esc(referLabel(e.from) || 'A section')} → <b>${esc(referLabel(e.to))}</b>: ${esc(e.reason || '')}</div>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}<div class="sub">${esc(staffName(e.by))} · since ${esc(fmtDate(e.date))}</div>${TEAM_KEYS.includes(e.to) ? `<div style="margin-top:6px"><a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${esc(e.to)}">Record a visit</a></div>` : ''}</div>
     <form data-form="referdone" class="refdone"><input type="hidden" name="id" value="${esc(e.id)}"><input class="in" name="note" placeholder="What was done" aria-label="What was done" required><button class="btn sm pri">Done</button></form></div>`;
 }
+/* what the colleagues asked of a section: shown where that section works (Monitoring, Activities) */
+function referFor(team, centre) { return referOpen().filter(e => (TEAM_KEYS.includes(team) || team === 'Sports' ? e.to === team : team === 'Others' ? e.to !== 'Family' && e.to !== 'School' : true) && (!centre || centre === 'all' || centreOf(child(e.childId)) === centre)); }
+function referTeamBox(team, centre) { const l = referFor(team, centre); return l.length ? `<section class="card refcard" id="refteam"><h2>Referred by colleagues · ${l.length}</h2>${l.map(referItem).join('')}</section>` : ''; }
+function vReferNew(r) {
+  const cid = r.q.get('child'), c = cid ? child(cid) : null;
+  return `<div class="top"><div><h1>Refer a child</h1><p class="lead">The section finds it in its To do.</p></div><a class="btn" href="#/referrals">Back</a></div>
+  <form class="card" data-form="refer" style="max-width:720px">
+    <div class="fs two">${childPick('id', c ? c.id : '', 'Child *')}${field('From', 'from', '', 'select', { options: opt(REFER_TO.map(([v, l]) => ({ v, l })), referFrom(), 'Choose') })}${field('To', 'referTo', '', 'select', { req: true, options: opt(REFER_TO.map(([v, l]) => ({ v, l })), '', 'Choose') })}
+      ${field('Why', 'referWhy', '', 'select', { req: true, options: opt(REFER_WHY, '', 'Choose') })}${field('Date', 'date', today(), 'date', { req: true })}${field('Note for that section', 'referNote', '', 'textarea', { wide: true, rows: 3 })}</div>
+    <button class="btn pri" style="margin-top:12px">Refer</button></form>`;
+}
+function referFrom() { return myTeam() || myCentre() || (hasFlag('Sports') ? 'Sports' : ''); }
 function referBox(c) {
   const list = referOpen().filter(e => String(e.childId) === String(c.id)); if (!list.length) return '';
   return `<section class="card refcard"><h2>Referred to another section · ${list.length}</h2>${list.map(referItem).join('')}</section>`;
@@ -4227,7 +4245,7 @@ function referFields() {
 function vRefer(c) {
   return `<div class="top"><div><h1>Refer ${esc(fullName(c))}</h1><p class="lead">The other section finds it in its To do.</p></div><a class="btn" href="#/child/${esc(c.id)}">Back</a></div>
   <form class="card" data-form="refer" style="max-width:720px"><input type="hidden" name="id" value="${esc(c.id)}">
-    <div class="fs two">${field('From', 'from', '', 'select', { options: opt(REFER_TO.map(([v, l]) => ({ v, l })), myTeam() || myCentre() || '', 'Choose') })}${field('To', 'referTo', '', 'select', { req: true, options: opt(REFER_TO.map(([v, l]) => ({ v, l })), '', 'Choose') })}
+    <div class="fs two">${field('From', 'from', '', 'select', { options: opt(REFER_TO.map(([v, l]) => ({ v, l })), referFrom(), 'Choose') })}${field('To', 'referTo', '', 'select', { req: true, options: opt(REFER_TO.map(([v, l]) => ({ v, l })), '', 'Choose') })}
       ${field('Why', 'referWhy', '', 'select', { req: true, options: opt(REFER_WHY, '', 'Choose') })}${field('Date', 'date', today(), 'date', { req: true })}${field('Note for that section', 'referNote', '', 'textarea', { wide: true, rows: 3 })}</div>
     <button class="btn pri" style="margin-top:12px">Refer</button></form>`;
 }
@@ -4235,8 +4253,8 @@ function vReferrals(r) {
   const q = r.q, mine = REFER_TO.map(x => x[0]).filter(k => hasFlag(k)), tq = q.get('to') || (USER.admin ? 'all' : myTeam() || (mine.length === 1 ? mine[0] : 'all')), to = tq === 'all' ? '' : tq;
   const open = referOpen(to), done = S.events.filter(e => e.type === 'Referral' && referClosed(e.id) && (!to || e.to === to) && child(e.childId)).sort((a, b) => (b.date || '').localeCompare(a.date || '')).slice(0, 30);
   return `<div class="top"><div><h1>Referrals between sections</h1><p class="lead">One section asks another to follow a child.</p></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap"><select class="in" data-filter="to" style="width:auto" aria-label="Referred to">${opt([{ v: 'all', l: 'To every section' }].concat(REFER_TO.map(([v, l]) => ({ v, l: 'To ' + l }))), to || 'all')}</select><button class="btn sm" data-act="xl" data-k="referrals">Export in Excel</button></div></div>
-  <section class="card refcard"><h2>Open · ${open.length}</h2><p class="sub" style="margin:2px 0 6px">Write what was done, then tap Done. To refer a child: open the file, "Refer to a section".</p>${open.length ? open.map(referItem).join('') : '<p class="empty">No open referral.</p>'}</section>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><select class="in" data-filter="to" style="width:auto" aria-label="Referred to">${opt([{ v: 'all', l: 'To every section' }].concat(REFER_TO.map(([v, l]) => ({ v, l: 'To ' + l }))), to || 'all')}</select><button class="btn sm" data-act="xl" data-k="referrals">Export in Excel</button><a class="btn pri" href="#/referrals/new">Refer a child</a></div></div>
+  <section class="card refcard"><h2>Open · ${open.length}</h2><p class="sub" style="margin:2px 0 6px">Write what was done, then tap Done.</p>${open.length ? open.map(referItem).join('') : '<p class="empty">No open referral.</p>'}</section>
   <section class="card"><h2>Done · ${done.length}</h2>${done.length ? done.map(e => { const c = child(e.childId), cl = referClosed(e.id); return `<div class="it"><div class="w"><b>${childLink(c)}</b><span>${esc(referLabel(e.from) || 'A section')} → ${esc(referLabel(e.to))}: ${esc(e.reason || '')} · ${esc(fmtDate(e.date))}</span><span>Done ${esc(fmtDate(cl.date))} by ${esc(staffName(cl.by))}: ${esc(cl.note || '')}</span></div></div>`; }).join('') : '<p class="empty">Nothing yet.</p>'}</section>`;
 }
 
@@ -4354,7 +4372,7 @@ const SCHOOL_COLS = [{ label: 'School', get: r => r.school }, { label: 'ID', get
 function promotedIn(y) { const all = [], ok = []; for (const c of S.children) { const r = (c.terms || []).filter(x => x.y === y && x.yearEnd && x.yearEnd !== 'Results not out yet').sort((a, b) => b.t - a.t)[0]; if (!r) continue; all.push(c); if (/^Promoted|^Completed/.test(r.yearEnd)) ok.push(c); } return { all, ok }; }
 
 /* ---------- saving ---------- */
-FORMS.refer = function (o) { const c = child(o.id); if (!c || !o.referTo) return toast('Choose the section'); referAdd(c.id, o.from, o.referTo, o.referWhy, o.referNote, o.date); save(); toast('Referred to ' + referLabel(o.referTo)); go('#/child/' + c.id); };
+FORMS.refer = function (o) { const c = child(o.id); if (!c) return toast('Choose a child'); if (!o.referTo) return toast('Choose the section'); referAdd(c.id, o.from, o.referTo, o.referWhy, o.referNote, o.date); save(); toast('Referred to ' + referLabel(o.referTo)); go('#/child/' + c.id); };
 FORMS.referdone = function (o) { const e = S.events.find(x => x.id === o.id); if (!e || referClosed(e.id)) return render(); S.events.push({ id: uid('e'), childId: String(e.childId), type: 'Referral closed', ref: e.id, date: today(), note: (o.note || '').trim(), by: USER.id }); save(); toast('Referral closed'); render(); };
 FORMS.term = function (o) {
   const c = child(o.id), y = Number(o.y), t = Number(o.t); if (!c || !y || ![1, 2, 3].includes(t)) return toast('Write the year and the term');
