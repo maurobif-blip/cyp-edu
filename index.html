@@ -280,7 +280,7 @@ details.vchoose[open]{display:flex;flex-direction:column;gap:14px}
   .demobar .btn{white-space:nowrap}
   .seg.dayseg{width:auto;flex:1 1 52%}.top input[type=date].in{flex:1 1 38%;width:auto!important;min-width:0}
   .knowncard h2{font-size:15px;margin-bottom:8px}
-  details.vchoose>summary{flex-direction:column;align-items:stretch}details.vchoose>summary .vchg{align-self:stretch}
+  details.vchoose>summary{flex-direction:row;align-items:center;gap:8px}details.vchoose>summary .vchg{align-self:center;flex:none}
   .seg .dshort{display:inline}.seg .dlong{display:none}
 }
 
@@ -503,6 +503,9 @@ a:focus-visible,summary:focus-visible,.seg a:focus-visible,.vtabs a:focus-visibl
   .btn.sm{min-height:44px}
 }
 
+td.vopen{white-space:nowrap;text-align:right}td.vopen .chip{margin-right:6px}
+@media (max-width:760px){.vtab td.vopen{flex:1 1 100%;display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;white-space:normal}.vtab td.vopen .btn{margin-left:auto}}
+
 </style>
 </head>
 <body>
@@ -515,7 +518,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.7';
+const VERSION = 'alpha 5.8';
 const BUILD_DATE = '2026-11-17'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -1374,8 +1377,8 @@ function vHome(r) {
     </div>
     <p class="sub" style="margin:10px 0 0"></p>
   </section>
-  <section><p class="sec">Plans and progress in ${esc(fmtMonth(m))}</p>
-  <div class="grid g3">
+  ${isPhone() ? `<details class="card more"><summary>Plans and progress in ${esc(fmtMonth(m))}</summary>` : `<section><p class="sec">Plans and progress in ${esc(fmtMonth(m))}</p>`}
+  <div class="grid g3"${isPhone() ? ' style="margin-top:12px"' : ''}>
     <div class="card"><h3>Family Section</h3><p class="sub" style="margin:2px 0 12px">Home visits against the month's target</p>
       <div style="display:flex;align-items:baseline;gap:8px"><span class="big">${done}</span><span style="color:var(--soft)">of ${tv || '?'} planned</span></div>${bar(done, tv, '#448361')}
       <form data-form="target" style="display:flex;gap:6px;align-items:center;margin:4px 0 6px"><input type="hidden" name="m" value="${m}"><input type="hidden" name="k" value="homeVisits"><label class="sub">Target <input class="in" style="width:80px;min-height:30px;padding:3px 8px" type="number" min="0" name="v" value="${tv || ''}"></label><button class="btn sm">Set</button></form>
@@ -1397,7 +1400,7 @@ function vHome(r) {
       <div class="row"><span>Outreach and drop-in sessions</span><b>${sess.length}</b></div>
       <div class="row"><span>Home visits by Luigi: done / in the plan</span><b>${lvs.length} / ${planFor(m, 'Luigi').length}</b></div>
     </div>
-  </div></section>
+  </div>${isPhone() ? '</details>' : '</section>'}
   <p class="sub" style="margin:0"></p>`;
 }
 
@@ -1693,9 +1696,9 @@ function vVisits(r) {
     ${txt('vf', 'Findings', 'A word')}
     ${hasSchool ? sel('vsn', opt(Object.keys(names).sort((x, y) => x.localeCompare(y)).map(k => ({ v: k, l: k + ' · ' + names[k] })), q.get('vsn'), 'Every school'), 'School') + sel('vsa', opt(SCH_ATT, q.get('vsa'), 'Any'), 'School attendance') + sel('vsp', opt(PERF, q.get('vsp'), 'Any'), 'Performance') + sel('vst', opt(TREND, q.get('vst'), 'Any'), 'Compared with the last visit') : ''}
   </div>
-  <div class="card" style="padding:6px 8px"><p class="sub" style="margin:4px 4px 6px"><b>${vs.length}</b> of ${base.length} visits shown${any ? ' · <a href="#" data-q="' + VISIT_FK.map(k => k + '=').join('&') + '">clear the filters</a>' : ''} · tap a column title to sort</p>${vs.length ? `<div class="tw"><table class="vtab"><thead><tr>${th('date', 'Date')}${th('team', 'Section', 'mh')}${th('centre', 'Centre', 'mh')}${th('child', 'Child')}${th('purpose', 'Purpose')}${th('where', 'Where', 'mh')}${th('ok', 'Found')}${th('by', 'By', 'mh')}${schoolCols ? '<th class="mh">Attendance</th><th class="mh">Performance</th>' : ''}<th class="mh">Findings</th></tr></thead><tbody>${vs.map(v => { const c = child(v.childId); return `<tr><td><a href="#/visitrep/${esc(v.id)}">${esc(fmtDate(v.date))}</a></td><td class="mh">${esc(teamLabel(visitTeam(v)))}</td><td class="mh">${c ? centreChip(c) : ''}</td><td>${c ? childLink(c) : esc(v.childId)}${c && isAba(c) ? ' <span class="chip c-green">ABA</span>' : ''}<div class="sub mo">${esc(teamLabel(visitTeam(v)))} · ${esc(staffName(v.by))}</div></td><td>${esc(v.purpose)}</td><td class="mh">${esc(v.where || '')}${v.place ? ' · ' + esc(v.place) : ''}</td><td>${v.successful === 'No' ? '<span class="chip c-red">No</span>' : 'Yes'}</td><td class="mh">${esc(staffName(v.by))}</td>${schoolCols ? `<td class="mh">${esc(v.schAtt || '')}</td><td class="mh">${esc(v.perf || '')}${v.trend ? ' · ' + esc(v.trend) : ''}</td>` : ''}<td class="mh">${esc((v.findings || '').slice(0, 120))}${v.action ? `<div class="sub">Action${v.actionDone ? ' (done)' : ''}: ${esc(v.action.slice(0, 80))}</div>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">No visits match.</p>'}</div>`;
+  <div class="card" style="padding:6px 8px"><p class="sub" style="margin:4px 4px 6px"><b>${vs.length}</b> of ${base.length} visits shown${any ? ' · <a href="#" data-q="' + VISIT_FK.map(k => k + '=').join('&') + '">clear the filters</a>' : ''}<span class="mh"> · tap a column title to sort</span></p>${vs.length ? `<div class="tw"><table class="vtab"><thead><tr>${th('date', 'Date')}${th('team', 'Section', 'mh')}${th('centre', 'Centre', 'mh')}${th('child', 'Child')}${th('purpose', 'Purpose')}${th('where', 'Where', 'mh')}${th('ok', 'Found')}${th('by', 'By', 'mh')}${schoolCols ? '<th class="mh">Attendance</th><th class="mh">Performance</th>' : ''}<th class="mh">Findings</th><th><span class="vh">Report</span></th></tr></thead><tbody>${vs.map(v => { const c = child(v.childId); return `<tr><td>${esc(fmtDate(v.date))}</td><td class="mh">${esc(teamLabel(visitTeam(v)))}</td><td class="mh">${c ? centreChip(c) : ''}</td><td>${c ? childLink(c) : esc(v.childId)}${c && isAba(c) ? ' <span class="chip c-green">ABA</span>' : ''}<div class="sub mo">${esc(teamLabel(visitTeam(v)))} · ${esc(staffName(v.by))}</div></td><td>${esc(v.purpose)}</td><td class="mh">${esc(v.where || '')}${v.place ? ' · ' + esc(v.place) : ''}</td><td>${v.successful === 'No' ? '<span class="chip c-red">No</span>' : 'Yes'}</td><td class="mh">${esc(staffName(v.by))}</td>${schoolCols ? `<td class="mh">${esc(v.schAtt || '')}</td><td class="mh">${esc(v.perf || '')}${v.trend ? ' · ' + esc(v.trend) : ''}</td>` : ''}<td class="mh">${esc((v.findings || '').slice(0, 120))}${v.action ? `<div class="sub">Action${v.actionDone ? ' (done)' : ''}: ${esc(v.action.slice(0, 80))}</div>` : ''}</td><td class="vopen">${visitChip(v)}<a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the report</a></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">No visits match.</p>'}</div>`;
   }
-  return `<div class="top"><div><h1>Monitoring</h1><p class="lead">Blue button: record a visit.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' ? monthPicker(m) : ''}${team === 'School' || team === 'all' ? '<a class="btn" href="#/school">Pupils by school</a>' : ''}<a class="btn" href="#/referrals${TEAM_KEYS.includes(team) ? '?to=' + team : ''}">Referrals${referOpen(TEAM_KEYS.includes(team) ? team : '').length ? ' · ' + referOpen(TEAM_KEYS.includes(team) ? team : '').length : ''}</a><a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a></div></div>
+  return `<div class="top"><div><h1>Monitoring</h1></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' ? monthPicker(m) : ''}${team === 'School' || team === 'all' ? '<a class="btn" href="#/school">Pupils by school</a>' : ''}<a class="btn" href="#/referrals${TEAM_KEYS.includes(team) ? '?to=' + team : ''}">Referrals${referOpen(TEAM_KEYS.includes(team) ? team : '').length ? ' · ' + referOpen(TEAM_KEYS.includes(team) ? team : '').length : ''}</a><a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a></div></div>
   <div class="vtabs" id="vtabs" role="tablist">${tabs.map(([k, l, n]) => `<a href="#" role="tab" data-q="vtab=${k === 'done' ? '' : k}&all=&lall=" class="${tab === k ? 'on' : ''}">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</a>`).join('')}</div>
   ${visitChooser(q, m)}
   ${body}`;
