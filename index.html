@@ -545,6 +545,7 @@ a.spot:hover{color:var(--ink);background:#DCEDF5}
 .tw{position:relative}
 td.op{text-align:right;white-space:nowrap}
 @media (max-width:760px){#childTable td.op{display:block;width:100%;text-align:left;padding-top:6px}}
+.ph1{display:flex;align-items:center;gap:12px}.ph1 a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:5px}.ph1 a:hover{text-decoration-color:var(--ink)}
 
 </style>
 </head>
@@ -558,7 +559,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.13';
+const VERSION = 'alpha 5.14';
 const BUILD_DATE = '2026-11-18'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -4505,7 +4506,7 @@ function vPupil(r) {
   const c = child(r.id); if (!c) return '<div class="top"><div><h1>Pupil</h1></div></div><div class="card"><p class="empty">This child is not in the database.</p></div>';
   const sv = schoolVisits(c), n = termNow(), [ta, tb] = termRange(n.y, n.t), inT = sv.some(x => inRange(x.date, ta, tb)), T = termsOf(c), pr = progressOf(c), sn = schoolOf(c), tile = (nn, l) => `<div class="tile"><b>${nn}</b><span>${l}</span></div>`;
   const mk = T.find(x => (x.subjects || []).length);
-  return `<div class="top"><div><p class="kick">Pupil · School Section</p><h1>${esc(fullName(c))}</h1><p class="lead">${esc(sn)}${c.grade ? ' · ' + esc(gradeLabel(c.grade)) : ''}${c.stream ? ' ' + esc(c.stream) : ''} ${centreChip(c)}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${schoolPupils(sn).length ? `<a class="btn" href="#/schoolvisit?sn=${encodeURIComponent(sn)}">The pupils of the school</a>` : ''}<a class="btn" href="#/child/${esc(c.id)}">The file of the child</a></div></div>
+  return `<div class="top"><div><p class="kick">Pupil · School Section</p><h1 class="ph1">${avatar(c, 52)}<a href="#/child/${esc(c.id)}" aria-label="Open the file of ${esc(fullName(c))}">${esc(fullName(c))}</a></h1><p class="lead">${esc(sn)}${c.grade ? ' · ' + esc(gradeLabel(c.grade)) : ''}${c.stream ? ' ' + esc(c.stream) : ''} ${centreChip(c)}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${schoolPupils(sn).length ? `<a class="btn" href="#/schoolvisit?sn=${encodeURIComponent(sn)}">The pupils of the school</a>` : ''}<a class="btn" href="#/child/${esc(c.id)}">The file of the child</a></div></div>
   <div class="grid g4">${tile(sv[0] ? esc(fmtDate(sv[0].date)) : 'Never', 'Last school visit')}${tile(inT ? 'Visited' : n.hol ? 'Not visited' : 'Not yet', esc(termLabel(n)))}${tile(pr ? esc(pr) : '-', 'Progress')}</div>
   <section class="card" id="pforms"><div class="phead"><h2><span class="pnum">1</span>School visits · ${sv.length}</h2><a class="btn pri" href="#/visit/new?child=${esc(c.id)}&t=School&back=pu">Fill a form</a></div>
     ${sv.length ? sv.map(v => `<div class="it"><div class="w"><b>${esc(fmtDate(v.date))}</b><span>${[v.schAtt ? 'Attendance ' + v.schAtt.toLowerCase() : '', v.perf || '', v.by ? 'by ' + staffName(v.by) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>${trendChip(v.trend)}<a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the form</a></div>`).join('') : '<p class="empty">No form yet.</p>'}</section>
