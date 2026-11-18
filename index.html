@@ -506,6 +506,41 @@ a:focus-visible,summary:focus-visible,.seg a:focus-visible,.vtabs a:focus-visibl
 td.vopen{white-space:nowrap;text-align:right}td.vopen .chip{margin-right:6px}
 @media (max-width:760px){.vtab td.vopen{flex:1 1 100%;display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;white-space:normal}.vtab td.vopen .btn{margin-left:auto}}
 
+/* spotlight: who does the visits, the databases, the schools */
+.vq{font-size:17px;font-weight:700;margin:0 0 8px;color:var(--ink)}
+.tbtns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.tbtn{display:flex;align-items:center;justify-content:center;min-height:58px;padding:10px 12px;border:2px solid var(--line2);border-radius:10px;background:#FFFFFF;color:var(--ink);font-weight:700;font-size:16.5px;text-decoration:none;text-align:center}
+.tbtn:hover{border-color:var(--ink);color:var(--ink)}
+.tbtn.on{background:var(--ink);border-color:var(--ink);color:#FFFFFF}
+.kick{font-size:13px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--pri2);margin:0 0 2px}
+.spot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--prisoft);border:2px solid var(--pri);border-radius:14px;padding:12px 16px;text-decoration:none;color:var(--ink);margin:0 0 12px}
+a.spot:hover{color:var(--ink);background:#DCEDF5}
+.spot .sk{display:block;font-size:12.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--pri2)}
+.spot b{font-size:21px;line-height:1.25}
+.spot .sr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.spot .sn{font-size:26px;font-weight:700}
+.spot.plain{background:var(--fill);border-color:var(--line2);margin-top:4px}
+.spot.plain .sk{color:var(--muted)}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.scard{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:12px 14px;border:2px solid var(--line2);border-radius:12px;background:#FFFFFF;color:var(--ink);text-decoration:none;text-align:left;font:inherit;cursor:pointer;min-height:92px}
+.scard b{font-size:15.5px;line-height:1.25}
+.scard>span{font-size:13px;color:var(--muted)}
+.scard:hover{border-color:var(--pri);color:var(--ink)}
+.scard.on{border-color:var(--pri);background:var(--prisoft)}
+.chip.c-blue{background:var(--pri);color:#FFFFFF}
+.psingle{margin-top:14px;border-top:1px solid var(--line);padding-top:8px}
+.psingle>summary{cursor:pointer;font-weight:700;padding:10px 2px;min-height:44px}
+.pschool{border:1px solid var(--line2);border-radius:10px;margin-top:8px;padding:0 10px}
+.pschool>summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;cursor:pointer;padding:10px 2px;min-height:52px}
+.pschool>summary .w{display:flex;flex-direction:column;flex:1;min-width:150px}
+.pschool>summary b{font-size:15.5px}
+.schact{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+@media (max-width:760px){.tbtns{grid-template-columns:repeat(2,minmax(0,1fr))}.tbtn{font-size:15px;min-height:52px}.spot b{font-size:18px}.sgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.scard{padding:10px 10px}.scard b{font-size:14.5px}}
+.pschool>summary{list-style:none}.pschool>summary::-webkit-details-marker{display:none}
+.pschool>summary::before{content:'\25B8';font-size:16px;color:var(--muted);width:14px}
+.pschool[open]>summary::before{content:'\25BE'}
+.vchoose>div+div{margin-top:4px}
+
 </style>
 </head>
 <body>
@@ -518,7 +553,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.10';
+const VERSION = 'alpha 5.11';
 const BUILD_DATE = '2026-11-18'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -1200,8 +1235,9 @@ const REPORTS = {
       if (priv.length) rows.push(['', 'In private school (not in the section template)', priv]);
       rows.push(['', 'Under ABA (distance adoption)', act.filter(isAba)], ['', 'Under ABA, visited at school this month', seen.filter(isAba)]);
       const out = rows.map(r => [r[0], r[1], sx(r[2]), r[2]]);
-      out.push(['', 'School visits made (target ' + (Number(t.schoolVisits) || 'not set') + ')', [null, null, null, sv.length], null]);
-      if (svRec.length !== sv.length) out.push(['', 'School visits recorded, not validated yet', [null, null, null, svRec.length - sv.length], null]);
+      out.push(['', 'School Monitoring Forms filled (target ' + (Number(t.schoolVisits) || 'not set') + ')', [null, null, null, sv.length], null]);
+      out.push(['', 'School visits (a school on a day)', [null, null, null, uniq(sv.map(v => v.date + '|' + visitSchool(v).toLowerCase())).length], null]);
+      if (svRec.length !== sv.length) out.push(['', 'Forms recorded, not validated yet', [null, null, null, svRec.length - sv.length], null]);
       out.push(['', 'Schools visited', [null, null, null, uniq(sv.map(v => visitSchool(v).toLowerCase()).filter(Boolean)).length], null]);
       return out;
     },
@@ -1610,17 +1646,19 @@ function vStatus(c) {
   </div>`;
 }
 
+/* Monitoring, School Section: the way to the pupils of every school */
+function schoolSpot() { const P = S.children.filter(c => isPupil(c) && outsideSchool(c)), sl = schoolsLeft(termNow()); return `<a class="spot" href="#/school"><div><span class="sk">Database of pupils · School Section</span><b>Pupils by school</b></div><div class="sr"><span class="sub">${P.length} pupils · ${sl.all} schools${sl.all && !termNow().hol ? ' · ' + sl.left + ' not visited in ' + esc(termLabel(termNow())) : ''}</span><span class="btn pri">Open</span></div></a>`; }
 function vVisitForm(r) {
   const cid = r.q.get('child'); const c = cid ? child(cid) : null;
   const opts = S.children.filter(x => x.status !== 'Closed').sort((a, b) => fullName(a).localeCompare(fullName(b))).map(x => ({ v: x.id, l: fullName(x) + (x.nickname ? ' "' + x.nickname + '"' : '') + ' · ' + centreOf(x) + ' · ' + x.id }));
   const tq = r.q.get('t'), team = TEAM_KEYS.includes(tq) ? tq : (myTeam() || (c ? teamFor(c) : '')), school = team === 'School';
   const ed = r.q.get('edit') ? S.visits.find(x => x.id === r.q.get('edit') && visitCanEdit(x)) : null;
-  return `<div class="top"><div><h1>${ed ? 'Change the visit' : school ? 'Record a school visit' : 'Record a visit'}</h1><p class="lead">${school ? 'The fields of the School Monitoring Form.' : ''}</p></div></div>
-  <form class="card" data-form="visit" style="display:flex;flex-direction:column;gap:14px;max-width:820px">${ed ? `<input type="hidden" name="edit" value="${esc(ed.id)}">` : ''}
+  return `<div class="top"><div><h1>${ed ? 'Change the visit' : school ? 'School Monitoring Form' : 'Record a visit'}</h1><p class="lead">${school ? 'One form for each pupil seen in the school visit.' : ''}</p></div>${school && !ed ? '<a class="btn" href="#/schoolvisit' + (c && schoolNorm(c.schoolName) ? '?sn=' + encodeURIComponent(schoolOf(c)) + (r.q.get('d') ? '&d=' + esc(r.q.get('d')) : '') : '') + '">The pupils of the school</a>' : ''}</div>
+  <form class="card" data-form="visit" style="display:flex;flex-direction:column;gap:14px;max-width:820px">${r.q.get('back') === 'sv' ? '<input type="hidden" name="back" value="sv">' : ''}${ed ? `<input type="hidden" name="edit" value="${esc(ed.id)}">` : ''}
     <div class="fs two">
       ${field('Who made the visit?', 'team', '', 'select', { req: true, wide: true, options: opt(VISIT_TEAMS.map(([k, l]) => ({ v: k, l })), team, 'Choose the section'), hint: '' })}
       ${childPick('childId', c ? c.id : '', 'Child *')}
-      ${field('Date', 'date', today(), 'date', { req: true })}
+      ${field('Date', 'date', /^\d{4}-\d\d-\d\d$/.test(r.q.get('d') || '') && r.q.get('d') <= today() ? r.q.get('d') : today(), 'date', { req: true })}
       ${school ? schoolVisitFields(c) : `      ${field('Purpose', 'purpose', '', 'select', { req: true, options: opt(VISIT_PURPOSES, school ? 'School visit' : c && c.status === 'Follow-up' ? 'Follow-up' : '', 'Choose') })}
       ${field('Where', 'where', '', 'select', { options: opt(VISIT_WHERE, school ? 'School' : 'Home') })}
       ${field('Visited by', 'by', '', 'select', { options: opt(activeStaff().map(s => ({ v: s.id, l: s.name })), USER.id) })}
@@ -1689,7 +1727,7 @@ function vVisits(r) {
     const th = (key, label, cls) => `<th class="${cls || ''}"><a href="#" class="sortth" data-q="vso=${key}&vsd=${so === key && sd === 'desc' ? 'asc' : 'desc'}" title="Sort by this column">${label}${so === key ? (sd === 'asc' ? ' ▲' : ' ▼') : ''}</a></th>`;
     const names = {}; for (const v of base) { const n = visitSchool(v); if (n) names[n] = (names[n] || 0) + 1; }
     const who = (team === 'all' ? '' : ' · ' + teamLabel(team)) + (centre === 'all' ? '' : ' · children of ' + CENTRE_LABEL[centre]);
-    body = `<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">Visits done${esc(who)} · ${esc(per === 'year' ? yy : per === 'all' ? 'all years' : fmtMonth(m))} · ${vs.length}</h2><button class="btn sm" data-act="xl" data-k="visits">Export in Excel</button></div>
+    body = `${team === 'School' ? schoolTripsHtml(per === 'year' ? yy + '-01-01' : per === 'all' ? '0000' : m + '-01', per === 'year' ? yy + '-12-31' : per === 'all' ? '9999' : m + '-31', per === 'year' ? yy : per === 'all' ? 'all years' : fmtMonth(m)) : ''}<div class="spot plain"><div><span class="sk">Database of visits${team === 'School' ? ' · one row for each form' : ''}</span><b>${team === 'School' ? 'Forms filled' : 'Visits done'}${esc(who)} · ${esc(per === 'year' ? yy : per === 'all' ? 'all years' : fmtMonth(m))}</b></div><div class="sr"><span class="sn">${vs.length}</span><button class="btn sm" data-act="xl" data-k="visits">Export in Excel</button></div></div>
   <div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:repeat(4,minmax(0,1fr))">${filtBtn()}
     ${sel('vper', opt([{ v: 'year', l: 'Whole year ' + yy }, { v: 'all', l: 'All years' }], per, 'The month chosen above'), 'Period')}
     ${txt('vq', 'Child', 'Name or ID')}
@@ -1704,9 +1742,10 @@ function vVisits(r) {
   </div>
   <div class="card" style="padding:6px 8px"><p class="sub" style="margin:4px 4px 6px"><b>${vs.length}</b> of ${base.length} visits shown${any ? ' · <a href="#" data-q="' + VISIT_FK.map(k => k + '=').join('&') + '">clear the filters</a>' : ''}<span class="mh"> · tap a column title to sort</span></p>${vs.length ? `<div class="tw"><table class="vtab"><thead><tr>${th('date', 'Date')}${th('team', 'Section', 'mh')}${th('centre', 'Centre', 'mh')}${th('child', 'Child')}${th('purpose', 'Purpose')}${th('where', 'Where', 'mh')}${th('ok', 'Found')}${th('by', 'By', 'mh')}${schoolCols ? '<th class="mh">Attendance</th><th class="mh">Performance</th>' : ''}<th class="mh">Findings</th><th><span class="vh">Report</span></th></tr></thead><tbody>${vs.map(v => { const c = child(v.childId); return `<tr><td>${esc(fmtDate(v.date))}</td><td class="mh">${esc(teamLabel(visitTeam(v)))}</td><td class="mh">${c ? centreChip(c) : ''}</td><td>${c ? childLink(c) : esc(v.childId)}${c && isAba(c) ? ' <span class="chip c-green">ABA</span>' : ''}<div class="sub mo">${esc(teamLabel(visitTeam(v)))} · ${esc(staffName(v.by))}</div></td><td>${esc(v.purpose)}</td><td class="mh">${esc(v.where || '')}${v.place ? ' · ' + esc(v.place) : ''}</td><td>${v.successful === 'No' ? '<span class="chip c-red">No</span>' : 'Yes'}</td><td class="mh">${esc(staffName(v.by))}</td>${schoolCols ? `<td class="mh">${esc(v.schAtt || '')}</td><td class="mh">${esc(v.perf || '')}${v.trend ? ' · ' + esc(v.trend) : ''}</td>` : ''}<td class="mh">${esc((v.findings || '').slice(0, 120))}${v.action ? `<div class="sub">Action${v.actionDone ? ' (done)' : ''}: ${esc(v.action.slice(0, 80))}</div>` : ''}</td><td class="vopen">${visitChip(v)}<a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the report</a></td></tr>`; }).join('')}</tbody></table></div>` : '<p class="empty">No visits match.</p>'}</div>`;
   }
-  return `<div class="top"><div><h1>Monitoring</h1></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' ? monthPicker(m) : ''}${team === 'School' || team === 'all' ? '<a class="btn" href="#/school">Pupils by school</a>' : ''}<a class="btn" href="#/referrals${TEAM_KEYS.includes(team) ? '?to=' + team : ''}">Referrals${referOpen(TEAM_KEYS.includes(team) ? team : '').length ? ' · ' + referOpen(TEAM_KEYS.includes(team) ? team : '').length : ''}</a><a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a></div></div>
-  <div class="vtabs" id="vtabs" role="tablist">${tabs.map(([k, l, n]) => `<a href="#" role="tab" data-q="vtab=${k === 'done' ? '' : k}&all=&lall=" class="${tab === k ? 'on' : ''}">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</a>`).join('')}</div>
+  return `<div class="top"><div><h1>Monitoring</h1></div><div style="display:flex;gap:8px;flex-wrap:wrap">${tab === 'done' ? monthPicker(m) : ''}${team === 'all' ? '<a class="btn" href="#/school">Pupils by school</a>' : ''}<a class="btn" href="#/referrals${TEAM_KEYS.includes(team) ? '?to=' + team : ''}">Referrals${referOpen(TEAM_KEYS.includes(team) ? team : '').length ? ' · ' + referOpen(TEAM_KEYS.includes(team) ? team : '').length : ''}</a>${team === 'School' ? '<a class="btn pri" href="#/schoolvisit">Record a school visit</a>' : `<a class="btn pri" href="#/visit/new${team === 'all' ? '' : '?t=' + team}">Record a visit</a>`}</div></div>
   ${visitChooser(q, m)}
+  ${team === 'School' ? schoolSpot() : ''}
+  <div class="vtabs" id="vtabs" role="tablist">${tabs.map(([k, l, n]) => `<a href="#" role="tab" data-q="vtab=${k === 'done' ? '' : k}&all=&lall=" class="${tab === k ? 'on' : ''}">${l}${n !== '' ? ` <span class="n">${n}</span>` : ''}</a>`).join('')}</div>
   ${body}`;
 }
 
@@ -2049,6 +2088,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'logframe': body = vLogframe(r); break;
       case 'visitrep': body = vVisitRep(r); active = 'visits'; break;
       case 'school': body = vSchool(r); active = 'visits'; break;
+      case 'schoolvisit': body = vSchoolVisit(r); active = 'visits'; break;
       case 'referrals': body = r.id === 'new' ? vReferNew(r) : vReferrals(r); active = 'visits'; break;
       case 'monthly': body = vMonthly(r); active = 'children'; break;
       case 'review': body = vReview(); active = 'pending'; break;
@@ -2098,7 +2138,7 @@ const FORMS = {
     { const ph = fileKeep('visit', v.childId, 'Visit photo'); if (ph) v.photo = ph.id; else if (old && old.photo) v.photo = old.photo; }
     if (old) { const back = visitState(old) === 'back', t = Date.now(); S.events.push({ id: uid('e'), childId: String(old.childId), type: 'Visit corrected', ref: old.id, date: today(), ts: t, by: USER.id }); if (back) S.events.push({ id: uid('e'), childId: v.childId, type: 'Visit sent again', ref: v.root, date: today(), ts: t + 1, note: 'Report changed', by: USER.id }); }
     S.visits.push(v); dropCancelled(); if (o.referTo) referAdd(v.childId, v.team, o.referTo, o.referWhy, o.referNote, v.date, v.id);
-    save(); toast(old ? 'Changes saved' : o.referTo ? 'Visit saved. Referred to ' + referLabel(o.referTo) : 'Visit saved'); go(old ? '#/visitrep/' + v.id : '#/visits?vt=' + v.team + '&m=' + v.date.slice(0, 7));
+    save(); toast(old ? 'Changes saved' : o.referTo ? 'Visit saved. Referred to ' + referLabel(o.referTo) : 'Visit saved'); go(old ? '#/visitrep/' + v.id : o.back === 'sv' && v.purpose === 'School visit' && visitSchool(v) ? '#/schoolvisit?sn=' + encodeURIComponent(visitSchool(v)) + '&d=' + v.date : '#/visits?vt=' + v.team + '&m=' + v.date.slice(0, 7));
   },
   event(o) { S.events.push({ id: uid('e'), childId: String(o.childId), type: o.type, date: o.date, note: o.note, by: USER.id }); save(); toast('Added to the history'); render(); },
   move(o) {
@@ -2894,12 +2934,12 @@ function luigiStepsCard(r) {
 function visitChooser(q, m) {
   const { team, centre } = visitSel(q);
   const nPlan = k => planFor(m, team, k).length;
-  const tBtn = (k, l) => `<a href="#" data-q="vt=${k}&vc=" class="${team === k ? 'on' : ''}">${esc(l)}</a>`;
+  const tBtn = (k, l) => `<a href="#" data-q="vt=${k}&vc=" class="tbtn${team === k ? ' on' : ''}"${team === k ? ' aria-current="true"' : ''}>${esc(l)}</a>`;
   const cBtn = (k, l, col) => `<a href="#" data-q="vc=${k}" class="cbtn${centre === k ? ' on' : ''}" style="--c:${col}"><b>${esc(l)}</b><span>${nPlan(k)} in the plan</span></a>`;
   return `<details class="card vchoose" id="vchoose"${isPhone() ? '' : ' open'}>
     <summary><span class="vnow">You are looking at: <b>${esc(team === 'all' ? 'all sections' : team === 'Others' ? 'Others' : teamLabel(team))}</b> · <b>${esc(centre === 'all' ? 'children of all centres' : 'children of ' + CENTRE_LABEL[centre])}</b></span><span class="btn sm vchg">Change centre</span></summary>
-    <div><p class="sec" style="margin:0 0 6px">1 · Who does the visits?</p><div class="seg big" role="group" aria-label="Who does the visits">${tBtn('Family', 'Family Section')}${tBtn('School', 'School Section')}<a href="#" data-q="vt=Others&vc=" class="${team !== 'Family' && team !== 'School' && team !== 'all' ? 'on' : ''}">Others</a>${tBtn('all', 'All')}</div></div>
-    <div><p class="sec" style="margin:0 0 6px">2 · Children of which centre?</p><div class="cbtns" role="group" aria-label="Centre of the child">${['Luigi', 'Minsundu', 'Nkwazi'].filter(k => !(noLuigi(team) && k === 'Luigi')).map(k => cBtn(k, CENTRE_LABEL[k], CENTRE_COLOR[k])).join('')}${cBtn('all', 'All centres', '#73726E')}</div></div>
+    <div><p class="vq">1 · Who does the visits?</p><div class="tbtns" role="group" aria-label="Who does the visits">${tBtn('Family', 'Family Section')}${tBtn('School', 'School Section')}<a href="#" data-q="vt=Others&vc=" class="tbtn${team !== 'Family' && team !== 'School' && team !== 'all' ? ' on' : ''}">Others</a>${tBtn('all', 'All sections')}</div></div>
+    <div><p class="vq">2 · Children of which centre?</p><div class="cbtns" role="group" aria-label="Centre of the child">${['Luigi', 'Minsundu', 'Nkwazi'].filter(k => !(noLuigi(team) && k === 'Luigi')).map(k => cBtn(k, CENTRE_LABEL[k], CENTRE_COLOR[k])).join('')}${cBtn('all', 'All centres', '#73726E')}</div></div>
   </details>`;
 }
 /* ---------- planner: the children as faces, longest without a visit first; a tap puts in or takes out of the plan ---------- */
@@ -2938,16 +2978,20 @@ function planPicker(m, team, centre) {
   const cmp = places[q.get('pcmp')] ? q.get('pcmp') : '';
   const base = pool.filter(x => !cmp || planPlace(x.c) === cmp);
   const centres = ['Luigi', 'Minsundu', 'Nkwazi'].filter(k => !(noLuigi(team) && k === 'Luigi'));
+  const sch = team === 'School', inPl = new Set(planFor(m, 'School', 'all').map(p => String(p.childId))), bySch = {}; if (sch) for (const x of pool) { const k = schoolOf(x.c); (bySch[k] = bySch[k] || []).push(x); }
+  const sTile = ([k, l]) => { const nIn = l.filter(x => inPl.has(String(x.c.id))).length, last = l.map(x => x.last || '').sort().pop(); return `<button type="button" class="scard${nIn === l.length ? ' on' : ''}" data-pact="pschool" data-school="${esc(k)}" data-m="${m}" data-centre="${centre}" aria-pressed="${nIn === l.length}"><b>${esc(k)}</b><span>${l.length} ${l.length === 1 ? 'pupil' : 'pupils'} · ${last ? 'last visit ' + esc(fmtDate(last)) : 'never visited'}</span>${nIn === l.length ? '<span class="chip c-blue">✓ In the plan</span>' : nIn ? `<span class="chip">${nIn} of ${l.length} in the plan</span>` : ''}</button>`; };
+  const schools = sch ? `<p class="vq" style="margin:0 0 2px">Schools</p><p class="sub" style="margin:0 0 8px">Tap a school: all its pupils in the plan. Tap again: out.</p><div class="sgrid">${Object.entries(bySch).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])).map(sTile).join('') || '<p class="empty">No pupil with a school written.</p>'}</div><details id="psingle" class="psingle"${UI.psingle || UI.planq ? ' open' : ''}><summary>Choose single pupils</summary>` : '';
   return `<div class="ppick" id="ppick" data-m="${m}" data-team="${team}" data-centre="${centre}">
-    <input class="in qsearch" id="plansearch" type="search" autocomplete="off" placeholder="Type a name" aria-label="Find a child by name" value="${esc(UI.planq || '')}" style="margin-bottom:8px">
+    <input class="in qsearch" id="plansearch" type="search" autocomplete="off" placeholder="Type a name" aria-label="Find a child by name" value="${esc(UI.planq || '')}" style="margin-bottom:8px">${schools}
     <div class="pfil"><div class="seg" role="group" aria-label="Centre">${centres.map(k => `<a href="#" data-q="vc=${k}&pcmp=&pall=" class="${centre === k ? 'on' : ''}">${esc(CENTRE_LABEL[k])}</a>`).join('')}<a href="#" data-q="vc=all&pcmp=&pall=" class="${centre === 'all' ? 'on' : ''}">All centres</a></div>
       <div class="seg" role="group" aria-label="Which children">${PLAN_F.filter(([k, l, f]) => !k || k === pf || base.some(f)).map(([k, l, f]) => `<a href="#" data-q="pf=${k}&pall=" class="${pf === k ? 'on' : ''}">${l} · ${base.filter(f).length}</a>`).join('')}</div>
       <select class="in" data-filter="pcmp" aria-label="Compound" style="width:auto">${opt(Object.entries(places).sort((a, b) => b[1] - a[1]).map(([k, n]) => ({ v: k, l: k + ' · ' + n })), cmp, 'All compounds')}</select></div>
     <p class="sub" style="margin:8px 0 0">Longest without a visit first. Tap a face: in the plan. Tap again: out. Purple ring: referred by a colleague. Red ring: late. Orange ring: never visited.</p>
-    <div id="pgridbox">${planGrid(m, team, centre)}</div>
+    <div id="pgridbox">${planGrid(m, team, centre)}</div>${sch ? '</details>' : ''}
   </div>`;
 }
-document.addEventListener('input', e => { if (e.target.id !== 'plansearch') return; UI.planq = e.target.value; const box = document.getElementById('pgridbox'), pp = document.getElementById('ppick'); if (box && pp) box.innerHTML = planGrid(pp.dataset.m, pp.dataset.team, pp.dataset.centre); });
+document.addEventListener('toggle', e => { if (e.target && e.target.id === 'psingle') UI.psingle = e.target.open; }, true);
+document.addEventListener('input', e => { if (e.target.id !== 'plansearch') return; UI.planq = e.target.value; { const ps = document.getElementById('psingle'); if (ps && e.target.value) ps.open = true; } const box = document.getElementById('pgridbox'), pp = document.getElementById('ppick'); if (box && pp) box.innerHTML = planGrid(pp.dataset.m, pp.dataset.team, pp.dataset.centre); });
 function planCard(m, team, centre) {
   team = team || 'all'; centre = centre || 'all';
   const list = planFor(m, team, centre).map(p => ({ p, c: child(p.childId), st: planStatus(p) }));
@@ -2956,18 +3000,21 @@ function planCard(m, team, centre) {
   const P = pendingData(), due = (team === 'all' || team === 'Family') ? P.due.filter(x => vcIn(x.c, 'Family', centre) && !plans().some(p => String(p.childId) === String(x.c.id) && p.month === m && planTeam(p) === 'Family')) : [];
   const chipOf = st => st.k === 'done' ? `<span class="chip c-green">Done ${esc(fmtDate(st.v.date))}</span>` : st.k === 'tried' ? `<span class="chip c-orange">Tried ${esc(fmtDate(st.v.date))}, nobody found</span>` : '<span class="chip">To do</span>';
   const past = m < thisMonth();
-  const row = ({ p, c, st }) => `<div class="it">${avatar(c, 34)}<div class="w"><b>${childLink(c)}</b><span>${team === 'all' ? '<em class="tm">' + esc(teamLabel(planTeam(p))) + '</em> · ' : ''}${esc(SECTIONS[c.section].label)} · ${esc(p.purpose)}${c.familyAddress ? ' · ' + esc(c.familyAddress) : ''}${c.guardianName ? ' · ' + esc(c.guardianName) : ''}${c.contact ? ' · ' + esc(c.contact) : ''}</span></div>${chipOf(st)}${st.k !== 'done' ? `<a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${planTeam(p)}">Record a visit</a>` : ''}${st.k === 'planned' ? `<button class="btn sm" data-pact="unplan" data-id="${esc(p.id)}" aria-label="Remove ${esc(fullName(c))} from the plan">Remove</button>` : ''}</div>`;
+  const row = ({ p, c, st }) => `<div class="it">${avatar(c, 34)}<div class="w"><b>${childLink(c)}</b><span>${team === 'all' ? '<em class="tm">' + esc(teamLabel(planTeam(p))) + '</em> · ' : ''}${esc(SECTIONS[c.section].label)} · ${team === 'School' ? esc(gradeLabel(c.grade) || 'class not written') : esc(p.purpose) + (c.familyAddress ? ' · ' + esc(c.familyAddress) : '') + (c.guardianName ? ' · ' + esc(c.guardianName) : '') + (c.contact ? ' · ' + esc(c.contact) : '')}</span></div>${chipOf(st)}${st.k !== 'done' ? (team === 'School' ? `<a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=School&back=sv">Fill the form</a>` : `<a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${planTeam(p)}">Record a visit</a>`) : ''}${st.k === 'planned' ? `<button class="btn sm" data-pact="unplan" data-id="${esc(p.id)}" aria-label="Remove ${esc(fullName(c))} from the plan">Remove</button>` : ''}</div>`;
   const block = k => { const l = list.filter(x => centreOf(x.c) === k); if (!l.length) return centre === k ? '' : '';
     const groups = {}; for (const x of l) (groups[place(x.c)] = groups[place(x.c)] || []).push(x);
     return `<div class="cgrp" style="--c:${CENTRE_COLOR[k]}"><b>${esc(CENTRE_LABEL[k])}</b><span>${l.length} ${l.length === 1 ? 'child' : 'children'} · ${l.filter(x => x.st.k === 'done').length} done</span></div>` + Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([g, gl]) => `<div class="grp">${esc(g)} · ${gl.length}</div>` + gl.map(row).join('')).join(''); };
+  const sG = {}; if (team === 'School') for (const x of list) (sG[schoolOf(x.c)] = sG[schoolOf(x.c)] || []).push(x);
+  const sBlock = () => Object.entries(sG).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0])).map(([k, gl]) => { const dn = gl.filter(x => x.st.k === 'done').length, pl = gl.filter(x => x.st.k === 'planned').length;
+    return `<details class="pschool"><summary><span class="w"><b>${esc(k)}</b><span class="sub">${gl.length} ${gl.length === 1 ? 'pupil' : 'pupils'} · ${dn} seen</span></span>${dn === gl.length ? '<span class="chip c-green">Done</span>' : `<a class="btn sm pri" href="#/schoolvisit?sn=${encodeURIComponent(k)}">Record the visit</a>`}${pl && !past ? `<button class="btn sm" data-pact="unplanschool" data-school="${esc(k)}" data-m="${m}" aria-label="Remove ${esc(k)} from the plan">Remove</button>` : ''}</summary>${gl.map(row).join('')}</details>`; }).join('');
   const who = (team === 'all' ? '' : teamLabel(team) + ' · ') + (centre === 'all' ? '' : 'children of ' + CENTRE_LABEL[centre] + ' · ');
   return `<section class="card" id="plan"${centre !== 'all' ? ` style="border-top:4px solid ${CENTRE_COLOR[centre]}"` : ''}>
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start"><div><h2>Plan of visits · ${esc(who)}${esc(fmtMonth(m))}</h2>
-      <p class="sub" style="margin:2px 0 0">${list.length ? `${list.length} ${list.length === 1 ? 'child' : 'children'} planned: ${n('done')} done, ${n('tried')} tried, ${n('planned')} to do.` : 'Nobody planned yet.'} A recorded visit ticks the child off.</p></div>
+      <p class="sub" style="margin:2px 0 0">${team === 'School' ? (list.length ? `${Object.keys(sG).length} ${Object.keys(sG).length === 1 ? 'school' : 'schools'}, ${list.length} ${list.length === 1 ? 'pupil' : 'pupils'} planned: ${n('done')} seen, ${list.length - n('done')} to see.` : 'No school planned yet.') : (list.length ? `${list.length} ${list.length === 1 ? 'child' : 'children'} planned: ${n('done')} done, ${n('tried')} tried, ${n('planned')} to do.` : 'Nobody planned yet.') + ' A recorded visit ticks the child off.'}</p></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" data-pact="xlplan" data-m="${m}" data-team="${team}" data-centre="${centre}">Export in Excel</button></div></div>
     ${past ? '' : planPicker(m, team, centre)}
-    ${list.length && !past ? '<p class="sec" style="margin:18px 0 0">In the plan · ' + list.length + '</p>' : ''}
-    ${CENTRES.map(block).join('')}
+    ${list.length && !past ? '<p class="sec" style="margin:18px 0 0">In the plan · ' + (team === 'School' ? Object.keys(sG).length + (Object.keys(sG).length === 1 ? ' school · ' : ' schools · ') + list.length + ' pupils' : list.length) + '</p>' : ''}
+    ${team === 'School' ? sBlock() : CENTRES.map(block).join('')}
     ${past ? '' : `<div style="margin-top:14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end">
       <label class="f">Add a child${centre === 'all' ? '' : ' of ' + esc(CENTRE_LABEL[centre])} to ${team === 'all' ? 'the plan' : 'the plan of ' + esc(teamLabel(team))}<input class="in" id="planq" data-m="${m}" data-team="${team}" data-centre="${centre}" placeholder="Name, nickname or ID" autocomplete="off"></label>
       ${due.length ? `<button class="btn" data-pact="plandue" data-m="${m}" data-centre="${centre}">Add the ${due.length} overdue home visits${centre === 'all' ? '' : ' of ' + esc(CENTRE_LABEL[centre])}</button>` : '<span></span>'}
@@ -3038,6 +3085,13 @@ document.addEventListener('click', e => {
     const p = plans().find(x => String(x.childId) === String(c.id) && x.month === m && tmatch(planTeam(x), tm));
     if (p && planStatus(p).k !== 'planned') return toast('A visit is already recorded: it stays in the plan');
     if (p) { S.plans = plans().filter(x => x.id !== p.id); syncMeta().rmPlans[p.id] = Date.now(); } else addPlan(c.id, m, tm === 'all' ? teamFor(c) : tm);
+    save(); render();
+  }
+  else if (act === 'pschool' || act === 'unplanschool') {
+    const m = b.dataset.m, sn = b.dataset.school, kids = planPool('School', b.dataset.centre || 'all').filter(x => schoolOf(x.c) === sn).map(x => x.c), mine = plans().filter(p => p.month === m && planTeam(p) === 'School' && child(p.childId) && schoolOf(child(p.childId)) === sn);
+    const allIn = kids.length && kids.every(c => mine.some(p => String(p.childId) === String(c.id)));
+    if (act === 'unplanschool' || allIn) { const out = mine.filter(p => planStatus(p).k === 'planned'); for (const p of out) syncMeta().rmPlans[p.id] = Date.now(); const ids = new Set(out.map(p => p.id)); S.plans = plans().filter(p => !ids.has(p.id)); toast(out.length ? sn + ': out of the plan' : 'Forms already filled: the school stays in the plan'); }
+    else { let n = 0; for (const c of kids) if (addPlan(c.id, m, 'School')) n++; toast(sn + ': ' + n + (n === 1 ? ' pupil' : ' pupils') + ' in the plan of ' + fmtMonth(m)); }
     save(); render();
   }
   else if (act === 'unplan') { S.plans = plans().filter(p => p.id !== b.dataset.id); syncMeta().rmPlans[b.dataset.id] = Date.now(); save(); render(); }
@@ -3280,7 +3334,7 @@ function overviewData() {
     if (P.issueCount.school) lines.push(L(P.issueCount.school, 'children under 18 without school information', '#/children?issue=school', 'orange'));
     lines.push(...planLines('School'));
     const t = Number((S.settings.targets[m] || {}).schoolVisits) || 0, done = S.visits.filter(v => inRange(v.date, a, b) && v.purpose === 'School visit').length;
-    lines.push(L(done + (t ? ' / ' + t : ''), `school visits done in ${fmtMonth(m)}${t ? ' (target)' : ''}`, '#/visits?vt=School', 'info'));
+    { const kidsSeen = uniq(S.visits.filter(v => inRange(v.date, a, b) && v.purpose === 'School visit').map(v => String(v.childId))).length, trips = schoolTrips(a, b).length; lines.push(L(kidsSeen + (t ? ' / ' + t : ''), `${kidsSeen === 1 && !t ? 'pupil' : 'pupils'} monitored at school in ${fmtMonth(m)}${t ? ' (target)' : ''} · ${trips} school ${trips === 1 ? 'visit' : 'visits'}`, '#/visits?vt=School', 'info')); }
     { const tn = termNow(), sl = schoolsLeft(tn); if (sl.all) lines.unshift(L(sl.left, 'of ' + sl.all + (tn.hol ? ' schools not visited in ' + termLabel(tn) + ' (school holidays now)' : ' schools not visited yet in ' + termLabel(tn)), '#/school?show=nosch', sl.left && !tn.hol ? 'orange' : 'info')); }
     referLine(lines, 'School'); backLine(lines, 'School'); cards.push({ k: 'School', title: 'School Section', color: '#73726E', lines }); }
   // Counseling
@@ -4221,7 +4275,7 @@ function termNow() { return { y: Number(today().slice(0, 4)), t: termOf(today())
 function termNext(x) { return x.t === 3 ? { y: x.y + 1, t: 1 } : { y: x.y, t: x.t + 1 }; }
 function termIsNow(x) { const n = termNow(); return x.y === n.y && x.t === n.t; }
 function termSel(q) { const x = String(q.get('tm') || '').split('-'), n = termNow(); return { y: Number(x[0]) || n.y, t: [1, 2, 3].includes(Number(x[1])) ? Number(x[1]) : n.t }; }
-function termLabel(x) { return 'Term ' + x.t + ' ' + x.y; }
+function termLabel(x) { return x.y + ' Term ' + x.t; }
 
 /* ---------- pupils ---------- */
 function schoolVisits(c) { return visitsOf(c.id).filter(v => v.purpose === 'School visit' && v.successful !== 'No').sort((a, b) => (b.date || '').localeCompare(a.date || '')); }
@@ -4362,7 +4416,7 @@ function vTerm(c) {
       </tbody></table></div></details>
     <button class="btn pri" style="margin-top:12px">Save the term</button></form>`;
 }
-function termRow(c, r) { const av = termAvg(r); return `<tr><td><a href="#/child/${esc(c.id)}/term?y=${r.y}&t=${r.t}">Term ${r.t} ${r.y}</a></td><td>${esc(r.perf || '')}${av != null ? ` <span class="sub">average ${av}</span>` : ''}</td><td>${esc(r.pos || '')}</td><td>${r.absent == null || r.absent === '' ? '' : esc(r.absent)}</td><td>${esc(r.weak || '')}</td><td>${esc(r.yearEnd || '')}</td></tr>`; }
+function termRow(c, r) { const av = termAvg(r); return `<tr><td><a href="#/child/${esc(c.id)}/term?y=${r.y}&t=${r.t}">${r.y} Term ${r.t}</a></td><td>${esc(r.perf || '')}${av != null ? ` <span class="sub">average ${av}</span>` : ''}</td><td>${esc(r.pos || '')}</td><td>${r.absent == null || r.absent === '' ? '' : esc(r.absent)}</td><td>${esc(r.weak || '')}</td><td>${esc(r.yearEnd || '')}</td></tr>`; }
 
 /* ---------- the school box on the file of the child: what every section knows, in one place ---------- */
 function schoolBox(c) {
@@ -4396,14 +4450,14 @@ function schoolRows(q, all) {
   return base.filter(r => (!sn || r.school === sn) && (!show || (show === 'novisit' ? !r.visited : show === 'att' ? r.v && r.v.schAtt && r.v.schAtt !== 'Regular' : show === 'down' ? r.pr === 'Decreasing' || (r.v && r.v.perf === 'Below average') || (r.tr && r.tr.perf === 'Below average') : show === 'noterm' ? !r.tr : r.ref)));
 }
 function vSchool(r) {
-  const q = r.q, x = termSel(q), rows = schoolRows(q), n = termNow(), pm0 = planMonth(), pm = termHoliday(pm0 + '-01') ? addMonths(pm0, 1) : pm0;
+  const q = r.q, x = termSel(q), rows = schoolRows(q), n = termNow(), pm0 = planMonth(), pm = termHoliday(pm0 + '-01') ? addMonths(pm0, 1) : pm0, inPl = new Set(planFor(pm, 'School', 'all').map(p => String(p.childId)));
   const names = {}; for (const r of schoolRows(q, true)) names[r.school] = (names[r.school] || 0) + 1;
-  const terms = []; for (let y = n.y, t = n.t, i = 0; i < 6; i++) { terms.push({ v: y + '-' + t, l: 'Term ' + t + ' ' + y + ' (' + TERM_SHORT[t] + ')' }); t--; if (!t) { t = 3; y--; } }
+  const terms = []; for (let y = n.y, t = n.t, i = 0; i < 6; i++) { terms.push({ v: y + '-' + t, l: y + ' · Term ' + t + ' (' + TERM_SHORT[t] + ')' }); t--; if (!t) { t = 3; y--; } }
   const by = {}; for (const r of rows) (by[r.school] = by[r.school] || []).push(r);
   const schools = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
   const vis = rows.filter(r => r.visited).length, doneS = schools.filter(([, l]) => l.some(r => r.visited)).length, nx = termNext(n), hol = n.hol && termIsNow(x), tile = (nn, l) => `<div class="tile"><b>${nn}</b><span>${l}</span></div>`;
   const cnt = k => rows.filter(r => r.pr === k).length;
-  return `<div class="top"><div><h1>Pupils by school · ${esc(termLabel(x))}</h1><p class="lead">${esc(TERM_MONTHS[x.t])}. Every school is visited at least once in the term.${hol ? ` <b>School holidays now: Term ${nx.t} starts in ${TERM_START[nx.t]}.</b>` : ''}</p></div>
+  return `<div class="top"><div><p class="kick">Database of pupils · School Section</p><h1>Pupils by school · ${esc(termLabel(x))}</h1><p class="lead">${esc(TERM_MONTHS[x.t])}. Every school is visited at least once in the term.${hol ? ` <b>School holidays now: Term ${nx.t} starts in ${TERM_START[nx.t]}.</b>` : ''}</p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="#/referrals?to=School">Referrals</a><button class="btn" data-act="xl" data-k="school">Export in Excel</button></div></div>
   <div class="card filters" style="grid-template-columns:repeat(5,minmax(0,1fr))">
     <label class="f">Term<select class="in" data-filter="tm">${opt(terms, x.y + '-' + x.t)}</select></label>
@@ -4413,8 +4467,30 @@ function vSchool(r) {
     <label class="f">Show<select class="in" data-filter="show">${opt([{ v: 'nosch', l: 'Schools not visited this term' }, { v: 'novisit', l: 'Pupils not visited this term' }, { v: 'att', l: 'Attendance irregular or absent' }, { v: 'down', l: 'Below average or decreasing' }, { v: 'noterm', l: 'No term result yet' }, { v: 'ref', l: 'Referred, still open' }], q.get('show') || '', 'Everyone')}</select></label></div>
   <div class="grid g4">${tile(rows.length, 'Pupils')}${tile(doneS + ' / ' + schools.length, 'Schools visited this term')}${tile(vis + ' / ' + rows.length, 'Pupils seen this term')}${tile(cnt('Improving') + ' · ' + cnt('Decreasing'), 'Improving · decreasing')}</div>
   ${schools.map(([name, l]) => { const left = l.filter(r => !r.visited).length, seen = l.length - left, last = l.map(r => r.vt).sort().pop() || '';
-    return `<section class="card schcard" style="padding:8px 10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;padding:2px 2px 6px"><h2 style="margin:0">${esc(name)} · ${l.length} ${seen ? `<span class="chip c-green">Visited ${esc(fmtDate(last))}</span> <span class="sub">${seen === l.length ? 'all pupils seen' : seen + ' of ' + l.length + ' pupils seen'}</span>` : '<span class="chip c-orange">Not visited this term</span>'}</h2>${left ? `<button class="btn sm" data-sact="planschool" data-school="${esc(name)}" data-m="${pm}">Plan this school · ${esc(fmtMonth(pm))}</button>` : ''}</div>
+    return `<section class="card schcard" style="padding:8px 10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;padding:2px 2px 6px"><h2 style="margin:0">${esc(name)} · ${l.length} ${seen ? `<span class="chip c-green">Visited ${esc(fmtDate(last))}</span> <span class="sub">${seen === l.length ? 'all pupils seen' : seen + ' of ' + l.length + ' pupils seen'}</span>` : '<span class="chip c-orange">Not visited this term</span>'}</h2><span class="schact">${left ? (l.filter(r => !r.visited).every(r => inPl.has(String(r.c.id))) ? `<span class="chip c-green">In the plan · ${esc(fmtMonth(pm))}</span><a class="btn sm" href="#/visits?vt=School&vtab=plan&m=${pm}">Open the plan</a>` : `<button class="btn pri" data-sact="planschool" data-school="${esc(name)}" data-m="${pm}">Plan the visit · ${esc(fmtMonth(pm))}</button>`) : ''}<a class="btn" href="#/schoolvisit?sn=${encodeURIComponent(name)}">Record the visit</a></span></div>
       <div class="tw"><table class="mt"><thead><tr><th>Pupil</th><th>Class</th><th>Last school visit</th><th>Attendance</th><th>Performance</th><th>Progress</th><th></th></tr></thead><tbody>${l.sort((a, b) => fullName(a.c).localeCompare(fullName(b.c))).map(r => `<tr><td>${childLink(r.c)} ${centreChip(r.c)}${r.ref ? ' <span class="chip c-orange">Referred</span>' : ''}</td><td>${esc(r.c.grade || '')}</td><td>${r.v ? esc(fmtDate(r.v.date)) : '<span class="sub">never</span>'}${r.visited ? '' : ' <span class="chip c-orange">not this term</span>'}</td><td>${esc((r.v && r.v.schAtt) || '')}</td><td>${esc((r.tr && r.tr.perf) || (r.v && r.v.perf) || '')}</td><td>${trendChip(r.pr)}</td><td><a class="btn sm" href="#/visit/new?child=${esc(r.c.id)}&t=School">Record a visit</a></td></tr>`).join('')}</tbody></table></div></section>`; }).join('') || '<p class="empty">No pupil here.</p>'}`;
+}
+/* ---------- one visit to a school: the pupils seen that day, one School Monitoring Form each ---------- */
+function schoolPupils(sn) { return S.children.filter(c => isPupil(c) && schoolOf(c) === sn).sort((a, b) => fullName(a).localeCompare(fullName(b))); }
+function sheetOn(c, d) { return visitsOf(c.id).find(v => v.purpose === 'School visit' && v.date === d) || null; }
+/* a school visit is a school on a day; the forms filled that day belong to it */
+function schoolTrips(a, b) { const m = {}; for (const v of S.visits) { if (v.purpose !== 'School visit' || !inRange(v.date, a, b) || !child(v.childId)) continue; const sn = visitSchool(v); if (!sn) continue; const k = v.date + '|' + sn; (m[k] = m[k] || { date: v.date, school: sn, forms: [] }).forms.push(v); } return Object.values(m).sort((x, y) => y.date.localeCompare(x.date) || x.school.localeCompare(y.school)); }
+function schoolTripsHtml(a, b, label) { const T = schoolTrips(a, b); return `<section class="card" id="trips"><h2 style="margin:0 0 6px">School visits · ${esc(label)} · ${T.length}</h2>${T.length ? T.map(t => `<div class="it"><div class="w"><b>${esc(t.school)}</b><span>${esc(fmtDate(t.date))} · ${t.forms.length} ${t.forms.length === 1 ? 'pupil' : 'pupils'} seen</span></div><a class="btn sm" href="#/schoolvisit?sn=${encodeURIComponent(t.school)}&d=${t.date}">Open the visit</a></div>`).join('') : '<p class="empty">No school visit recorded.</p>'}</section>`; }
+function vSchoolVisit(r) {
+  const q = r.q, sn = q.get('sn') || '', d = q.get('d') && q.get('d') <= today() ? q.get('d') : today(), n = termNow(), [ta, tb] = termRange(n.y, n.t), kids = sn ? schoolPupils(sn) : [];
+  if (!kids.length) {
+    const by = {}; for (const c of S.children) if (isPupil(c)) { const k = schoolOf(c); (by[k] = by[k] || { out: outsideSchool(c), l: [] }).l.push(c); }
+    const tile = ([k, g]) => { const last = g.l.map(lastSchoolVisit).sort().pop() || '', inT = inRange(last, ta, tb); return `<a class="scard${inT ? ' done' : ''}" href="#/schoolvisit?sn=${encodeURIComponent(k)}"><b>${esc(k)}</b><span>${g.l.length} ${g.l.length === 1 ? 'pupil' : 'pupils'}</span><span class="chip ${inT ? 'c-green' : 'c-orange'}">${inT ? 'Visited ' + esc(fmtDate(last)) : 'Not visited this term'}</span></a>`; };
+    const E = Object.entries(by).filter(([k]) => k !== 'School name not written').sort((a, b) => b[1].l.length - a[1].l.length || a[0].localeCompare(b[0])), out = E.filter(x => x[1].out), own = E.filter(x => !x[1].out);
+    return `<div class="top"><div><h1>Record a school visit</h1><p class="lead">Choose the school.</p></div><a class="btn" href="#/visits?vt=School">Back</a></div>
+    <div class="sgrid">${out.map(tile).join('') || '<p class="empty">No pupil with a school written.</p>'}</div>${own.length ? `<p class="sec" style="margin:18px 0 8px">Schools of the project</p><div class="sgrid">${own.map(tile).join('')}</div>` : ''}`;
+  }
+  const rows = kids.map(c => ({ c, v: sheetOn(c, d), last: lastSchoolVisit(c) })), seen = rows.filter(x => x.v).length, tile = (nn, l) => `<div class="tile"><b>${nn}</b><span>${l}</span></div>`;
+  const row = ({ c, v, last }) => `<div class="it">${avatar(c, 40)}<div class="w"><b>${childLink(c)}</b> ${centreChip(c)}<span>${esc(gradeLabel(c.grade) || 'class not written')}${v ? (v.schAtt ? ' · attendance ' + esc(v.schAtt.toLowerCase()) : '') + (v.perf ? ' · ' + esc(v.perf.toLowerCase()) : '') + (v.trend ? ' · ' + esc(v.trend.toLowerCase()) : '') : ' · last form: ' + (last ? esc(fmtDate(last)) : 'never')}</span></div>${v ? `<span class="chip c-green">Form filled</span><a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the form</a>` : `<a class="btn sm pri" href="#/visit/new?child=${esc(c.id)}&t=School&d=${d}&back=sv">Fill the form</a>`}</div>`;
+  return `<div class="top"><div><p class="kick">School visit</p><h1>${esc(sn)}</h1></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="#/schoolvisit">Another school</a><a class="btn" href="#/school?ty=all&sn=${encodeURIComponent(sn)}">Results of the term</a></div></div>
+  ${dayBar(d, 'd')}
+  <div class="grid g4" style="margin-top:12px">${tile(kids.length, 'Pupils in this school')}${tile(seen + ' / ' + kids.length, 'Forms filled this day')}</div>
+  <section class="card" style="padding:8px 10px"><p class="sub" style="margin:4px 2px 6px">One School Monitoring Form for each pupil seen.</p>${rows.filter(x => !x.v).map(row).join('')}${seen ? `<div class="grp">Done · ${seen}</div>` + rows.filter(x => x.v).map(row).join('') : ''}</section>`;
 }
 /* To do: the schools with pupils where no school visit is written in the term */
 function schoolsLeft(x) { const [ta, tb] = termRange(x.y, x.t), m = {}; for (const c of S.children) { if (!isPupil(c) || !outsideSchool(c)) continue; const n = schoolOf(c); if (n === 'School name not written') continue; m[n] = m[n] || schoolVisits(c).some(v => inRange(v.date, ta, tb)); } const all = Object.keys(m); return { all: all.length, left: all.filter(k => !m[k]).length }; }
@@ -4436,7 +4512,7 @@ FORMS.term = function (o) {
 };
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-sact]'); if (!b) return; e.preventDefault();
-  if (b.dataset.sact === 'planschool') { let n = 0; for (const r of schoolRows(route().q)) if (r.school === b.dataset.school && !r.visited && addPlan(r.c.id, b.dataset.m, 'School')) n++; save(); toast(n ? n + ' pupils in the plan of ' + fmtMonth(b.dataset.m) : 'Already in the plan'); render(); }
+  if (b.dataset.sact === 'planschool') { let n = 0; for (const r of schoolRows(route().q)) if (r.school === b.dataset.school && !r.visited && addPlan(r.c.id, b.dataset.m, 'School')) n++; save(); toast(n ? b.dataset.school + ': ' + n + (n === 1 ? ' pupil' : ' pupils') + ' in the plan of ' + fmtMonth(b.dataset.m) : 'Already in the plan'); render(); }
 });
 /* in the visit form, changing who made the visit shows the fields of that section */
 document.addEventListener('change', e => {
@@ -4465,7 +4541,7 @@ function monthFacts(c, m) {
   const sv = schoolVisits(c)[0], T = termsOf(c)[0];
   out.push(['School', schoolOf(c) + (c.grade ? ', ' + gradeLabel(c.grade) : '')]);
   if (sv) out.push(['Last school visit', fmtDate(sv.date) + [sv.schAtt && 'attendance ' + sv.schAtt.toLowerCase(), sv.perf && sv.perf.toLowerCase(), sv.trend && sv.trend.toLowerCase()].filter(Boolean).map(x => ', ' + x).join('')]);
-  if (T) out.push(['Last term result', 'Term ' + T.t + ' ' + T.y + (T.perf ? ', ' + T.perf.toLowerCase() : '') + (T.pos ? ', position ' + T.pos : '')]);
+  if (T) out.push(['Last term result', T.y + ' Term ' + T.t + (T.perf ? ', ' + T.perf.toLowerCase() : '') + (T.pos ? ', position ' + T.pos : '')]);
   const hv = visitsOf(c.id).filter(v => v.purpose !== 'School visit' && inRange(v.date, a, b)); if (hv.length) out.push(['Home visits this month', hv.map(v => fmtDate(v.date)).join(', ')]);
   const ses = S.sessions.filter(s => inRange(s.date, a, b) && (s.children || []).map(String).includes(key)); if (ses.length) out.push(['Counselling this month', ses.length + (ses.length === 1 ? ' session' : ' sessions')]);
   const ev = S.events.filter(e => String(e.childId) === key && inRange(e.date, a, b) && !/^Referral|^Visit /.test(e.type)); if (ev.length) out.push(['Happened this month', ev.map(e => e.type + (e.note ? ': ' + e.note : '')).join('; ')]);
