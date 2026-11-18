@@ -518,7 +518,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.9';
+const VERSION = 'alpha 5.10';
 const BUILD_DATE = '2026-11-18'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -542,7 +542,13 @@ const OUTREACH_TYPES = ['Day outreach', 'Night outreach', 'Drop-in'];
 const SESSION_TYPES = ['Individual', 'Group', 'Family'];
 const CENTRES = ['Minsundu', 'Luigi', 'Nkwazi'];
 const STAFF_SECTIONS = ['Education Department', 'Family', 'School', 'UCC', 'Youth', 'Luigi', 'Nkwazi', 'Counseling', 'Sports', 'Skills Training', 'Other'];
-const EXAM_GRADES = ['7', '9', '12'];
+/* examination classes, by year. Zambia is moving from grades to Form 1-4 (2023 curriculum framework):
+   the last Grade 9 examination was in 2025; Grade 7 and Grade 12 are written until 2028, when Grade 6 and Form 4 write with them; from 2029 Grade 6 and Form 4. */
+function examGrades(y) { y = Number(y) || Number(today().slice(0, 4)); return y <= 2025 ? ['7', '9', '12'] : y <= 2027 ? ['7', '12'] : y === 2028 ? ['6', '7', '12', 'Form 4'] : ['6', 'Form 4']; }
+function inExamClass(c, y) { return examGrades(y).includes(gradeNorm(c.grade)); }
+/* the classes to choose from while both systems are in the schools */
+const GRADE_LIST = ['ECE', '1', '2', '3', '4', '5', '6', '7', 'Form 1', 'Form 2', 'Form 3', 'Form 4', '10', '11', '12', '1st year', '2nd year', '3rd year', '4th year'];
+function gradeLabel(g) { g = String(g || ''); return /^\d+$/.test(g) ? 'grade ' + g : g; }
 
 /* ---------- small helpers ---------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -1182,7 +1188,7 @@ const REPORTS = {
         ['SCH 4', 'Number of children in GRZ Primary School', act.filter(c => dayType(c) === 'GRZ primary')],
         ['SCH 5', 'Number of children in GRZ secondary school', act.filter(c => dayType(c) === 'GRZ secondary')],
         ['SCH 6', 'Number of children who are in colleges', act.filter(c => dayType(c) === 'College / skills training')],
-        ['SCH 7', 'Number of children who are in exam classes', act.filter(c => EXAM_GRADES.includes(String(c.grade)))],
+        ['SCH 7', 'Number of children who are in exam classes', act.filter(c => inExamClass(c, String(b).slice(0, 4)))],
         ['SCH 8', 'Number of children under GRZ for Nkwazi', act.filter(c => grz(c) && nk(c))],
         ['SCH 9', 'Number of children under GRZ for Minsundu', act.filter(c => grz(c) && mi(c))],
         ['SCH 10', 'Number of children visited in GRZ school under Nkwazi', seen.filter(c => grz(c) && nk(c))],
@@ -1391,7 +1397,7 @@ function vHome(r) {
       <div style="display:flex;align-items:baseline;gap:8px"><span class="big">${sv.length}</span><span style="color:var(--soft)">of ${ts || '?'} planned</span></div>${bar(sv.length, ts, '#337EA9')}
       <form data-form="target" style="display:flex;gap:6px;align-items:center;margin:4px 0 6px"><input type="hidden" name="m" value="${m}"><input type="hidden" name="k" value="schoolVisits"><label class="sub">Target <input class="in" style="width:80px;min-height:30px;padding:3px 8px" type="number" min="0" name="v" value="${ts || ''}"></label><button class="btn sm">Set</button></form>
       <div class="row"><span>Children seen at school</span><b>${seen} of ${inSchool}</b></div>
-      <div class="row"><span>Children in examination classes</span><b>${S.children.filter(c => isCurrent(c) && EXAM_GRADES.includes(String(c.grade))).length}</b></div>
+      <div class="row"><span>Children in examination classes</span><b>${S.children.filter(c => isCurrent(c) && inExamClass(c)).length}</b></div>
     </div>
     <div class="card"><h3>Luigi Drop-in</h3><p class="sub" style="margin:2px 0 12px">Children in contact this month</p>
       <div style="display:flex;align-items:baseline;gap:8px"><span class="big">${luigiKids.length}</span><span style="color:var(--soft)">${lb} boys · ${luigiKids.length - lb} girls</span></div>${bar(lb, luigiKids.length, '#337EA9')}
@@ -1495,7 +1501,7 @@ function vChildForm(c) {
     </fieldset></div>
     ${isNew ? '<details class="more"><summary>More details: school, health, notes. They can be added later.</summary><div style="display:flex;flex-direction:column;gap:18px;margin-top:14px">' : ''}
     <div><p class="sec">School</p><fieldset class="fs">
-      ${field('Education: by day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('School name', 'schoolName', schoolNorm(c.schoolName), 'text', { attrs: ' list="schoolnames"', hint: 'Choose from the list if the school is there.' })}${schoolList()}${field('Grade now', 'grade', c.grade, 'text', { hint: 'ECE, a number (7) or Form 2' })}${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
+      ${field('Education: by day goes to', 'schoolType', '', 'select', { options: opt(dayOpts(), dayType(c), 'Not written'), hint: '' })}${field('School name', 'schoolName', schoolNorm(c.schoolName), 'text', { attrs: ' list="schoolnames"', hint: 'Choose from the list if the school is there.' })}${schoolList()}${field('Class now', 'grade', c.grade, 'text', { attrs: ' list="gradelist"', hint: 'Grade (7, 11) or Form (Form 2).' })}<datalist id="gradelist">${GRADE_LIST.map(g => `<option value="${g}"></option>`).join('')}</datalist>${field('Class (stream)', 'stream', c.stream, 'text', { hint: 'A, B, Blue...' })}
       ${field('Skill or trade', 'skill', c.skill)}${field('Education at entry', 'educationAtEntry', c.educationAtEntry, 'textarea', { wide: true, rows: 2 })}
     </fieldset></div>
     <div><p class="sec">Health and notes</p><fieldset class="fs">
@@ -3468,6 +3474,7 @@ function gradeNorm(g) {
   g = String(g == null ? '' : g).trim(); if (!g) return '';
   if (/^(ece|baby|recep|nursery|pre)/i.test(g)) return 'ECE';
   const f = /form\s*(\d)/i.exec(g); if (f) return 'Form ' + f[1];
+  const y = /^(\d)\s*(st|nd|rd|th)?\s*year$/i.exec(g) || /^year\s*(\d)$/i.exec(g); if (y) return y[1] + (['', 'st', 'nd', 'rd'][y[1]] || 'th') + ' year';
   return g.replace(/\D/g, '');
 }
 function isSecondary(c) { const g = String(c.grade || ''); return /^Form/.test(g) || Number(g) >= 8; }
@@ -4342,7 +4349,7 @@ function schoolFindings(o) {
 function vTerm(c) {
   const n = termNow(), q = route().q, y = Number(q.get('y')) || n.y, t = Number(q.get('t')) || n.t, old = (c.terms || []).find(r => r.y === y && r.t === t) || {};
   const subs = (old.subjects || []).concat(Array.from({ length: 10 }, () => ({}))).slice(0, 10);
-  return `<div class="top"><div><h1>Term result · ${esc(fullName(c))}</h1><p class="lead">${esc(schoolOf(c))}${c.grade ? ' · grade ' + esc(c.grade) : ''}</p></div><a class="btn" href="#/child/${esc(c.id)}">Back</a></div>
+  return `<div class="top"><div><h1>Term result · ${esc(fullName(c))}</h1><p class="lead">${esc(schoolOf(c))}${c.grade ? ' · ' + esc(gradeLabel(c.grade)) : ''}</p></div><a class="btn" href="#/child/${esc(c.id)}">Back</a></div>
   <form class="card" data-form="term" style="max-width:820px"><input type="hidden" name="id" value="${esc(c.id)}">
     <div class="fs two">${field('Year', 'y', y, 'number', { req: true })}${field('Term', 't', '', 'select', { req: true, options: opt([1, 2, 3].map(v => ({ v, l: 'Term ' + v + ' · ' + TERM_MONTHS[v] })), t) })}
       ${field('Academic performance', 'perf', '', 'select', { options: opt(PERF, old.perf || '', 'Choose') })}${field('Position in class', 'pos', old.pos || '', 'text')}
@@ -4366,7 +4373,7 @@ function schoolBox(c) {
   const row = (k, x) => x ? `<dt>${k}</dt><dd>${x}</dd>` : '';
   return `<section class="card" id="schoolbox"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">School ${trendChip(pr)}</h2>
       <div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn sm pri" href="#/visit/new?child=${esc(c.id)}&t=School">Record a school visit</a><a class="btn sm" href="#/child/${esc(c.id)}/term">Add a term result</a></div></div>
-    <dl class="dl" style="margin-top:8px">${row('School', esc(schoolOf(c)) + (c.grade ? ' · grade ' + esc(c.grade) : '') + (c.stream ? ' ' + esc(c.stream) : ''))}
+    <dl class="dl" style="margin-top:8px">${row('School', esc(schoolOf(c)) + (c.grade ? ' · ' + esc(gradeLabel(c.grade)) : '') + (c.stream ? ' ' + esc(c.stream) : ''))}
       ${row('Last school visit', v ? `${esc(fmtDate(v.date))}${v.schAtt ? ' · attendance ' + esc(v.schAtt.toLowerCase()) : ''}${v.perf ? ' · ' + esc(v.perf.toLowerCase()) : ''}${v.trend ? ' · ' + esc(v.trend.toLowerCase()) : ''}` : 'None recorded')}
       ${row(termLabel(n), inTerm ? 'Visited' : n.hol ? 'Not visited' : '<span class="chip c-orange">Not visited yet</span>')}
       ${row('Registers, last 30 days', regs.map(esc).join('<br>'))}
@@ -4407,7 +4414,7 @@ function vSchool(r) {
   <div class="grid g4">${tile(rows.length, 'Pupils')}${tile(doneS + ' / ' + schools.length, 'Schools visited this term')}${tile(vis + ' / ' + rows.length, 'Pupils seen this term')}${tile(cnt('Improving') + ' · ' + cnt('Decreasing'), 'Improving · decreasing')}</div>
   ${schools.map(([name, l]) => { const left = l.filter(r => !r.visited).length, seen = l.length - left, last = l.map(r => r.vt).sort().pop() || '';
     return `<section class="card schcard" style="padding:8px 10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;padding:2px 2px 6px"><h2 style="margin:0">${esc(name)} · ${l.length} ${seen ? `<span class="chip c-green">Visited ${esc(fmtDate(last))}</span> <span class="sub">${seen === l.length ? 'all pupils seen' : seen + ' of ' + l.length + ' pupils seen'}</span>` : '<span class="chip c-orange">Not visited this term</span>'}</h2>${left ? `<button class="btn sm" data-sact="planschool" data-school="${esc(name)}" data-m="${pm}">Plan this school · ${esc(fmtMonth(pm))}</button>` : ''}</div>
-      <div class="tw"><table class="mt"><thead><tr><th>Pupil</th><th>Grade</th><th>Last school visit</th><th>Attendance</th><th>Performance</th><th>Progress</th><th></th></tr></thead><tbody>${l.sort((a, b) => fullName(a.c).localeCompare(fullName(b.c))).map(r => `<tr><td>${childLink(r.c)} ${centreChip(r.c)}${r.ref ? ' <span class="chip c-orange">Referred</span>' : ''}</td><td>${esc(r.c.grade || '')}</td><td>${r.v ? esc(fmtDate(r.v.date)) : '<span class="sub">never</span>'}${r.visited ? '' : ' <span class="chip c-orange">not this term</span>'}</td><td>${esc((r.v && r.v.schAtt) || '')}</td><td>${esc((r.tr && r.tr.perf) || (r.v && r.v.perf) || '')}</td><td>${trendChip(r.pr)}</td><td><a class="btn sm" href="#/visit/new?child=${esc(r.c.id)}&t=School">Record a visit</a></td></tr>`).join('')}</tbody></table></div></section>`; }).join('') || '<p class="empty">No pupil here.</p>'}`;
+      <div class="tw"><table class="mt"><thead><tr><th>Pupil</th><th>Class</th><th>Last school visit</th><th>Attendance</th><th>Performance</th><th>Progress</th><th></th></tr></thead><tbody>${l.sort((a, b) => fullName(a.c).localeCompare(fullName(b.c))).map(r => `<tr><td>${childLink(r.c)} ${centreChip(r.c)}${r.ref ? ' <span class="chip c-orange">Referred</span>' : ''}</td><td>${esc(r.c.grade || '')}</td><td>${r.v ? esc(fmtDate(r.v.date)) : '<span class="sub">never</span>'}${r.visited ? '' : ' <span class="chip c-orange">not this term</span>'}</td><td>${esc((r.v && r.v.schAtt) || '')}</td><td>${esc((r.tr && r.tr.perf) || (r.v && r.v.perf) || '')}</td><td>${trendChip(r.pr)}</td><td><a class="btn sm" href="#/visit/new?child=${esc(r.c.id)}&t=School">Record a visit</a></td></tr>`).join('')}</tbody></table></div></section>`; }).join('') || '<p class="empty">No pupil here.</p>'}`;
 }
 /* To do: the schools with pupils where no school visit is written in the term */
 function schoolsLeft(x) { const [ta, tb] = termRange(x.y, x.t), m = {}; for (const c of S.children) { if (!isPupil(c) || !outsideSchool(c)) continue; const n = schoolOf(c); if (n === 'School name not written') continue; m[n] = m[n] || schoolVisits(c).some(v => inRange(v.date, ta, tb)); } const all = Object.keys(m); return { all: all.length, left: all.filter(k => !m[k]).length }; }
@@ -4456,7 +4463,7 @@ function monthFacts(c, m) {
   out.push(['Register of the centre', n ? `present ${p} of ${n} days marked${h ? ', home ' + h : ''}${bs ? ', boarding school ' + bs : ''}${ab ? ', absent ' + ab : ''}` : 'no marks this month']);
   for (const k of attCentres(c).filter(x => teacherReg(x))) { const kk = attKey(c, k); let pp = 0, nn = 0; for (const d of Object.keys(S.attendance)) { if (!inRange(d, a, b)) continue; const v = S.attendance[d][kk]; if (v == null) continue; nn++; if (v === 'P') pp++; } out.push([CENTRE_LABEL[k], nn ? `present ${pp} of ${nn} days marked` : 'no marks this month']); }
   const sv = schoolVisits(c)[0], T = termsOf(c)[0];
-  out.push(['School', schoolOf(c) + (c.grade ? ', grade ' + c.grade : '')]);
+  out.push(['School', schoolOf(c) + (c.grade ? ', ' + gradeLabel(c.grade) : '')]);
   if (sv) out.push(['Last school visit', fmtDate(sv.date) + [sv.schAtt && 'attendance ' + sv.schAtt.toLowerCase(), sv.perf && sv.perf.toLowerCase(), sv.trend && sv.trend.toLowerCase()].filter(Boolean).map(x => ', ' + x).join('')]);
   if (T) out.push(['Last term result', 'Term ' + T.t + ' ' + T.y + (T.perf ? ', ' + T.perf.toLowerCase() : '') + (T.pos ? ', position ' + T.pos : '')]);
   const hv = visitsOf(c.id).filter(v => v.purpose !== 'School visit' && inRange(v.date, a, b)); if (hv.length) out.push(['Home visits this month', hv.map(v => fmtDate(v.date)).join(', ')]);
