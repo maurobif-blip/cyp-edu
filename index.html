@@ -553,7 +553,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.11';
+const VERSION = 'alpha 5.12';
 const BUILD_DATE = '2026-11-18'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -4475,14 +4475,15 @@ function schoolPupils(sn) { return S.children.filter(c => isPupil(c) && schoolOf
 function sheetOn(c, d) { return visitsOf(c.id).find(v => v.purpose === 'School visit' && v.date === d) || null; }
 /* a school visit is a school on a day; the forms filled that day belong to it */
 function schoolTrips(a, b) { const m = {}; for (const v of S.visits) { if (v.purpose !== 'School visit' || !inRange(v.date, a, b) || !child(v.childId)) continue; const sn = visitSchool(v); if (!sn) continue; const k = v.date + '|' + sn; (m[k] = m[k] || { date: v.date, school: sn, forms: [] }).forms.push(v); } return Object.values(m).sort((x, y) => y.date.localeCompare(x.date) || x.school.localeCompare(y.school)); }
-function schoolTripsHtml(a, b, label) { const T = schoolTrips(a, b); return `<section class="card" id="trips"><h2 style="margin:0 0 6px">School visits · ${esc(label)} · ${T.length}</h2>${T.length ? T.map(t => `<div class="it"><div class="w"><b>${esc(t.school)}</b><span>${esc(fmtDate(t.date))} · ${t.forms.length} ${t.forms.length === 1 ? 'pupil' : 'pupils'} seen</span></div><a class="btn sm" href="#/schoolvisit?sn=${encodeURIComponent(t.school)}&d=${t.date}">Open the visit</a></div>`).join('') : '<p class="empty">No school visit recorded.</p>'}</section>`; }
+function schoolTripsHtml(a, b, label) { const T = schoolTrips(a, b); return `<section class="card" id="trips"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><h2 style="margin:0">School visits · ${esc(label)} · ${T.length}</h2><a class="btn pri" href="#/schoolvisit">Record a school visit</a></div>${T.length ? T.map(t => `<div class="it"><div class="w"><b>${esc(t.school)}</b><span>${esc(fmtDate(t.date))} · ${t.forms.length} ${t.forms.length === 1 ? 'pupil' : 'pupils'} seen</span></div><a class="btn sm" href="#/schoolvisit?sn=${encodeURIComponent(t.school)}&d=${t.date}">Open the visit</a></div>`).join('') : '<p class="empty">No school visit recorded.</p>'}</section>`; }
 function vSchoolVisit(r) {
   const q = r.q, sn = q.get('sn') || '', d = q.get('d') && q.get('d') <= today() ? q.get('d') : today(), n = termNow(), [ta, tb] = termRange(n.y, n.t), kids = sn ? schoolPupils(sn) : [];
   if (!kids.length) {
     const by = {}; for (const c of S.children) if (isPupil(c)) { const k = schoolOf(c); (by[k] = by[k] || { out: outsideSchool(c), l: [] }).l.push(c); }
     const tile = ([k, g]) => { const last = g.l.map(lastSchoolVisit).sort().pop() || '', inT = inRange(last, ta, tb); return `<a class="scard${inT ? ' done' : ''}" href="#/schoolvisit?sn=${encodeURIComponent(k)}"><b>${esc(k)}</b><span>${g.l.length} ${g.l.length === 1 ? 'pupil' : 'pupils'}</span><span class="chip ${inT ? 'c-green' : 'c-orange'}">${inT ? 'Visited ' + esc(fmtDate(last)) : 'Not visited this term'}</span></a>`; };
     const E = Object.entries(by).filter(([k]) => k !== 'School name not written').sort((a, b) => b[1].l.length - a[1].l.length || a[0].localeCompare(b[0])), out = E.filter(x => x[1].out), own = E.filter(x => !x[1].out);
-    return `<div class="top"><div><h1>Record a school visit</h1><p class="lead">Choose the school.</p></div><a class="btn" href="#/visits?vt=School">Back</a></div>
+    return `<div class="top"><div><h1>Record a school visit</h1></div><a class="btn" href="#/visits?vt=School">Back</a></div>
+    <p class="vq">Which school did you visit?</p>
     <div class="sgrid">${out.map(tile).join('') || '<p class="empty">No pupil with a school written.</p>'}</div>${own.length ? `<p class="sec" style="margin:18px 0 8px">Schools of the project</p><div class="sgrid">${own.map(tile).join('')}</div>` : ''}`;
   }
   const rows = kids.map(c => ({ c, v: sheetOn(c, d), last: lastSchoolVisit(c) })), seen = rows.filter(x => x.v).length, tile = (nn, l) => `<div class="tile"><b>${nn}</b><span>${l}</span></div>`;
