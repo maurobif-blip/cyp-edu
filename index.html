@@ -540,6 +540,11 @@ a.spot:hover{color:var(--ink);background:#DCEDF5}
 .pschool>summary::before{content:'\25B8';font-size:16px;color:var(--muted);width:14px}
 .pschool[open]>summary::before{content:'\25BE'}
 .vchoose>div+div{margin-top:4px}
+.phead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}.phead h2{margin:0;display:flex;align-items:center;gap:10px;font-size:19px}
+.pnum{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:var(--ink);color:#FFFFFF;font-size:15px;font-weight:700;flex:none}
+.tw{position:relative}
+td.op{text-align:right;white-space:nowrap}
+@media (max-width:760px){#childTable td.op{display:block;width:100%;text-align:left;padding-top:6px}}
 
 </style>
 </head>
@@ -553,7 +558,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.12';
+const VERSION = 'alpha 5.13';
 const BUILD_DATE = '2026-11-18'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -1465,8 +1470,8 @@ function filteredChildren(q) {
 }
 function childRows(list) {
   if (!list.length) return '<p class="empty">No child matches.</p>';
-  return `<div class="tw"><table><thead><tr><th class="mh">ID</th><th>Name</th><th class="mh">Sex</th><th class="n mh">Age</th><th class="mh">Education</th><th>Centre</th><th class="mh">Resident or not</th><th>Status</th><th class="mh">Last home visit</th><th><span class="vh">Photo</span></th></tr></thead><tbody>
-  ${list.map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td><a class="cname" href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td><td class="ph">${avatar(c, 40)}</td></tr>`; }).join('')}
+  return `<div class="tw"><table><thead><tr><th class="mh">ID</th><th>Name</th><th class="mh">Sex</th><th class="n mh">Age</th><th class="mh">Education</th><th>Centre</th><th class="mh">Resident or not</th><th>Status</th><th class="mh">Last home visit</th><th><span class="vh">Open</span></th><th><span class="vh">Photo</span></th></tr></thead><tbody>
+  ${list.map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td><a class="cname" href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td><td class="op"><a class="btn sm" href="#/child/${esc(c.id)}">Open the file</a></td><td class="ph">${avatar(c, 40)}</td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
 function vChildren(r) {
@@ -1551,7 +1556,7 @@ function vChildForm(c) {
 
 function vChild(r) {
   if (r.id === 'new') return vChildForm(null);
-  const c = child(r.id); if (!c) return `<h1>Not found</h1><p><a href="#/children">Back to the list</a></p>`;
+  const c = child(r.id); if (!c) return `<h1>Not found</h1><p><a class="btn" href="#/children">Back to the list</a></p>`;
   if (r.sub === 'edit') return vChildForm(c);
   if (r.sub === 'status') return vStatus(c);
   if (r.sub === 'refer') return vRefer(c);
@@ -1559,7 +1564,7 @@ function vChild(r) {
   if (r.sub === 'month') return vMonthly1(c);
   const vi = visitInfo(c);
   const hist = [];
-  for (const v of visitsOf(c.id)) hist.push({ d: v.date, t: `<b>${esc(v.purpose)}</b> visit${v.where ? ' · ' + esc(v.where) : ''}${v.successful === 'No' ? ' · <span class="chip c-red">nobody found</span>' : ''}${v.stillHome ? ' · still at home: ' + esc(v.stillHome) : ''} <span class="sub">by ${esc(staffName(v.by))} · ${esc(teamLabel(visitTeam(v)))}</span>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}${v.actionDone ? ' (done)' : ''}</div>` : ''}<div><a href="#/visitrep/${esc(v.id)}">Open the report</a> ${visitChip(v)}</div>` });
+  for (const v of visitsOf(c.id)) hist.push({ d: v.date, t: `<b>${esc(v.purpose)}</b> visit${v.where ? ' · ' + esc(v.where) : ''}${v.successful === 'No' ? ' · <span class="chip c-red">nobody found</span>' : ''}${v.stillHome ? ' · still at home: ' + esc(v.stillHome) : ''} <span class="sub">by ${esc(staffName(v.by))} · ${esc(teamLabel(visitTeam(v)))}</span>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}${v.actionDone ? ' (done)' : ''}</div>` : ''}<div><a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the report</a> ${visitChip(v)}</div>` });
   for (const e of S.events.filter(e => String(e.childId) === String(c.id))) { const t = eventLine(e); if (t) hist.push({ d: e.date, t: t + cancelBtn('event', e) }); }
   for (const m of movesOf(c.id)) hist.push({ d: m.date, t: `<b>${esc(moveLabel(m))}</b>${m.by ? ` <span class="sub">by ${esc(staffName(m.by))}</span>` : ''}${m.note ? `<div>${esc(m.note)}</div>` : ''}${cancelBtn('move', m)}` });
   for (const s of S.sessions.filter(s => (s.children || []).map(String).includes(String(c.id)))) hist.push({ d: s.date, t: `<b>Counselling, ${esc(s.type.toLowerCase())} session</b> <span class="sub">by ${esc(staffName(s.by))}</span>${s.topic ? `<div>${esc(s.topic)}</div>` : ''}${cancelBtn('session', s)}` });
@@ -1654,7 +1659,7 @@ function vVisitForm(r) {
   const tq = r.q.get('t'), team = TEAM_KEYS.includes(tq) ? tq : (myTeam() || (c ? teamFor(c) : '')), school = team === 'School';
   const ed = r.q.get('edit') ? S.visits.find(x => x.id === r.q.get('edit') && visitCanEdit(x)) : null;
   return `<div class="top"><div><h1>${ed ? 'Change the visit' : school ? 'School Monitoring Form' : 'Record a visit'}</h1><p class="lead">${school ? 'One form for each pupil seen in the school visit.' : ''}</p></div>${school && !ed ? '<a class="btn" href="#/schoolvisit' + (c && schoolNorm(c.schoolName) ? '?sn=' + encodeURIComponent(schoolOf(c)) + (r.q.get('d') ? '&d=' + esc(r.q.get('d')) : '') : '') + '">The pupils of the school</a>' : ''}</div>
-  <form class="card" data-form="visit" style="display:flex;flex-direction:column;gap:14px;max-width:820px">${r.q.get('back') === 'sv' ? '<input type="hidden" name="back" value="sv">' : ''}${ed ? `<input type="hidden" name="edit" value="${esc(ed.id)}">` : ''}
+  <form class="card" data-form="visit" style="display:flex;flex-direction:column;gap:14px;max-width:820px">${['sv', 'pu'].includes(r.q.get('back')) ? '<input type="hidden" name="back" value="' + r.q.get('back') + '">' : ''}${ed ? `<input type="hidden" name="edit" value="${esc(ed.id)}">` : ''}
     <div class="fs two">
       ${field('Who made the visit?', 'team', '', 'select', { req: true, wide: true, options: opt(VISIT_TEAMS.map(([k, l]) => ({ v: k, l })), team, 'Choose the section'), hint: '' })}
       ${childPick('childId', c ? c.id : '', 'Child *')}
@@ -2089,6 +2094,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'visitrep': body = vVisitRep(r); active = 'visits'; break;
       case 'school': body = vSchool(r); active = 'visits'; break;
       case 'schoolvisit': body = vSchoolVisit(r); active = 'visits'; break;
+      case 'pupil': body = vPupil(r); active = 'visits'; break;
       case 'referrals': body = r.id === 'new' ? vReferNew(r) : vReferrals(r); active = 'visits'; break;
       case 'monthly': body = vMonthly(r); active = 'children'; break;
       case 'review': body = vReview(); active = 'pending'; break;
@@ -2138,7 +2144,7 @@ const FORMS = {
     { const ph = fileKeep('visit', v.childId, 'Visit photo'); if (ph) v.photo = ph.id; else if (old && old.photo) v.photo = old.photo; }
     if (old) { const back = visitState(old) === 'back', t = Date.now(); S.events.push({ id: uid('e'), childId: String(old.childId), type: 'Visit corrected', ref: old.id, date: today(), ts: t, by: USER.id }); if (back) S.events.push({ id: uid('e'), childId: v.childId, type: 'Visit sent again', ref: v.root, date: today(), ts: t + 1, note: 'Report changed', by: USER.id }); }
     S.visits.push(v); dropCancelled(); if (o.referTo) referAdd(v.childId, v.team, o.referTo, o.referWhy, o.referNote, v.date, v.id);
-    save(); toast(old ? 'Changes saved' : o.referTo ? 'Visit saved. Referred to ' + referLabel(o.referTo) : 'Visit saved'); go(old ? '#/visitrep/' + v.id : o.back === 'sv' && v.purpose === 'School visit' && visitSchool(v) ? '#/schoolvisit?sn=' + encodeURIComponent(visitSchool(v)) + '&d=' + v.date : '#/visits?vt=' + v.team + '&m=' + v.date.slice(0, 7));
+    save(); toast(old ? 'Changes saved' : o.referTo ? 'Visit saved. Referred to ' + referLabel(o.referTo) : 'Visit saved'); go(old ? '#/visitrep/' + v.id : o.back === 'pu' && v.purpose === 'School visit' ? '#/pupil/' + v.childId : o.back === 'sv' && v.purpose === 'School visit' && visitSchool(v) ? '#/schoolvisit?sn=' + encodeURIComponent(visitSchool(v)) + '&d=' + v.date : '#/visits?vt=' + v.team + '&m=' + v.date.slice(0, 7));
   },
   event(o) { S.events.push({ id: uid('e'), childId: String(o.childId), type: o.type, date: o.date, note: o.note, by: USER.id }); save(); toast('Added to the history'); render(); },
   move(o) {
@@ -3041,7 +3047,7 @@ function luigiVisitLine(c) {
   if (c.section !== 'Luigi') return '';
   const last = lastHomeVisit(c);
   if (last) return `<div class="row"><span>Last home visit</span><b>${esc(fmtDate(last))}</b></div>`;
-  return familyKnown(c) ? `<div class="row"><span>Family in ${esc(c.familyAddress)}</span><b>no home visit yet</b></div>` : `<div class="row"><span>Where the family is</span><b>not known yet · <a href="#/child/${esc(c.id)}/edit">add it</a></b></div>`;
+  return familyKnown(c) ? `<div class="row"><span>Family in ${esc(c.familyAddress)}</span><b>no home visit yet</b></div>` : `<div class="row"><span>Where the family is</span><b>not known yet <a class="btn sm" href="#/child/${esc(c.id)}/edit">Add it</a></b></div>`;
 }
 function planReminder() {
   const next = addMonths(thisMonth(), 1);
@@ -4403,8 +4409,8 @@ function schoolFindings(o) {
 function vTerm(c) {
   const n = termNow(), q = route().q, y = Number(q.get('y')) || n.y, t = Number(q.get('t')) || n.t, old = (c.terms || []).find(r => r.y === y && r.t === t) || {};
   const subs = (old.subjects || []).concat(Array.from({ length: 10 }, () => ({}))).slice(0, 10);
-  return `<div class="top"><div><h1>Term result · ${esc(fullName(c))}</h1><p class="lead">${esc(schoolOf(c))}${c.grade ? ' · ' + esc(gradeLabel(c.grade)) : ''}</p></div><a class="btn" href="#/child/${esc(c.id)}">Back</a></div>
-  <form class="card" data-form="term" style="max-width:820px"><input type="hidden" name="id" value="${esc(c.id)}">
+  return `<div class="top"><div><h1>Term result · ${esc(fullName(c))}</h1><p class="lead">${esc(schoolOf(c))}${c.grade ? ' · ' + esc(gradeLabel(c.grade)) : ''}</p></div><a class="btn" href="${q.get('back') === 'pu' ? '#/pupil/' : '#/child/'}${esc(c.id)}">Back</a></div>
+  <form class="card" data-form="term" style="max-width:820px"><input type="hidden" name="id" value="${esc(c.id)}">${q.get('back') === 'pu' ? '<input type="hidden" name="back" value="pu">' : ''}
     <div class="fs two">${field('Year', 'y', y, 'number', { req: true })}${field('Term', 't', '', 'select', { req: true, options: opt([1, 2, 3].map(v => ({ v, l: 'Term ' + v + ' · ' + TERM_MONTHS[v] })), t) })}
       ${field('Academic performance', 'perf', '', 'select', { options: opt(PERF, old.perf || '', 'Choose') })}${field('Position in class', 'pos', old.pos || '', 'text')}
       ${field('Days absent', 'absent', old.absent == null ? '' : old.absent, 'number')}${field('End of the year', 'yearEnd', '', 'select', { options: opt(YEAR_END, old.yearEnd || '', 'Not the end of the year') })}
@@ -4416,7 +4422,7 @@ function vTerm(c) {
       </tbody></table></div></details>
     <button class="btn pri" style="margin-top:12px">Save the term</button></form>`;
 }
-function termRow(c, r) { const av = termAvg(r); return `<tr><td><a href="#/child/${esc(c.id)}/term?y=${r.y}&t=${r.t}">${r.y} Term ${r.t}</a></td><td>${esc(r.perf || '')}${av != null ? ` <span class="sub">average ${av}</span>` : ''}</td><td>${esc(r.pos || '')}</td><td>${r.absent == null || r.absent === '' ? '' : esc(r.absent)}</td><td>${esc(r.weak || '')}</td><td>${esc(r.yearEnd || '')}</td></tr>`; }
+function termRow(c, r) { const av = termAvg(r); return `<tr><td><b>${r.y} Term ${r.t}</b></td><td>${esc(r.perf || '')}${av != null ? ` <span class="sub">average ${av}</span>` : ''}</td><td>${esc(r.pos || '')}</td><td>${r.absent == null || r.absent === '' ? '' : esc(r.absent)}</td><td>${esc(r.weak || '')}</td><td>${esc(r.yearEnd || '')}</td><td><a class="btn sm" href="#/child/${esc(c.id)}/term?y=${r.y}&t=${r.t}">Change</a></td></tr>`; }
 
 /* ---------- the school box on the file of the child: what every section knows, in one place ---------- */
 function schoolBox(c) {
@@ -4426,14 +4432,14 @@ function schoolBox(c) {
   const hv = lastHomeVisit(c), ses = S.sessions.filter(s => (s.children || []).map(String).includes(String(c.id))).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const row = (k, x) => x ? `<dt>${k}</dt><dd>${x}</dd>` : '';
   return `<section class="card" id="schoolbox"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">School ${trendChip(pr)}</h2>
-      <div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn sm pri" href="#/visit/new?child=${esc(c.id)}&t=School">Record a school visit</a><a class="btn sm" href="#/child/${esc(c.id)}/term">Add a term result</a></div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><a class="btn sm pri" href="#/pupil/${esc(c.id)}">School page of the pupil</a><a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=School">Fill a form</a><a class="btn sm" href="#/child/${esc(c.id)}/term">Add a term result</a></div></div>
     <dl class="dl" style="margin-top:8px">${row('School', esc(schoolOf(c)) + (c.grade ? ' · ' + esc(gradeLabel(c.grade)) : '') + (c.stream ? ' ' + esc(c.stream) : ''))}
       ${row('Last school visit', v ? `${esc(fmtDate(v.date))}${v.schAtt ? ' · attendance ' + esc(v.schAtt.toLowerCase()) : ''}${v.perf ? ' · ' + esc(v.perf.toLowerCase()) : ''}${v.trend ? ' · ' + esc(v.trend.toLowerCase()) : ''}` : 'None recorded')}
       ${row(termLabel(n), inTerm ? 'Visited' : n.hol ? 'Not visited' : '<span class="chip c-orange">Not visited yet</span>')}
       ${row('Registers, last 30 days', regs.map(esc).join('<br>'))}
       ${row('Last home visit', hv ? esc(fmtDate(hv)) : 'None recorded')}
       ${row('Counselling', ses.length ? ses.length + (ses.length === 1 ? ' session' : ' sessions') + ', last ' + esc(fmtDate(ses[0].date)) : '')}</dl>
-    ${T.length ? `<div class="tw" style="margin-top:8px"><table class="mt"><thead><tr><th>Term</th><th>Performance</th><th>Position</th><th>Days absent</th><th>Weak subjects</th><th>End of the year</th></tr></thead><tbody>${T.slice(0, 6).map(r => termRow(c, r)).join('')}</tbody></table></div>` : ''}</section>`;
+    ${T.length ? `<div class="tw" style="margin-top:8px"><table class="mt"><thead><tr><th>Term</th><th>Performance</th><th>Position</th><th>Days absent</th><th>Weak subjects</th><th>End of the year</th><th><span class="vh">Change</span></th></tr></thead><tbody>${T.slice(0, 6).map(r => termRow(c, r)).join('')}</tbody></table></div>` : ''}</section>`;
 }
 
 /* ---------- pupils by school: who was visited this term, how they are doing ---------- */
@@ -4468,7 +4474,7 @@ function vSchool(r) {
   <div class="grid g4">${tile(rows.length, 'Pupils')}${tile(doneS + ' / ' + schools.length, 'Schools visited this term')}${tile(vis + ' / ' + rows.length, 'Pupils seen this term')}${tile(cnt('Improving') + ' · ' + cnt('Decreasing'), 'Improving · decreasing')}</div>
   ${schools.map(([name, l]) => { const left = l.filter(r => !r.visited).length, seen = l.length - left, last = l.map(r => r.vt).sort().pop() || '';
     return `<section class="card schcard" style="padding:8px 10px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;padding:2px 2px 6px"><h2 style="margin:0">${esc(name)} · ${l.length} ${seen ? `<span class="chip c-green">Visited ${esc(fmtDate(last))}</span> <span class="sub">${seen === l.length ? 'all pupils seen' : seen + ' of ' + l.length + ' pupils seen'}</span>` : '<span class="chip c-orange">Not visited this term</span>'}</h2><span class="schact">${left ? (l.filter(r => !r.visited).every(r => inPl.has(String(r.c.id))) ? `<span class="chip c-green">In the plan · ${esc(fmtMonth(pm))}</span><a class="btn sm" href="#/visits?vt=School&vtab=plan&m=${pm}">Open the plan</a>` : `<button class="btn pri" data-sact="planschool" data-school="${esc(name)}" data-m="${pm}">Plan the visit · ${esc(fmtMonth(pm))}</button>`) : ''}<a class="btn" href="#/schoolvisit?sn=${encodeURIComponent(name)}">Record the visit</a></span></div>
-      <div class="tw"><table class="mt"><thead><tr><th>Pupil</th><th>Class</th><th>Last school visit</th><th>Attendance</th><th>Performance</th><th>Progress</th><th></th></tr></thead><tbody>${l.sort((a, b) => fullName(a.c).localeCompare(fullName(b.c))).map(r => `<tr><td>${childLink(r.c)} ${centreChip(r.c)}${r.ref ? ' <span class="chip c-orange">Referred</span>' : ''}</td><td>${esc(r.c.grade || '')}</td><td>${r.v ? esc(fmtDate(r.v.date)) : '<span class="sub">never</span>'}${r.visited ? '' : ' <span class="chip c-orange">not this term</span>'}</td><td>${esc((r.v && r.v.schAtt) || '')}</td><td>${esc((r.tr && r.tr.perf) || (r.v && r.v.perf) || '')}</td><td>${trendChip(r.pr)}</td><td><a class="btn sm" href="#/visit/new?child=${esc(r.c.id)}&t=School">Record a visit</a></td></tr>`).join('')}</tbody></table></div></section>`; }).join('') || '<p class="empty">No pupil here.</p>'}`;
+      <div class="tw"><table class="mt"><thead><tr><th>Pupil</th><th>Class</th><th>Last school visit</th><th>Attendance</th><th>Performance</th><th>Progress</th><th></th></tr></thead><tbody>${l.sort((a, b) => fullName(a.c).localeCompare(fullName(b.c))).map(r => `<tr><td>${pupilLink(r.c)} ${centreChip(r.c)}${r.ref ? ' <span class="chip c-orange">Referred</span>' : ''}</td><td>${esc(r.c.grade || '')}</td><td>${r.v ? esc(fmtDate(r.v.date)) : '<span class="sub">never</span>'}${r.visited ? '' : ' <span class="chip c-orange">not this term</span>'}</td><td>${esc((r.v && r.v.schAtt) || '')}</td><td>${esc((r.tr && r.tr.perf) || (r.v && r.v.perf) || '')}</td><td>${trendChip(r.pr)}</td><td><a class="btn sm" href="#/visit/new?child=${esc(r.c.id)}&t=School">Record a visit</a></td></tr>`).join('')}</tbody></table></div></section>`; }).join('') || '<p class="empty">No pupil here.</p>'}`;
 }
 /* ---------- one visit to a school: the pupils seen that day, one School Monitoring Form each ---------- */
 function schoolPupils(sn) { return S.children.filter(c => isPupil(c) && schoolOf(c) === sn).sort((a, b) => fullName(a).localeCompare(fullName(b))); }
@@ -4487,11 +4493,25 @@ function vSchoolVisit(r) {
     <div class="sgrid">${out.map(tile).join('') || '<p class="empty">No pupil with a school written.</p>'}</div>${own.length ? `<p class="sec" style="margin:18px 0 8px">Schools of the project</p><div class="sgrid">${own.map(tile).join('')}</div>` : ''}`;
   }
   const rows = kids.map(c => ({ c, v: sheetOn(c, d), last: lastSchoolVisit(c) })), seen = rows.filter(x => x.v).length, tile = (nn, l) => `<div class="tile"><b>${nn}</b><span>${l}</span></div>`;
-  const row = ({ c, v, last }) => `<div class="it">${avatar(c, 40)}<div class="w"><b>${childLink(c)}</b> ${centreChip(c)}<span>${esc(gradeLabel(c.grade) || 'class not written')}${v ? (v.schAtt ? ' · attendance ' + esc(v.schAtt.toLowerCase()) : '') + (v.perf ? ' · ' + esc(v.perf.toLowerCase()) : '') + (v.trend ? ' · ' + esc(v.trend.toLowerCase()) : '') : ' · last form: ' + (last ? esc(fmtDate(last)) : 'never')}</span></div>${v ? `<span class="chip c-green">Form filled</span><a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the form</a>` : `<a class="btn sm pri" href="#/visit/new?child=${esc(c.id)}&t=School&d=${d}&back=sv">Fill the form</a>`}</div>`;
+  const row = ({ c, v, last }) => `<div class="it">${avatar(c, 40)}<div class="w"><b>${pupilLink(c)}</b> ${centreChip(c)}<span>${esc(gradeLabel(c.grade) || 'class not written')}${v ? (v.schAtt ? ' · attendance ' + esc(v.schAtt.toLowerCase()) : '') + (v.perf ? ' · ' + esc(v.perf.toLowerCase()) : '') + (v.trend ? ' · ' + esc(v.trend.toLowerCase()) : '') : ' · last form: ' + (last ? esc(fmtDate(last)) : 'never')}</span></div>${v ? `<span class="chip c-green">Form filled</span><a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the form</a>` : `<a class="btn sm pri" href="#/visit/new?child=${esc(c.id)}&t=School&d=${d}&back=sv">Fill the form</a>`}</div>`;
   return `<div class="top"><div><p class="kick">School visit</p><h1>${esc(sn)}</h1></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn" href="#/schoolvisit">Another school</a><a class="btn" href="#/school?ty=all&sn=${encodeURIComponent(sn)}">Results of the term</a></div></div>
   ${dayBar(d, 'd')}
   <div class="grid g4" style="margin-top:12px">${tile(kids.length, 'Pupils in this school')}${tile(seen + ' / ' + kids.length, 'Forms filled this day')}</div>
   <section class="card" style="padding:8px 10px"><p class="sub" style="margin:4px 2px 6px">One School Monitoring Form for each pupil seen.</p>${rows.filter(x => !x.v).map(row).join('')}${seen ? `<div class="grp">Done · ${seen}</div>` + rows.filter(x => x.v).map(row).join('') : ''}</section>`;
+}
+/* ---------- one page for one pupil: the forms of the school visits and the results of the terms, nothing else ---------- */
+function pupilLink(c) { return `<a href="#/pupil/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}`; }
+function vPupil(r) {
+  const c = child(r.id); if (!c) return '<div class="top"><div><h1>Pupil</h1></div></div><div class="card"><p class="empty">This child is not in the database.</p></div>';
+  const sv = schoolVisits(c), n = termNow(), [ta, tb] = termRange(n.y, n.t), inT = sv.some(x => inRange(x.date, ta, tb)), T = termsOf(c), pr = progressOf(c), sn = schoolOf(c), tile = (nn, l) => `<div class="tile"><b>${nn}</b><span>${l}</span></div>`;
+  const mk = T.find(x => (x.subjects || []).length);
+  return `<div class="top"><div><p class="kick">Pupil · School Section</p><h1>${esc(fullName(c))}</h1><p class="lead">${esc(sn)}${c.grade ? ' · ' + esc(gradeLabel(c.grade)) : ''}${c.stream ? ' ' + esc(c.stream) : ''} ${centreChip(c)}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${schoolPupils(sn).length ? `<a class="btn" href="#/schoolvisit?sn=${encodeURIComponent(sn)}">The pupils of the school</a>` : ''}<a class="btn" href="#/child/${esc(c.id)}">The file of the child</a></div></div>
+  <div class="grid g4">${tile(sv[0] ? esc(fmtDate(sv[0].date)) : 'Never', 'Last school visit')}${tile(inT ? 'Visited' : n.hol ? 'Not visited' : 'Not yet', esc(termLabel(n)))}${tile(pr ? esc(pr) : '-', 'Progress')}</div>
+  <section class="card" id="pforms"><div class="phead"><h2><span class="pnum">1</span>School visits · ${sv.length}</h2><a class="btn pri" href="#/visit/new?child=${esc(c.id)}&t=School&back=pu">Fill a form</a></div>
+    ${sv.length ? sv.map(v => `<div class="it"><div class="w"><b>${esc(fmtDate(v.date))}</b><span>${[v.schAtt ? 'Attendance ' + v.schAtt.toLowerCase() : '', v.perf || '', v.by ? 'by ' + staffName(v.by) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>${trendChip(v.trend)}<a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the form</a></div>`).join('') : '<p class="empty">No form yet.</p>'}</section>
+  <section class="card" id="pterms"><div class="phead"><h2><span class="pnum">2</span>Term results · ${T.length}</h2><a class="btn pri" href="#/child/${esc(c.id)}/term?back=pu">Add a term result</a></div>
+    ${T.length ? T.map(x => `<div class="it"><div class="w"><b>${x.y} Term ${x.t}</b><span>${[x.perf, x.pos ? 'position ' + x.pos : '', termAvg(x) != null ? 'average mark ' + termAvg(x) : '', x.absent === '' || x.absent == null ? '' : x.absent + ' days absent', x.yearEnd].filter(Boolean).map(esc).join(' · ') || 'Nothing written'}</span></div><a class="btn sm" href="#/child/${esc(c.id)}/term?y=${x.y}&t=${x.t}&back=pu">Change</a></div>`).join('') : '<p class="empty">No term result yet.</p>'}
+    ${mk ? `<h3 style="margin:16px 0 6px">Marks · ${mk.y} Term ${mk.t}</h3><div class="tw"><table class="mt"><thead><tr><th>Subject</th><th>Test 1</th><th>Test 2</th><th>End of term</th><th>Grade</th></tr></thead><tbody>${mk.subjects.map(s2 => `<tr><td>${esc(s2.s)}</td><td>${esc(s2.t1 || '')}</td><td>${esc(s2.t2 || '')}</td><td>${esc(s2.e || '')}</td><td>${esc(s2.g || '')}</td></tr>`).join('')}</tbody></table></div>` : ''}</section>`;
 }
 /* To do: the schools with pupils where no school visit is written in the term */
 function schoolsLeft(x) { const [ta, tb] = termRange(x.y, x.t), m = {}; for (const c of S.children) { if (!isPupil(c) || !outsideSchool(c)) continue; const n = schoolOf(c); if (n === 'School name not written') continue; m[n] = m[n] || schoolVisits(c).some(v => inRange(v.date, ta, tb)); } const all = Object.keys(m); return { all: all.length, left: all.filter(k => !m[k]).length }; }
@@ -4509,7 +4529,7 @@ FORMS.term = function (o) {
   const c = child(o.id), y = Number(o.y), t = Number(o.t); if (!c || !y || ![1, 2, 3].includes(t)) return toast('Write the year and the term');
   const subjects = []; for (let i = 0; i < 10; i++) { const s = (o['ms' + i] || '').trim(); if (s) subjects.push({ s, t1: (o['m1' + i] || '').trim(), t2: (o['m2' + i] || '').trim(), e: (o['me' + i] || '').trim(), g: (o['mg' + i] || '').trim() }); }
   const r = { y, t, perf: o.perf || '', pos: (o.pos || '').trim(), absent: o.absent === '' || o.absent == null ? '' : Number(o.absent), strong: (o.strong || '').trim(), weak: (o.weak || '').trim(), note: (o.note || '').trim(), yearEnd: o.yearEnd || '', subjects, by: USER.id, on: today(), ts: Date.now() };
-  c.terms = (c.terms || []).filter(x => !(x.y === y && x.t === t)).concat(r); c.updatedAt = today(); save(); toast('Term saved'); go('#/child/' + c.id);
+  c.terms = (c.terms || []).filter(x => !(x.y === y && x.t === t)).concat(r); c.updatedAt = today(); save(); toast('Term saved'); go(o.back === 'pu' ? '#/pupil/' + c.id : '#/child/' + c.id);
 };
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-sact]'); if (!b) return; e.preventDefault();
@@ -4566,8 +4586,8 @@ function vMonthly1(c) {
 function monthlyBox(c) {
   if (centreOf(c) !== 'Minsundu' || (!isCurrent(c) && !(c.monthly || []).length)) return '';
   const m0 = monthDue() || thisMonth(), list = (c.monthly || []).slice().sort((a, b) => b.m.localeCompare(a.m)).slice(0, 6), has = monthlyOf(c, m0);
-  return `<section class="card" id="monthlybox"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">Monthly reports · key child form</h2><a class="btn sm${has ? '' : ' pri'}" href="#/child/${esc(c.id)}/month?m=${m0}">${has ? 'Open' : 'Write'} the report of ${esc(fmtMonth(m0))}</a></div>
-    ${list.length ? list.map(r => `<div class="it"><div class="w"><b><a href="#/child/${esc(c.id)}/month?m=${r.m}">${esc(fmtMonth(r.m))}</a></b><span>${esc([r.perf && 'School: ' + r.perf, r.behaviour, r.plan && 'Plan: ' + r.plan].filter(Boolean).join(' · ').slice(0, 220))}</span><span class="sub">${esc(staffName(r.by))}${r.checkedBy ? ' · checked by ' + esc(staffName(r.checkedBy)) : ' · not checked yet'}</span></div></div>`).join('') : '<p class="empty">No monthly report yet.</p>'}</section>`;
+  return `<section class="card" id="monthlybox"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div><h2 style="margin:0">Minsundu monthly reports</h2><p class="sub" style="margin:2px 0 0">Key Child Form, written by the key worker.</p></div><a class="btn sm${has ? '' : ' pri'}" href="#/child/${esc(c.id)}/month?m=${m0}">${has ? 'Open' : 'Write'} the report of ${esc(fmtMonth(m0))}</a></div>
+    ${list.length ? list.map(r => `<div class="it"><div class="w"><b>${esc(fmtMonth(r.m))}</b><span>${esc([r.perf && 'School: ' + r.perf, r.behaviour, r.plan && 'Plan: ' + r.plan].filter(Boolean).join(' · ').slice(0, 220))}</span><span class="sub">${esc(staffName(r.by))}${r.checkedBy ? ' · checked by ' + esc(staffName(r.checkedBy)) : ' · not checked yet'}</span></div><a class="btn sm" href="#/child/${esc(c.id)}/month?m=${r.m}">Open</a></div>`).join('') : '<p class="empty">No monthly report yet.</p>'}</section>`;
 }
 function vMonthly(r) {
   const q = r.q, m = /^\d{4}-\d{2}$/.test(q.get('m') || '') ? q.get('m') : (monthDue() || thisMonth()), kids = monthlyKids(q), g = q.get('mg') || 'Resident';
@@ -4825,7 +4845,7 @@ function vVisitRep(r) {
   const check = USER.admin && visitMine(v) && (st === 'wait' || st === 'back') ? '<p class="sub" style="margin:8px 0 0">Your visit: another person of the Education office validates it.</p>' : visitCanValidate(v) && (st === 'wait' || st === 'back') ? `<div class="chk" style="border:0;padding-bottom:0"><div class="chka" style="width:100%"><button class="btn pri" data-dact="valid" data-id="${esc(v.id)}">Validate</button>${st === 'wait' ? `${ph.length ? '' : `<button class="btn" data-dact="back" data-id="${esc(v.id)}" data-note="Photo missing">Send back: photo missing</button>`}<input class="in" name="note" placeholder="What is missing" aria-label="What is missing" style="flex:1;min-width:160px"><button class="btn" data-dact="back" data-id="${esc(v.id)}">Send back</button>` : ''}</div></div>` : '';
   const again = !GUEST && mine && (st === 'back' || (st === 'wait' && !ph.length)) ? `<form data-form="visitagain" style="display:flex;flex-direction:column;gap:10px;margin-top:10px;max-width:640px"><input type="hidden" name="id" value="${esc(v.id)}">${st === 'back' ? field('What you add', 'note', '', 'textarea', { wide: true, rows: 3 }) : ''}${filePickField('again', 'Photo of the visit')}<div><button class="btn pri">${st === 'back' ? 'Send again' : 'Add the photo'}</button></div></form>` : '';
   setTimeout(fileImgs, 0);
-  return `<div class="top"><div><h1>Visit report</h1><p class="lead">${childLink(c)} ${centreChip(c)} ${visitChip(v)}</p></div><div><a class="btn" href="#" data-dact="goback">Back</a></div></div>
+  return `<div class="top"><div><h1>${v.purpose === 'School visit' ? 'School Monitoring Form' : 'Visit report'}</h1><p class="lead">${childLink(c)} ${centreChip(c)} ${visitChip(v)}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${v.purpose === 'School visit' ? `<a class="btn" href="#/pupil/${esc(c.id)}">Forms and results of the pupil</a>` : ''}<a class="btn" href="#" data-dact="goback">Back</a></div></div>
   <section class="card" id="visitrep"><dl class="dl vdl">${visitRows(v).map(([k, x]) => `<dt>${esc(k)}</dt><dd>${esc(x)}</dd>`).join('')}</dl></section>
   <section class="card"><h2>Photo</h2>${ph.length ? ph.map(id => `<div class="vphw" data-fimg="${esc(id)}" data-name="${esc(nm)}">Opening the photo…</div>`).join('') : '<p style="margin:4px 0"><span class="chip c-orange">No photo</span></p>'}</section>
   ${st === 'old' ? '' : `<section class="card" id="visitval"><h2>Validation</h2>${trail.length ? trail.map(tl).join('') : '<p class="sub" style="margin:4px 0">Not validated yet.</p>'}${check}${again}</section>`}
