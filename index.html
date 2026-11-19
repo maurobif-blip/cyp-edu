@@ -583,6 +583,7 @@ body{padding-top:env(safe-area-inset-top)}
 /* Luigi month grid on a touch screen: cells a finger can hit */
 @media (pointer:coarse),(max-width:760px){.lgrid th,.lgrid td{min-width:40px;height:40px;font-size:13px}.lgrid .lname{min-width:132px;max-width:150px;white-space:normal;line-height:1.25;font-size:13px}.lgrid .lname a{display:inline-block;padding:4px 0}}
 @media (max-width:380px){.mnav a{font-size:12px;letter-spacing:-.1px}}
+.chip.c-hid{background:var(--fill2);color:var(--soft);border:1px dashed var(--line2)}
 
 </style>
 </head>
@@ -596,7 +597,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.18';
+const VERSION = 'alpha 5.20';
 const BUILD_DATE = '2026-11-19'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -613,7 +614,7 @@ const CLOSE_REASONS = ['2-year follow-up completed', 'Left the programme, no lon
 const SCHOOL_TYPES = ['Nkwazi community school', 'Literacy class (Minsundu)', 'Luigi Special School', 'GRZ primary', 'GRZ secondary', 'Private school', 'College / skills training', 'Not in school'];
 const VISIT_PURPOSES = ['Family tracing', 'Assessment', 'Follow-up', 'Emergency', 'School visit'];
 const VISIT_WHERE = ['Home', 'School', 'Phone', 'Other'];
-const EVENT_TYPES = ['Something happened', 'Visited family', 'Bonding with family', 'Sick, medical attention', 'Sneaked out', 'Came back'];
+const EVENT_TYPES = ['Something happened', 'Visited family', 'Bonding with family', 'Sick, medical attention', 'Child protection concern', 'Sneaked out', 'Came back'];
 const PROGRAMMES = ['ABA', 'ZAS', 'Muchinga'];
 const SUPPORT = ['Nutrition', 'Medical', 'Girl-child activities'];
 const OUTREACH_TYPES = ['Day outreach', 'Night outreach', 'Drop-in'];
@@ -1600,8 +1601,8 @@ function vChildForm(c) {
       ${field('Skill or trade', 'skill', c.skill)}${field('Education at entry', 'educationAtEntry', c.educationAtEntry, 'textarea', { wide: true, rows: 2 })}
     </fieldset></div>
     <div><p class="sec">Health and notes</p><fieldset class="fs">
-      ${field('Medical', 'medical', c.medical, 'textarea', { rows: 2 })}${field('Disabilities', 'disabilities', c.disabilities, 'textarea', { rows: 2 })}${field('Objectives', 'objectives', c.objectives, 'textarea', { rows: 2 })}
-      ${field('Notes', 'notes', c.notes, 'textarea', { wide: true, rows: 4 })}
+      ${seesHealth(c) ? field('Medical', 'medical', c.medical, 'textarea', { rows: 2 }) + field('Disabilities', 'disabilities', c.disabilities, 'textarea', { rows: 2 }) : `<p class="f wide" style="margin:0">${hiddenChip()} <span class="sub">Medical, disabilities and notes.</span></p>`}${field('Objectives', 'objectives', c.objectives, 'textarea', { rows: 2 })}
+      ${seesHealth(c) ? field('Notes', 'notes', c.notes, 'textarea', { wide: true, rows: 4 }) : ''}
     </fieldset></div>
     ${isNew ? '</div></details>' : ''}
     <div style="display:flex;gap:10px"><button class="btn pri">${isNew ? 'Save the child' : 'Save changes'}</button><a class="btn" href="${isNew ? '#/children' : '#/child/' + esc(c.id)}">Cancel</a></div>
@@ -1621,7 +1622,7 @@ function vChild(r) {
   for (const v of visitsOf(c.id)) hist.push({ d: v.date, t: `<b>${esc(v.purpose)}</b> visit${v.where ? ' · ' + esc(v.where) : ''}${v.successful === 'No' ? ' · <span class="chip c-red">nobody found</span>' : ''}${v.stillHome ? ' · still at home: ' + esc(v.stillHome) : ''} <span class="sub">by ${esc(staffName(v.by))} · ${esc(teamLabel(visitTeam(v)))}</span>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}${v.actionDone ? ' (done)' : ''}</div>` : ''}<div><a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the report</a> ${visitChip(v)}</div>` });
   for (const e of S.events.filter(e => String(e.childId) === String(c.id))) { const t = eventLine(e); if (t) hist.push({ d: e.date, t: t + cancelBtn('event', e) }); }
   for (const m of movesOf(c.id)) hist.push({ d: m.date, t: `<b>${esc(moveLabel(m))}</b>${m.by ? ` <span class="sub">by ${esc(staffName(m.by))}</span>` : ''}${m.note ? `<div>${esc(m.note)}</div>` : ''}${cancelBtn('move', m)}` });
-  for (const s of S.sessions.filter(s => (s.children || []).map(String).includes(String(c.id)))) hist.push({ d: s.date, t: `<b>Counselling, ${esc(s.type.toLowerCase())} session</b> <span class="sub">by ${esc(staffName(s.by))}</span>${s.topic ? `<div>${esc(s.topic)}</div>` : ''}${cancelBtn('session', s)}` });
+  for (const s of S.sessions.filter(s => (s.children || []).map(String).includes(String(c.id)))) hist.push({ d: s.date, t: `<b>Counselling, ${esc(s.type.toLowerCase())} session</b> <span class="sub">by ${esc(staffName(s.by))}</span>${s.topic ? `<div>${seesProtection(c, s) ? esc(s.topic) : hiddenChip()}</div>` : ''}${cancelBtn('session', s)}` });
   const met = S.outreach.filter(o => (o.children || []).map(String).includes(String(c.id)));
   if (met.length > 12) {
     const byM = {};
@@ -1657,7 +1658,7 @@ function vChild(r) {
         <p class="sec" style="margin-top:12px">In the programme</p>${dl([['Centre', SECTIONS[c.section] ? SECTIONS[c.section].label : ''], ['Date of entry', entryText(c)], ['Came from', c.referredBy], ['Note at admission', c.admissionNote], ['No in the Nkwazi Data Tool', c.toolNo], ['Followed by', staffName(c.responsible)], ['Programmes', c.programmes], ['Support received', c.support], ['Street situation', STREET_CATS[c.streetCat] || ''], ['Relatives on the street', c.relStreet ? c.relStreet + (c.relStreetWho ? ' · ' + c.relStreetWho : '') : ''], ['Back on the street', c.backStreet ? backLabel(c.backStreet) + (c.backStreetDate ? ' · found again on ' + fmtDate(c.backStreetDate) : '') : ''], ['Where now', [c.whereNow && c.whereNow !== 'InCity' ? c.whereNow : '', c.streetPlace].filter(Boolean).join(', ')], ['Taken to another place on', fmtDate(c.transferDate)], ['Connected (A to B) on', fmtDate(c.connectionDate)], ['Reintegrated on', fmtDate(c.reintegrationDate)], ['File closed', c.closeDate ? fmtDate(c.closeDate) + ' · ' + (c.closeReason || '') : '']])}
         <p class="sec" style="margin-top:14px">Family</p>${dl([['Compound', c.compound], ['Family address', c.familyAddress], ['Contact', c.contact], ['Guardian', [c.guardianName, c.guardianRelation].filter(Boolean).join(', ')], ['Father', c.father], ['Mother', c.mother], ['Other relatives', c.otherRelatives], ['Family background', c.familyBackground], ['Languages', c.languages]])}
         <p class="sec" style="margin-top:14px">School</p>${dl([['School type', c.schoolType ? c.schoolType + (c.schoolTypeToCheck ? ' (from the Nkwazi file: GRZ or private to confirm)' : '') : ''], ['School', c.schoolName], ['Grade', c.grade], ['Class (stream)', c.stream], ['Skill', c.skill], ['Education at entry', c.educationAtEntry]])}
-        <p class="sec" style="margin-top:14px">Health and notes</p>${dl([['Medical', c.medical], ['Disabilities', c.disabilities], ['Objectives', c.objectives], ['Notes', c.notes]])}
+        <p class="sec" style="margin-top:14px">Health and notes</p>${seesHealth(c) ? dl([['Medical', c.medical], ['Disabilities', c.disabilities], ['Objectives', c.objectives], ['Notes', c.notes]]) : dl([['Objectives', c.objectives]]) + (c.medical || c.disabilities || c.notes ? `<p style="margin:6px 0 0">${hiddenChip()}</p>` : '')}
         ${c.importedFrom ? `<p class="sub" style="margin:12px 0 0">Imported from the ${esc(c.importedFrom)}.</p>` : ''}
       </section>
     </div>
@@ -1904,7 +1905,7 @@ function vCounseling(r) {
         ${field('Follow-up action', 'action', '', 'text', { wide: true })}
       </div><p class="sub" style="margin:0">All staff can read these notes.</p>
       <button class="btn pri">Save session</button></form>
-    <section class="card"><h2>Sessions this month</h2>${ss.length ? ss.map(s => { const c = s.children && s.children[0] ? child(s.children[0]) : null; return `<div class="it"><div class="w"><b>${esc(fmtDate(s.date))} · ${esc(s.type)} · ${esc(s.centre)}</b><span>${c ? esc(fullName(c)) + ((s.children || []).length > 1 ? ' and ' + ((s.children || []).length - 1) + ' more' : '') : (s.others ? esc(s.others) + ' participants' : '')}${s.topic ? ' · ' + esc(s.topic) : ''} · ${esc(staffName(s.by))}</span></div>${cancelBtn('session', s)}</div>`; }).join('') : '<p class="empty">No sessions recorded this month.</p>'}</section>
+    <section class="card"><h2>Sessions this month</h2>${ss.length ? ss.map(s => { const c = s.children && s.children[0] ? child(s.children[0]) : null; return `<div class="it"><div class="w"><b>${esc(fmtDate(s.date))} · ${esc(s.type)} · ${esc(s.centre)}</b><span>${c ? esc(fullName(c)) + ((s.children || []).length > 1 ? ' and ' + ((s.children || []).length - 1) + ' more' : '') : (s.others ? esc(s.others) + ' participants' : '')}${s.topic ? ' · ' + (seesProtection(c, s) ? esc(s.topic) : HIDDEN_TXT) : ''} · ${esc(staffName(s.by))}</span></div>${cancelBtn('session', s)}</div>`; }).join('') : '<p class="empty">No sessions recorded this month.</p>'}</section>
   </div>`;
 }
 
@@ -2007,6 +2008,8 @@ function vHelp() {
   return `<div class="top"><div><h1>How it works</h1><p class="lead">CYP EDU ${VERSION}</p></div></div>
   ${centreGuide(true)}
   ${secExplain()}
+  <section class="card"><h2>Who sees what</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6"><li><b>Health, disabilities and notes of a child:</b> the staff of the child's centre, the person who follows the child, the counsellors, the Education admins.</li><li><b>Child protection concerns and what is said in counselling:</b> the person who wrote it, the person who follows the child, the head of the child's centre, the counsellors, the Education admins.</li><li>Everyone else sees "${HIDDEN_TXT}".</li><li>An Education admin can tick "Confidential" in Admin for a person who needs to see more.</li></ul></section>
+  <section class="card"><h2>Where the records are kept</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6"><li>On this phone or computer, so the app works without internet.</li><li>In the shared database, in the Google account of the project, so every phone shows the same records.</li><li>When the lock is on (More, Shared database), the records are locked on the phone before they are sent. Google keeps them and cannot read them. Only a phone opened with the staff link can read them.</li><li>Do not forward the staff link. If a phone is lost, tell the Education office the same day.</li></ul></section>
   <div class="grid g2" style="align-items:start">
     <section class="card"><h2>Every day</h2><ol style="margin:10px 0 0;padding-left:18px;line-height:1.6">${li([
       'Open the app and tap your name. Staff names ask for the staff PIN.',
@@ -2178,7 +2181,7 @@ const FORMS = {
     let c = isNew ? { id: nextChildId(), status: 'Active', createdAt: today(), createdBy: USER.id } : child(o.id);
     const oldSection = c.section, oldRes = c.residence, ageBefore = isNew ? '' : curAge(c), hadDob = !isNew && !!c.dob;
     const keys = ['name', 'surname', 'nickname', 'sex', 'dob', 'languages', 'section', 'residence', 'entryDate', 'entryYear', 'referredBy', 'responsible', 'stream', 'programmes', 'support', 'compound', 'familyAddress', 'contact', 'guardianName', 'guardianRelation', 'father', 'mother', 'otherRelatives', 'familyBackground', 'schoolType', 'schoolName', 'grade', 'skill', 'educationAtEntry', 'medical', 'disabilities', 'objectives', 'notes', 'streetCat', 'streetPlace', 'connectionDate', 'relStreet', 'relStreetWho', 'backStreet', 'backStreetDate'];
-    for (const k of keys) c[k] = Array.isArray(o[k]) ? o[k] : String(o[k] == null ? '' : o[k]).trim();
+    for (const k of keys) { if (['medical', 'disabilities', 'notes'].includes(k) && !(k in o)) continue; c[k] = Array.isArray(o[k]) ? o[k] : String(o[k] == null ? '' : o[k]).trim(); }
     if (!o.dob && o.age !== '') { if (hadDob || ageBefore === '' || Number(o.age) !== ageBefore || !c.ageAsOf) { c.age = Number(o.age); c.ageAsOf = today(); } } else if (o.dob) { c.age = ''; }
     c.grade = gradeNorm(c.grade); if (c.schoolType) { c.schoolTypeToCheck = false; c.alsoAt = ''; }
     if (!isNew && oldSection && oldSection !== c.section) { addMove(c.id, 'section', today(), { from: oldSection, to: c.section }); c.sectionToCheck = false; }
@@ -2384,8 +2387,10 @@ document.addEventListener('change', e => {
   }
   if (el.id === 'restorefile' && el.files[0]) {
     const rd = new FileReader();
-    rd.onload = () => {
-      try { const d = JSON.parse(rd.result); if (!d || !Array.isArray(d.children)) throw new Error('not a backup of this app'); if (!confirm('Replace all data on this ' + (isPhone() ? 'phone' : 'computer') + ' with this backup (' + d.children.length + ' children)?')) return; noStamp(); S = Object.assign(blankState(), d); mergeStaff(); save(); USER = S.staff.find(s => s.id === (USER && USER.id)) || null; toast('Backup restored'); render(); }
+    rd.onload = async () => {
+      try { let d = JSON.parse(rd.result);
+        if (d && d.locked && d.box) { try { d = JSON.parse(await lockOpen(d.box, (syncCfg() || {}).enc)); } catch (e) { throw new Error('this copy is locked. It opens only on a device connected to the shared database with the same staff link'); } }
+        if (!d || !Array.isArray(d.children)) throw new Error('not a backup of this app'); if (!confirm('Replace all data on this ' + (isPhone() ? 'phone' : 'computer') + ' with this backup (' + d.children.length + ' children)?')) return; noStamp(); S = Object.assign(blankState(), d); mergeStaff(); save(); USER = S.staff.find(s => s.id === (USER && USER.id)) || null; toast('Backup restored'); render(); }
       catch (err) { toast('Could not restore: ' + err.message); }
     };
     rd.readAsText(el.files[0]);
@@ -3197,8 +3202,8 @@ function mergeStaff() {
 function flagChecks(s, self) { return STAFF_FLAGS.map(([k]) => `<td style="text-align:center"><input type="checkbox" data-staff="flag" data-flag="${k}" data-id="${esc(s.id)}" aria-label="${esc(FLAG_LABEL[k])}"${staffAreas(s).includes(k) ? ' checked' : ''}${self && k === 'Admin' ? ' disabled title="You cannot remove your own access"' : ''}></td>`).join(''); }
 function staffTable() {
   const list = S.staff.slice().sort((a, b) => (b.active - a.active) || a.name.localeCompare(b.name));
-  return `<div class="tw"><table class="stafft"><thead><tr><th>Name and role</th>${STAFF_FLAGS.map(([k, l]) => `<th style="text-align:center;white-space:normal;max-width:84px">${esc(l)}</th>`).join('')}<th class="n">Children followed</th><th>Status</th></tr></thead><tbody>
-  ${list.map(s => `<tr style="${s.active ? '' : 'opacity:.55'}"><td><b>${esc(s.name)}</b><input class="in" style="min-height:30px;padding:3px 8px;margin-top:4px;font-size:13px" data-staff="role" data-id="${esc(s.id)}" value="${esc(s.role || '')}" placeholder="Role" aria-label="Role of ${esc(s.name)}"></td>${flagChecks(s, s.id === USER.id)}<td class="n"><a href="#/children?who=${esc(s.id)}">${S.children.filter(c => c.responsible === s.id && c.status !== 'Closed').length}</a></td><td><button class="btn sm" data-act="staffactive" data-id="${esc(s.id)}"${s.id === USER.id ? ' disabled' : ''}>${s.active ? 'Active · set as left' : 'Left · set as active'}</button></td></tr>`).join('')}
+  return `<div class="tw"><table class="stafft"><thead><tr><th>Name and role</th>${STAFF_FLAGS.map(([k, l]) => `<th style="text-align:center;white-space:normal;max-width:84px">${esc(l)}</th>`).join('')}<th style="text-align:center;white-space:normal;max-width:96px">Confidential (all centres)</th><th class="n">Children followed</th><th>Status</th></tr></thead><tbody>
+  ${list.map(s => `<tr style="${s.active ? '' : 'opacity:.55'}"><td><b>${esc(s.name)}</b><input class="in" style="min-height:30px;padding:3px 8px;margin-top:4px;font-size:13px" data-staff="role" data-id="${esc(s.id)}" value="${esc(s.role || '')}" placeholder="Role" aria-label="Role of ${esc(s.name)}"></td>${flagChecks(s, s.id === USER.id)}<td style="text-align:center"><input type="checkbox" data-staff="conf" data-id="${esc(s.id)}" aria-label="Sees confidential information of all centres"${staffAreas(s).includes('Admin') || staffAreas(s).includes('Counseling') ? ' checked disabled title="Education admins and counsellors always see it"' : s.conf ? ' checked' : ''}></td><td class="n"><a href="#/children?who=${esc(s.id)}">${S.children.filter(c => c.responsible === s.id && c.status !== 'Closed').length}</a></td><td><button class="btn sm" data-act="staffactive" data-id="${esc(s.id)}"${s.id === USER.id ? ' disabled' : ''}>${s.active ? 'Active · set as left' : 'Left · set as active'}</button></td></tr>`).join('')}
   </tbody></table></div>`;
 }
 function loginTiles() {
@@ -3212,6 +3217,7 @@ document.addEventListener('change', e => {
   const s = S.staff.find(x => x.id === el.dataset.id); if (!s) return;
   if (el.dataset.staff === 'flag') { const a = new Set(staffAreas(s)); if (el.checked) a.add(el.dataset.flag); else a.delete(el.dataset.flag); s.areas = STAFF_FLAGS.map(x => x[0]).filter(k => a.has(k)); s.admin = s.areas.includes('Admin'); s.section = mainFlag(s) || 'Other'; save(); }
   else if (el.dataset.staff === 'role') { s.role = el.value.trim(); save(); }
+  else if (el.dataset.staff === 'conf') { s.conf = !!el.checked; save(); }
 });
 
 /* ====================================================================
@@ -3263,7 +3269,7 @@ function abaSheet(year) {
     nh += hv.length; ns += sv.length; if (!vs.length) never++;
     const last = l => l.length ? l[l.length - 1].findings || '' : '';
     return [c.id, c.name, c.surname, c.sex, curAge(c), centreOf(c), (SECTIONS[c.section] || {}).label || '', c.residence === 'Resident' ? 'Residente' : c.residence === 'In transit' ? 'In transito' : c.residence === 'Non-resident' ? 'Non residente' : '', IT[c.status] || c.status, c.familyAddress || c.compound || '', c.guardianName || '', c.guardianRelation || '', c.contact || '', c.schoolType || '', c.schoolName || '', c.grade || '',
-      hv.length, hv.map(v => fmtDate(v.date)).join('; '), last(hv), sv.length, sv.map(v => fmtDate(v.date)).join('; '), last(sv), vs.filter(v => v.action && !v.actionDone).map(v => v.action).join('; '), c.notes || ''];
+      hv.length, hv.map(v => fmtDate(v.date)).join('; '), last(hv), sv.length, sv.map(v => fmtDate(v.date)).join('; '), last(sv), vs.filter(v => v.action && !v.actionDone).map(v => v.action).join('; '), seesHealth(c) ? c.notes || '' : (c.notes ? HIDDEN_TXT : '')];
   });
   const by = f => kids.filter(f).length;
   const sum = [['Scheda ABA (adozioni a distanza), anno ' + year], ['Preparata il', fmtDate(today())], [''], ['Bambini e ragazzi ABA', kids.length], ['Maschi', by(c => c.sex !== 'F')], ['Femmine', by(c => c.sex === 'F')], ['Minsundu', by(c => centreOf(c) === 'Minsundu')], ['Nkwazi', by(c => centreOf(c) === 'Nkwazi')], ['Luigi', by(c => centreOf(c) === 'Luigi')], ['Visite a casa nell\'anno', nh], ['Visite a scuola nell\'anno', ns], ['Senza nessuna visita registrata nell\'anno', never]];
@@ -4381,7 +4387,8 @@ function eventLine(e) {
   if (e.type === 'Record cancelled' || e.type === 'Visit cancelled') return `<b>Cancelled</b> <span class="sub">by ${esc(staffName(e.by))}</span>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}`;
   if (e.type === 'Referral') { const cl = referClosed(e.id); return `<b>Referred to ${esc(referLabel(e.to))}</b>${e.from ? ' by ' + esc(referLabel(e.from)) : ''}: ${esc(e.reason || '')} ${cl ? '<span class="chip c-green">Done</span>' : '<span class="chip c-orange">Open</span>'} <span class="sub">${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`; }
   if (e.type === 'Referral closed') return `<b>Referral closed</b> <span class="sub">${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`;
-  return `<b>${esc(e.type)}</b> <span class="sub">recorded by ${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`;
+  const kid = child(e.childId), open = CONF_EVENTS.includes(e.type) ? seesProtection(kid, e) : HEALTH_EVENTS.includes(e.type) ? (seesHealth(kid) || e.by === USER.id) : true;
+  return `<b>${esc(e.type)}</b> <span class="sub">recorded by ${esc(staffName(e.by))}</span>${e.note ? `<div>${open ? esc(e.note) : hiddenChip()}</div>` : ''}`;
 }
 function referItem(e) {
   const c = child(e.childId);
@@ -4621,7 +4628,7 @@ function monthFacts(c, m) {
   if (T) out.push(['Last term result', T.y + ' Term ' + T.t + (T.perf ? ', ' + T.perf.toLowerCase() : '') + (T.pos ? ', position ' + T.pos : '')]);
   const hv = visitsOf(c.id).filter(v => v.purpose !== 'School visit' && inRange(v.date, a, b)); if (hv.length) out.push(['Home visits this month', hv.map(v => fmtDate(v.date)).join(', ')]);
   const ses = S.sessions.filter(s => inRange(s.date, a, b) && (s.children || []).map(String).includes(key)); if (ses.length) out.push(['Counselling this month', ses.length + (ses.length === 1 ? ' session' : ' sessions')]);
-  const ev = S.events.filter(e => String(e.childId) === key && inRange(e.date, a, b) && !/^Referral|^Visit /.test(e.type)); if (ev.length) out.push(['Happened this month', ev.map(e => e.type + (e.note ? ': ' + e.note : '')).join('; ')]);
+  const ev = S.events.filter(e => String(e.childId) === key && inRange(e.date, a, b) && !/^Referral|^Visit /.test(e.type)); if (ev.length) out.push(['Happened this month', ev.map(e => e.type + (e.note && !CONF_EVENTS.includes(e.type) && (!HEALTH_EVENTS.includes(e.type) || seesHealth(c)) ? ': ' + e.note : '')).join('; ')]);
   const rf = referOpen().filter(e => String(e.childId) === key); if (rf.length) out.push(['Referred, still open', rf.map(e => referLabel(e.to) + ': ' + e.reason).join('; ')]);
   return out;
 }
@@ -4632,7 +4639,7 @@ function vMonthly1(c) {
   <section class="card"><h2>From the app</h2><dl class="dl">${[['Age', curAge(c) !== '' ? curAge(c) + ' years' : '']].concat(monthFacts(c, m)).filter(x => x[1]).map(x => `<dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join('')}</dl></section>
   <form class="card" data-form="monthly" style="max-width:820px"><input type="hidden" name="id" value="${esc(c.id)}"><input type="hidden" name="m" value="${m}">
     <div class="fs two">${field('Parental status', 'parental', '', 'select', { options: opt(PARENTAL, c.parentalStatus || '', 'Choose') })}${field('School performance', 'perf', old.perf != null ? old.perf : schoolGuess(c), 'text')}
-      ${field('General behaviour', 'behaviour', old.behaviour || '', 'textarea', { wide: true, rows: 2 })}${field('Health status', 'health', old.health || '', 'text', { wide: true })}
+      ${field('General behaviour', 'behaviour', old.behaviour || '', 'textarea', { wide: true, rows: 2 })}${seesHealth(c) ? field('Health status', 'health', old.health || '', 'text', { wide: true }) : `<p class="f wide" style="margin:0">${hiddenChip()} <span class="sub">Health status.</span></p>`}
       ${field('Strengths', 'strengths', old.strengths || '', 'textarea', { wide: true, rows: 2 })}${field('Weakness', 'weak', old.weak || '', 'textarea', { wide: true, rows: 2 })}
       ${field('Areas which need to be worked on', 'areas', old.areas || '', 'textarea', { wide: true, rows: 2 })}${field('Action plan / period', 'plan', old.plan || '', 'textarea', { wide: true, rows: 2 })}
       ${field('Note', 'note', old.note || '', 'text', { wide: true })}${field('Key worker', 'by', '', 'select', { options: opt(activeStaff().map(s => ({ v: s.id, l: s.name })), old.by || USER.id) })}${field('Date', 'on', old.on || today(), 'date', { req: true })}</div>
@@ -4654,12 +4661,12 @@ function vMonthly(r) {
   <section class="card" style="padding:6px 8px">${kids.length ? kids.map(c => { const x = monthlyOf(c, m); return `<div class="it">${avatar(c, 34)}<div class="w"><b>${childLink(c)}</b><span>${esc(c.section)} · ${esc(c.residence || '')}${x ? ' · ' + esc(staffName(x.by)) + ' · ' + esc(fmtDate(x.on)) : ''}</span></div>${x ? (x.checkedBy ? '<span class="chip c-green">Checked</span>' : '<span class="chip">Written</span>') : '<span class="chip c-orange">To write</span>'}<a class="btn sm${x ? '' : ' pri'}" href="#/child/${esc(c.id)}/month?m=${m}">${x ? 'Open' : 'Write'}</a></div>`; }).join('') : '<p class="empty">No child here.</p>'}</section>`;
 }
 const MONTHLY_COLS = [{ label: 'ID', get: x => x.c.id }, { label: 'Name', get: x => fullName(x.c) }, { label: 'UCC or Youth', get: x => x.c.section }, { label: 'Resident or not', get: x => x.c.residence || '' }, { label: 'Age', get: x => curAge(x.c) }, { label: 'Parental status', get: x => x.c.parentalStatus || '' }, { label: 'Grade', get: x => x.c.grade || '' }, { label: 'School', get: x => schoolOf(x.c) },
-  { label: 'School performance', get: x => x.r.perf || '' }, { label: 'General behaviour', get: x => x.r.behaviour || '' }, { label: 'Health status', get: x => x.r.health || '' }, { label: 'Strengths', get: x => x.r.strengths || '' }, { label: 'Weakness', get: x => x.r.weak || '' }, { label: 'Areas to work on', get: x => x.r.areas || '' }, { label: 'Action plan / period', get: x => x.r.plan || '' }, { label: 'Note', get: x => x.r.note || '' },
+  { label: 'School performance', get: x => x.r.perf || '' }, { label: 'General behaviour', get: x => x.r.behaviour || '' }, { label: 'Health status', get: x => seesHealth(x.c) ? x.r.health || '' : (x.r.health ? HIDDEN_TXT : '') }, { label: 'Strengths', get: x => x.r.strengths || '' }, { label: 'Weakness', get: x => x.r.weak || '' }, { label: 'Areas to work on', get: x => x.r.areas || '' }, { label: 'Action plan / period', get: x => x.r.plan || '' }, { label: 'Note', get: x => x.r.note || '' },
   { label: 'Key worker', get: x => x.r.by ? staffName(x.r.by) : '' }, { label: 'Date', get: x => x.r.on || '' }, { label: 'Checked by', get: x => x.r.checkedBy ? staffName(x.r.checkedBy) : '' }];
 FORMS.monthly = function (o) {
   const c = child(o.id); if (!c || !/^\d{4}-\d{2}$/.test(o.m || '')) return;
   const old = monthlyOf(c, o.m) || {}, t = k => String(o[k] || '').trim();
-  const r = { m: o.m, perf: t('perf'), behaviour: t('behaviour'), health: t('health'), strengths: t('strengths'), weak: t('weak'), areas: t('areas'), plan: t('plan'), note: t('note'), by: o.by || USER.id, on: o.on || today(), ts: Date.now() };
+  const r = { m: o.m, perf: t('perf'), behaviour: t('behaviour'), health: 'health' in o ? t('health') : (old.health || ''), strengths: t('strengths'), weak: t('weak'), areas: t('areas'), plan: t('plan'), note: t('note'), by: o.by || USER.id, on: o.on || today(), ts: Date.now() };
   if (old.checkedBy && ['perf', 'behaviour', 'health', 'strengths', 'weak', 'areas', 'plan'].every(k => (old[k] || '') === r[k])) { r.checkedBy = old.checkedBy; r.checkedOn = old.checkedOn; }
   c.monthly = (c.monthly || []).filter(x => x.m !== o.m).concat(r); if (o.parental) c.parentalStatus = o.parental; c.updatedAt = today(); save(); toast('Report saved'); go('#/child/' + c.id);
 };
@@ -4930,6 +4937,23 @@ function askBox(o) {
 }
 
 /* ====================================================================
+   Need to know (alpha 5.19): health, confidential notes, child protection.
+   This hides what is on the screen and in the Excel files. The records are still
+   on every device of the staff: it is a rule of the interface, not a lock.
+   ==================================================================== */
+const CONF_EVENTS = ['Child protection concern'], HEALTH_EVENTS = ['Sick, medical attention'];
+function isHead(u) { return /supervisor|head/i.test((u && u.role) || ''); }
+function inMyCentre(c) { return !!USER && !!c && staffAreas(USER).includes(centreOf(c)); }
+/* sees everything: Education admins, the counsellors, the people ticked "Confidential" in Admin */
+function seesAll() { return !!USER && !GUEST && (!!USER.admin || !!USER.conf || hasFlag('Counseling')); }
+/* health and notes: also the staff of the child's centre and the person who follows the child */
+function seesHealth(c) { return seesAll() || (!!USER && !GUEST && (!c || !c.id || c.responsible === USER.id || inMyCentre(c))); }
+/* child protection and counselling: also who wrote the record, who follows the child, the head of the child's centre */
+function seesProtection(c, rec) { return seesAll() || (!!USER && !GUEST && ((rec && (rec.by === USER.id || rec.recordedBy === USER.id)) || (!!c && (c.responsible === USER.id || (isHead(USER) && inMyCentre(c)))))); }
+const HIDDEN_TXT = 'Hidden: only for the staff who need it';
+function hiddenChip() { return `<span class="chip c-hid">${HIDDEN_TXT}</span>`; }
+
+/* ====================================================================
    PIN for the staff
    ==================================================================== */
 function pinValue() { return String((S.settings && S.settings.pin) || ''); }
@@ -5132,13 +5156,65 @@ function syncCfg() {
   try { const c = JSON.parse(lsGet('cyp-sync') || 'null'); return c && c.url ? c : null; } catch (e) { return null; }
 }
 function syncOn() { return !!syncCfg() && !!(S.meta.sync && S.meta.sync.shared); }
-function parseLink(text) { const t = String(text || '').trim(), h = t.indexOf('#c='); if (h >= 0) { try { const o = JSON.parse(unb64u(t.slice(h + 3))); return o.u && o.k ? { url: o.u, key: o.k } : null; } catch (e) { return null; } } const i = t.indexOf('?'); if (!/^https?:\/\//.test(t) || i < 0) return null; const k = new URLSearchParams(t.slice(i + 1)).get('k'); return k ? { url: t.slice(0, i), key: k } : null; }
+function parseLink(text) { const t = String(text || '').trim(), h = t.indexOf('#c='); if (h >= 0) { try { const o = JSON.parse(unb64u(t.slice(h + 3))); return o.u && o.k ? Object.assign({ url: o.u, key: o.k }, o.e ? { enc: o.e } : {}) : null; } catch (e) { return null; } } const i = t.indexOf('?'); if (!/^https?:\/\//.test(t) || i < 0) return null; const k = new URLSearchParams(t.slice(i + 1)).get('k'); return k ? { url: t.slice(0, i), key: k } : null; }
+/* ---------- the lock: the records are locked on the device before they leave it ----------
+   The key of the lock travels only inside the staff link, after the # (a browser never sends that part to a server).
+   Google keeps what it receives and cannot read it. In clear stay only what the database needs to give the IDs:
+   the ID and the random code of each child, the times, the sizes. Names of staff and of files are not sent. */
+const LOCK_FORMAT = 'cyp-edu-locked', LOCK_FILE = 'locked';
+const LOCK_MSG = { locked: 'This device does not have the key of the shared database. Open the new staff link on this device.', lockkey: 'The key on this device does not open the shared database. Open the new staff link on this device.', nolock: 'This browser cannot lock the records. Open the app in Chrome.' };
+function lockOn(cfg) { cfg = cfg || syncCfg(); return !!(cfg && cfg.enc); }
+function lockCan() { return typeof crypto !== 'undefined' && !!crypto.subtle && typeof TextEncoder !== 'undefined'; }
+function bytesB64(u8) { let t = ''; for (let i = 0; i < u8.length; i += 0x8000) t += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(t); }
+function b64Bytes(b) { const t = atob(b), u = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) u[i] = t.charCodeAt(i); return u; }
+function lockNewKey() { return bytesB64(crypto.getRandomValues(new Uint8Array(32))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+const _LOCKKEYS = {};
+async function lockKey(enc) { if (!_LOCKKEYS[enc]) { let t = String(enc).replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; _LOCKKEYS[enc] = await crypto.subtle.importKey('raw', b64Bytes(t), 'AES-GCM', false, ['encrypt', 'decrypt']); } return _LOCKKEYS[enc]; }
+async function lockSeal(text, enc) {
+  const iv = crypto.getRandomValues(new Uint8Array(12)), ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await lockKey(enc), new TextEncoder().encode(text)));
+  const out = new Uint8Array(13 + ct.length); out[0] = 1; out.set(iv, 1); out.set(ct, 13); return bytesB64(out);
+}
+async function lockOpen(b64, enc) {
+  if (!enc) throw new Error('locked'); if (!lockCan()) throw new Error('nolock');
+  let u; try { u = b64Bytes(b64); } catch (e) { throw new Error('lockkey'); }
+  if (u[0] !== 1 || u.length < 30) throw new Error('lockkey');
+  try { return new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.subarray(1, 13) }, await lockKey(enc), u.subarray(13))); } catch (e) { throw new Error('lockkey'); }
+}
+const lockStubs = list => (list || []).map(c => ({ id: c.id, uid: c.uid || '' }));
+/* what leaves the device */
+async function lockOut(body, cfg) {
+  if (!lockOn(cfg)) return body;
+  if (!lockCan()) throw new Error('nolock');
+  const b = Object.assign({}, body), e = cfg.enc;
+  if (b.changes) b.changes = { format: LOCK_FORMAT, children: lockStubs(b.changes.children), newKids: b.changes.newKids || [], box: await lockSeal(JSON.stringify(b.changes), e) };
+  if (typeof b.state === 'string') b.state = JSON.stringify({ locked: 1, children: lockStubs(JSON.parse(b.state).children), box: await lockSeal(b.state, e) });
+  if (b.action === 'file_put') { b.data = await lockSeal(JSON.stringify({ name: b.name, mime: b.mime, data: b.data }), e); b.name = LOCK_FILE; b.mime = 'application/octet-stream'; b.childId = ''; b.kind = ''; }
+  if ('user' in b) b.user = '';
+  return b;
+}
+/* what arrives on the device */
+async function lockIn(body, r, cfg) {
+  if (!r || !r.ok) return r;
+  const e = cfg.enc || cfg.encNext; /* the key kept aside: the database took it but the answer did not arrive */
+  const got = () => { if (!cfg.enc && cfg.encNext && !window.CYP_SYNC) { const c = syncCfg(); if (c && c.encNext === e) { c.enc = e; delete c.encNext; lsSet('cyp-sync', JSON.stringify(c)); } } };
+  if (Array.isArray(r.items)) { const keep = [];
+    for (const it of r.items) { const ch = it.changes;
+      if (ch && ch.format === LOCK_FORMAT) { const o = JSON.parse(await lockOpen(ch.box, e)); if (ch.idAssign) o.idAssign = ch.idAssign; it.changes = o; keep.push(it); got(); }
+      else if (e) console.warn('change not locked: left out', it.seq); /* a device with an old version of the app: its changes are not taken */
+      else keep.push(it); }
+    r.items = keep; }
+  if (typeof r.state === 'string' && r.state.slice(0, 12) === '{"locked":1,') { r.state = await lockOpen(JSON.parse(r.state).box, e); r.wasLocked = true; got(); }
+  if (body.action === 'file_get' && r.name === LOCK_FILE) { const o = JSON.parse(await lockOpen(r.data, e)); r.name = o.name; r.mime = o.mime; r.data = o.data; }
+  return r;
+}
+function lockErr(e) { const m = String(e && e.message || e); return LOCK_MSG[m] ? m : ''; }
 async function syncPost(body, cfg) {
   cfg = cfg || syncCfg(); if (!cfg) throw new Error('not connected');
+  const plain = body; body = await lockOut(body, cfg);
   const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 45000);
   try { const r = await fetch(cfg.url, { method: 'POST', body: JSON.stringify(Object.assign({ key: cfg.key }, body)), signal: ctl.signal, redirect: 'follow' }); const j = await r.json();
     if (j && typeof j.now === 'number') { const was = clockBad(); SY.skew = j.now - Date.now(); if (clockBad() !== was) setTimeout(render, 0); }
-    return j; }
+    return await lockIn(plain, j, cfg); }
   finally { clearTimeout(to); }
 }
 function pendingCount() { if (!S.meta.sync) return 0; const f = buildChanges(); return f.empty ? 0 : Object.values(f.count).reduce((a, b) => a + b, 0); }
@@ -5146,10 +5222,14 @@ function sharedState() { const m = S.meta.sync; S.meta.sync = undefined; let s; 
 function freshMeta(seq, gen) { const m = { shared: 1, gen: gen || '', cursor: seq, base: {}, att: {}, sheets: {}, photos: {}, kids: {}, newKids: {}, rmPlans: {}, done: {}, loadedAt: Date.now(), sentAt: Date.now(), dirtyAt: 0, adminDirty: 0 }; for (const k of SYNC_KEYS) m.base[k] = (S[k] || []).map(x => x.id); return m; }
 function rawSave() { const n = _NOSTAMP; _NOSTAMP = true; try { save(); } finally { _NOSTAMP = n; } }
 /* first device: its records become the shared database */
-async function syncStart(restart) {
+async function syncStart(restart, newKey) {
   if (!S.settings.pin) S.settings.pin = pinValue();
-  const r = await syncPost({ action: restart ? 'restart' : 'snapshot_put', seq: 0, state: sharedState() });
+  let cfg = syncCfg();
+  /* a new key is kept aside until the database confirms: the same key is used again if the step is repeated */
+  if (newKey && !window.CYP_SYNC) { if (!lockCan()) throw new Error('nolock'); if (!cfg.encNext) { cfg.encNext = lockNewKey(); lsSet('cyp-sync', JSON.stringify(cfg)); } cfg = Object.assign({}, cfg, { enc: cfg.encNext }); }
+  const r = await syncPost({ action: restart ? 'restart' : 'snapshot_put', seq: 0, state: sharedState() }, cfg);
   if (!r.ok) throw new Error(r.error || 'not saved');
+  if (newKey && !window.CYP_SYNC) { const c = syncCfg(); c.enc = c.encNext; delete c.encNext; lsSet('cyp-sync', JSON.stringify(c)); }
   S.meta.sync = freshMeta(r.seq || 0, r.gen); snapChildren(); rawSave();
 }
 /* any other device: it takes the shared database */
@@ -5157,6 +5237,7 @@ async function syncLoad() {
   const r = await syncPost({ action: 'snapshot_get' });
   if (!r.ok) throw new Error(r.error === 'empty' ? 'the shared database is still empty' : (r.error || 'not loaded'));
   const d = JSON.parse(r.state), uidNow = USER && USER.id;
+  if (!r.wasLocked && lockOn() && !window.CYP_SYNC) { const c = syncCfg(); delete c.enc; lsSet('cyp-sync', JSON.stringify(c)); }
   _NOSTAMP = true;
   try { S = Object.assign(blankState(), d); mergeStaff(); S.meta.sync = freshMeta(r.seq || 0, r.gen); snapChildren(); save(); } finally { _NOSTAMP = false; }
   if (uidNow && !GUEST) USER = S.staff.find(s => s.id === uidNow && s.active) || null;
@@ -5168,6 +5249,8 @@ async function syncNow() {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) { SY.state = 'off'; syncBadge(); return; }
   SY.busy = true; SY.state = SY.state === 'off' ? 'off' : 'wait'; syncBadge();
   try {
+    SY.lock = '';
+    if (S.locked || S.box) { await syncLoad(); render(); } /* an old version of the app took a locked database as it was: take it again, opened */
     let more = true, guard = 0, got = 0;
     while (more && guard++ < 50) {
       const m = syncMeta(), mark = Date.now(), f = buildChanges(), send = f.empty ? null : f;
@@ -5191,7 +5274,7 @@ async function syncNow() {
     SY.state = 'ok'; SY.err = ''; SY.fail = 0; SY.last = Date.now();
     if (got) softRender(); else syncBadge();
     if (!USER && !GUEST) render();
-  } catch (e) { SY.fail++; SY.state = 'off'; SY.err = String(e && e.message || e); syncBadge(); }
+  } catch (e) { const lk = lockErr(e); if (lk) { SY.state = 'err'; SY.lock = lk; SY.err = LOCK_MSG[lk]; if (route().path === 'sync') render(); else syncBadge(); } else { SY.fail++; SY.state = 'off'; SY.err = String(e && e.message || e); syncBadge(); } }
   finally { SY.busy = false; if (syncOn() && pendingCount() && SY.state === 'ok') schedulePush(); }
 }
 function schedulePush() { if (!syncOn() || GUEST) return; clearTimeout(SY.pushT); const wait = Math.max(2500, 8000 - (Date.now() - SY.lastPush)); SY.pushT = setTimeout(syncNow, SY.state === 'off' ? Math.max(wait, 15000) : wait); if (SY.state === 'ok') { SY.state = 'wait'; syncBadge(); } }
@@ -5229,16 +5312,21 @@ function vSync() {
       <div class="row"><span>Waiting to be sent</span><b>${txt || 'nothing'}</b></div>
       <div class="row"><span>Last exchange with the shared database</span><b>${esc(when(m.lastSync))}</b></div>
       <div class="row"><span>Children in the records</span><b>${S.children.length}</b></div>
+      <div class="row"><span>Records locked before they are sent</span><b>${lockOn() ? 'yes' : 'no'}</b></div>
       ${offlineLine()}
       <button class="btn pri" style="margin-top:12px;width:100%" data-sact="now">Send and receive now</button></section>
     ${staffLinkCard()}${installCard()}
-    ${SY.state === 'err' ? `<section class="card" style="border:2px solid var(--red)"><h2>The shared database was replaced</h2><p class="sub" style="margin:4px 0 10px">${txt ? 'Not sent from this ' + dev + ': ' + esc(txt) + '. They are lost if you continue. ' : ''}This ${dev} has to take the new shared database.</p><button class="btn pri" data-sact="load">Use the shared database</button></section>` : ''}
+    ${SY.state === 'err' && SY.lock ? `<section class="card" style="border:2px solid var(--red)"><h2>${SY.lock === 'nolock' ? 'This browser cannot lock the records' : 'This ' + dev + ' needs the new staff link'}</h2><p class="sub" style="margin:4px 0 10px">${SY.lock === 'nolock' ? 'Open the app in Chrome.' : 'The shared database is locked with a key. The key is inside the staff link. Ask the Education office for the new link and open it on this ' + dev + '.'}</p><button class="btn" data-sact="now">Try again</button></section>` : SY.state === 'err' ? `<section class="card" style="border:2px solid var(--red)"><h2>The shared database was replaced</h2><p class="sub" style="margin:4px 0 10px">${txt ? 'Not sent from this ' + dev + ': ' + esc(txt) + '. They are lost if you continue. ' : ''}This ${dev} has to take the new shared database.</p><button class="btn pri" data-sact="load">Use the shared database</button></section>` : ''}
     ${USER.admin ? `<details class="card more"><summary>After an import on this ${dev}: replace the shared database</summary><p class="sub" style="margin:8px 0">Use it only when a starter pack or an import was loaded on this ${dev} after the shared database was started. The records of this ${dev} become the shared database and every other device takes them at its next exchange.</p><button class="btn" data-sact="restart">Replace the shared database with the records of this ${dev}</button></details>` : ''}
+    ${USER.admin && !window.CYP_SYNC && SY.state !== 'err' ? `<details class="card more" id="lockbox"><summary>${lockOn() ? 'Change the key of the lock' : 'Lock the shared database'}</summary>
+      <p class="sub" style="margin:8px 0">${lockOn() ? 'Use it when a phone is lost or a person leaves the project. The old staff link stops opening the records.' : 'With the lock, every phone and computer locks the records before sending them. Google keeps the records and cannot read them. The key of the lock is inside the staff link.'}</p>
+      <ol class="sub" style="margin:0 0 10px;padding-left:20px;line-height:1.6"><li>Do it when every phone shows "Up to date": records not sent yet from the other phones are lost.</li><li>After it, send the new staff link to every person (the card "Invite the staff" on this page).</li><li>Keep a copy of the new staff link in a safe place. Without the link, the copy on Google cannot be opened.</li></ol>
+      <button class="btn" data-sact="lock">${lockOn() ? 'Change the key' : 'Lock the shared database'}</button></details>` : ''}
     ${USER.admin && !window.CYP_SYNC ? `<details class="card more"><summary>Disconnect this ${dev}</summary><p class="sub" style="margin:8px 0">The records stay on this ${dev}, but nothing is sent or received any more.</p><button class="btn danger" data-sact="disconnect">Disconnect</button></details>` : ''}`; }
   if (cfg) { const st = UI.syncPing; if (!st && !UI.syncChecking) { UI.syncChecking = true; setTimeout(() => syncCheck().then(() => { UI.syncChecking = false; }), 0); }
     return `<div class="top"><div><h1>Shared database</h1><p class="lead">The link is saved. One more step for this ${dev}.</p></div></div>${msg}
     <section class="card">${!st ? '<p class="sub">Checking the shared database…</p>' : !st.ok ? `<div class="warn">The shared database does not answer: ${esc(st.error || 'no connection')}.</div><button class="btn" data-sact="check">Try again</button>${USER.admin && !window.CYP_SYNC ? `<form data-form="synclink" style="margin-top:14px"><p class="sub" style="margin:0 0 6px">If the connection of this ${dev} works, the link saved here may be wrong. Paste the right link:</p><label class="f"><span>Link</span><input class="in" name="link" placeholder="https://script.google.com/macros/s/.../exec?k=..." autocomplete="off" required></label><button class="btn pri" style="margin-top:10px">Use this link</button></form>` : ''}` :
-      !st.hasSnapshot ? (USER.admin && S.children.length ? `<h2>Start the shared database</h2><p class="sub" style="margin:4px 0 10px">The shared database is empty. The ${S.children.length} children and all the records of this ${dev} become the shared database. Do this once, on the one computer where the records are today. After that every computer and every phone is equal.</p><button class="btn pri" data-sact="start">Start with the records of this ${dev}</button>` : `<p class="sub">The shared database is still empty. An Education admin starts it once, from the computer where the records are today.</p>`)
+      !st.hasSnapshot ? (USER.admin && S.children.length ? `<h2>Start the shared database</h2><p class="sub" style="margin:4px 0 10px">The shared database is empty. The ${S.children.length} children and all the records of this ${dev} become the shared database. Do this once, on the one computer where the records are today. After that every computer and every phone is equal.${lockCan() && !window.CYP_SYNC ? ' The records are locked before they are sent: Google keeps them and cannot read them.' : ''}</p><button class="btn pri" data-sact="start">Start with the records of this ${dev}</button>` : `<p class="sub">The shared database is still empty. An Education admin starts it once, from the computer where the records are today.</p>`)
       : `<h2>Use the shared database on this ${dev}</h2><p class="sub" style="margin:4px 0 10px">${S.children.length ? `The ${S.children.length} children recorded on this ${dev} are replaced by the shared database. ` : ''}From then on everything is sent and received by itself.</p><button class="btn pri" data-sact="load">Use the shared database</button>`}
       ${USER.admin && !window.CYP_SYNC ? '<p style="margin:12px 0 0"><button class="btn link sub" data-sact="disconnect">Remove the link from this device</button></p>' : ''}</section>`; }
   return `<div class="top"><div><h1>Shared database</h1><p class="lead">Today this ${dev} keeps its own copy of the records and nothing leaves it. With the shared database every phone and computer shows the same records: what one person records appears on the others by itself.</p></div></div>${msg}
@@ -5256,11 +5344,12 @@ document.addEventListener('click', async e => {
   try {
     if (act === 'now') { UI.syncMsg = ''; await syncNow(); if (route().path === 'sync') render(); }
     else if (act === 'check') { UI.syncPing = null; render(); await syncCheck(); }
-    else if (act === 'start') { if (!confirm('Start the shared database with the ' + S.children.length + ' children and all the records of this device?')) return; b.disabled = true; b.textContent = 'Sending the records…'; await syncStart(); UI.syncMsg = 'The shared database is started. The other devices can now use it.'; SY.state = 'ok'; render(); syncNow(); }
+    else if (act === 'start') { if (!confirm('Start the shared database with the ' + S.children.length + ' children and all the records of this device?')) return; b.disabled = true; b.textContent = 'Sending the records…'; await syncStart(false, lockCan() && !lockOn()); UI.syncMsg = 'The shared database is started. The other devices can now use it.' + (lockOn() ? ' Keep a copy of the staff link in a safe place: the key of the lock is inside it.' : ''); SY.state = 'ok'; render(); syncNow(); }
     else if (act === 'restart') { if (!confirm('Are you sure? This replaces the shared database with the ' + S.children.length + ' children and the records of this device. All the data now in the shared database will be lost, for everyone.')) return; if (!confirm('Are you really sure? All previous data will be lost. This cannot be undone.')) return; if (prompt('Last step. Type REPLACE to replace the database of everyone.') !== 'REPLACE') return; b.disabled = true; b.textContent = 'Sending the records…'; await syncStart(true); UI.syncMsg = 'The shared database now holds the records of this device.'; SY.state = 'ok'; render(); }
+    else if (act === 'lock') { const was = lockOn(); if (!confirm((was ? 'Change the key of the lock?' : 'Lock the shared database?') + ' Every person will need the new staff link. Records not sent yet from the other phones are lost.')) return; if (prompt('Last step. Type LOCK to continue.') !== 'LOCK') return; b.disabled = true; b.textContent = 'Sending the records…'; await syncStart(true, true); UI.syncMsg = (was ? 'The key is changed.' : 'The shared database is locked.') + ' Now send the new staff link to every person and keep a copy of it in a safe place.'; SY.state = 'ok'; SY.lock = ''; render(); }
     else if (act === 'load') { if (S.children.length && !confirm('Replace the records on this device with the shared database?')) return; b.disabled = true; b.textContent = 'Loading the records…'; await syncLoad(); UI.syncMsg = 'This device now uses the shared database: ' + S.children.length + ' children.'; SY.state = 'ok'; render(); syncNow(); }
     else if (act === 'disconnect') { if (!confirm('Disconnect this device from the shared database?')) return; lsSet('cyp-sync', null); if (S.meta.sync) S.meta.sync.shared = 0; rawSave(); UI.syncPing = null; UI.syncMsg = 'Disconnected.'; render(); }
-  } catch (err) { UI.syncMsg = 'Not done: ' + esc(String(err && err.message || err)) + '.'; render(); }
+  } catch (err) { const lk = lockErr(err); UI.syncMsg = lk ? esc(LOCK_MSG[lk]) : 'Not done: ' + esc(String(err && err.message || err)) + '.'; render(); }
 });
 /* opened from the link of the shared database: connect without questions */
 async function syncAuto() {
@@ -5268,7 +5357,7 @@ async function syncAuto() {
   syncLoop();
   if (!syncCfg() || syncOn()) return;
   const st = await syncCheck();
-  if (st && st.ok && st.hasSnapshot && !S.children.length) { try { await syncLoad(); SY.state = 'ok'; render(); syncNow(); } catch (e) { UI.syncMsg = 'Not loaded: ' + esc(String(e.message || e)); render(); } }
+  if (st && st.ok && st.hasSnapshot && !S.children.length) { try { await syncLoad(); SY.state = 'ok'; render(); syncNow(); } catch (e) { const lk = lockErr(e); UI.syncMsg = lk ? esc(LOCK_MSG[lk]) : 'Not loaded: ' + esc(String(e.message || e)); render(); } }
   else if (!USER) render();
 }
 
@@ -5283,11 +5372,11 @@ function b64u(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '
 function unb64u(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return decodeURIComponent(escape(atob(s))); }
 function linkFromHash() {
   const h = location.hash; if (!h.startsWith('#c=')) return false;
-  try { const o = JSON.parse(unb64u(h.slice(3))); if (o.u && o.k) lsSet('cyp-sync', JSON.stringify({ url: o.u, key: o.k })); } catch (e) {}
+  try { const o = JSON.parse(unb64u(h.slice(3))); if (o.u && o.k) lsSet('cyp-sync', JSON.stringify(Object.assign({ url: o.u, key: o.k }, o.e ? { enc: o.e } : {}))); } catch (e) {}
   try { history.replaceState(null, '', location.pathname + location.search + '#/home'); } catch (e) { location.hash = '#/home'; }
   return true;
 }
-function staffLink(appUrl) { const c = syncCfg(); if (!c || !appUrl) return ''; return String(appUrl).trim().replace(/#.*$/, '') + '#c=' + b64u(JSON.stringify({ u: c.url, k: c.key })); }
+function staffLink(appUrl) { const c = syncCfg(); if (!c || !appUrl) return ''; return String(appUrl).trim().replace(/#.*$/, '') + '#c=' + b64u(JSON.stringify(Object.assign({ u: c.url, k: c.key }, c.enc ? { e: c.enc } : {}))); }
 function appUrl() { return IS_WEB ? location.origin + location.pathname : ((S.settings && S.settings.appUrl) || ''); }
 function isInstalled() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
 function installHow() {
