@@ -546,6 +546,14 @@ a.spot:hover{color:var(--ink);background:#DCEDF5}
 td.op{text-align:right;white-space:nowrap}
 @media (max-width:760px){#childTable td.op{display:block;width:100%;text-align:left;padding-top:6px}}
 .ph1{display:flex;align-items:center;gap:12px}.ph1 a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:5px}.ph1 a:hover{text-decoration-color:var(--ink)}
+/* Children list: titles that sort, a row of filters under them */
+.ctable thead .sortth{color:inherit;text-decoration:none;white-space:nowrap}.ctable thead .sortth:hover{color:var(--ink)}.sarr{color:var(--muted);font-size:11px}
+.ctable th[aria-sort] .sortth{color:var(--ink)}.ctable th[aria-sort] .sarr{color:var(--pri2);font-size:12px}
+.frow td{padding:4px 6px 8px;background:var(--fill)}.fsel{min-height:36px;padding:4px 4px;font-size:13px;width:100%;min-width:0;max-width:120px}
+.csort{display:none}.chint{margin:6px 6px 8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+td.lc.fut{background:var(--fill);cursor:not-allowed}
+@media (max-width:760px){.csort{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;padding:10px 12px}.csort>.btn{grid-column:1/-1}.ctable thead{display:none}.chint{display:none}}
+.frow td:nth-child(4) .fsel{min-width:88px}.frow td:nth-child(8) .fsel{min-width:104px}.frow td:nth-child(3) .fsel{min-width:56px}
 
 </style>
 </head>
@@ -559,8 +567,8 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.14';
-const BUILD_DATE = '2026-11-18'; /* the day this version was made: a device with an earlier date has a wrong clock */
+const VERSION = 'alpha 5.15';
+const BUILD_DATE = '2026-11-19'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9', ink: '#2D7198' },
@@ -1453,7 +1461,7 @@ function vHome(r) {
 }
 
 function filteredChildren(q) {
-  const sec = q.get('section'), st = q.get('status') || 'open', res = q.get('res'), sx = q.get('sex'), issue = q.get('issue'), who = q.get('who'), grp = q.get('grp');
+  const sec = q.get('section'), st = q.get('status') || 'open', res = q.get('res'), sx = q.get('sex'), issue = q.get('issue'), who = q.get('who'), grp = q.get('grp'), ageB = AGE_BANDS.find(x => x[0] === q.get('age')), edu = q.get('edu'), hv = q.get('hv'), cs = q.get('cs') || 'name', m3 = addDays(today(), -92);
   const term = (UI.q || '').trim().toLowerCase();
   return S.children.filter(c => {
     if (sec && !secList(sec).includes(c.section)) return false;
@@ -1465,30 +1473,46 @@ function filteredChildren(q) {
     if (who && c.responsible !== who) return false;
     if (issue && !(issue === 'dob' ? !c.dob : issuesOf(c).includes(issue))) return false;
     if (grp && !inGroup(c, grp)) return false;
+    if (ageB) { const a = curAge(c); if (ageB[0] === 'none' ? a !== '' : a === '' || a < ageB[2] || a > ageB[3]) return false; }
+    if (edu && (edu === 'none' ? dayType(c) : dayType(c) !== edu)) return false;
+    if (hv) { const l = visitInfo(c).last || ''; if (hv === 'none' ? l : hv === 'new' ? l < m3 : !l || l >= m3) return false; }
     if (term) { const hay = [c.id, c.name, c.surname, c.nickname, c.compound].join(' ').toLowerCase(); if (!hay.includes(term)) return false; }
     return true;
-  }).sort((a, b) => fullName(a).localeCompare(fullName(b)));
+  }).sort(childSorter(cs));
+}
+/* Children list: the columns sort and filter like a sheet */
+const AGE_BANDS = [['u10', 'Under 10', 0, 9], ['10', '10 to 13', 10, 13], ['14', '14 to 17', 14, 17], ['18', '18 and over', 18, 200], ['none', 'Age not written']];
+const CHILD_SORTS = [['name', 'Name, A to Z'], ['name-desc', 'Name, Z to A'], ['age', 'Age, youngest first'], ['age-desc', 'Age, oldest first'], ['hv', 'Home visit, longest ago first'], ['hv-desc', 'Home visit, most recent first'], ['centre', 'Centre'], ['status', 'Status'], ['edu', 'Education'], ['id', 'ID']];
+function childFiltersOn(q) { return ['age', 'edu', 'hv', 'sex', 'res', 'section'].some(k => q.get(k)) || (q.get('cs') || 'name') !== 'name' || (q.get('status') || 'open') !== 'open'; }
+function childSorter(cs) {
+  const desc = /-desc$/.test(cs), k = cs.replace(/-desc$/, ''), nm = (a, b) => fullName(a).localeCompare(fullName(b));
+  const val = { id: c => String(c.id), sex: c => c.sex || '', age: c => curAge(c), edu: c => dayLabel(dayType(c)) || '', centre: c => SECTIONS[c.section] ? SECTIONS[c.section].label : '', res: c => c.residence || '', status: c => c.status || '', hv: c => visitInfo(c).last || '' }[k];
+  if (!val) return desc ? (a, b) => nm(b, a) : nm;
+  return (a, b) => { const x = val(a), y = val(b); if (x === '' && y !== '') return k === 'hv' && !desc ? -1 : 1; if (y === '' && x !== '') return k === 'hv' && !desc ? 1 : -1; const d = typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true }); return (desc ? -d : d) || nm(a, b); };
 }
 function childRows(list) {
-  if (!list.length) return '<p class="empty">No child matches.</p>';
-  return `<div class="tw"><table><thead><tr><th class="mh">ID</th><th>Name</th><th class="mh">Sex</th><th class="n mh">Age</th><th class="mh">Education</th><th>Centre</th><th class="mh">Resident or not</th><th>Status</th><th class="mh">Last home visit</th><th><span class="vh">Open</span></th><th><span class="vh">Photo</span></th></tr></thead><tbody>
+  const q = route().q, cs = q.get('cs') || 'name', th = (k, l, cls) => `<th class="${cls || ''}"${cs.replace(/-desc$/, '') === k ? ` aria-sort="${/-desc$/.test(cs) ? 'descending' : 'ascending'}"` : ''}><a href="#" class="sortth" data-q="cs=${cs === k ? k + '-desc' : k}" title="Sort by this column">${l}<span class="sarr">${cs === k ? ' ▲' : cs === k + '-desc' ? ' ▼' : ' ↕'}</span></a></th>`;
+  const fs = (name, options, label) => `<select class="in fsel" data-filter="${name}" aria-label="Filter: ${label}">${options}</select>`, secs = secList(q.get('section'));
+  const frow = `<tr class="frow"><td class="mh"></td><td></td><td class="mh">${fs('sex', opt([{ v: 'M', l: 'M' }, { v: 'F', l: 'F' }], q.get('sex'), 'All'), 'sex')}</td><td class="mh">${fs('age', opt(AGE_BANDS.map(x => ({ v: x[0], l: x[1] })), q.get('age'), 'All'), 'age')}</td><td class="mh">${fs('edu', opt(uniq(S.children.map(c => dayType(c)).filter(Boolean)).sort((x, y) => dayLabel(x).localeCompare(dayLabel(y))).map(x => ({ v: x, l: dayLabel(x) })).concat([{ v: 'none', l: 'Not written' }]), q.get('edu'), 'All'), 'education')}</td><td>${fs('section', opt([{ v: 'Luigi', l: 'Luigi' }, { v: 'Minsundu', l: 'Minsundu' }, { v: 'UCC', l: 'Minsundu · UCC' }, { v: 'Youth', l: 'Minsundu · Youth' }, { v: 'Nkwazi', l: 'Nkwazi Centre' }], secs.length === 1 ? secs[0] : secs.join(',') === 'UCC,Youth' ? 'Minsundu' : '', secs.length > 1 && secs.join(',') !== 'UCC,Youth' ? 'Several' : 'All'), 'centre')}</td><td class="mh">${fs('res', opt(RES3, q.get('res'), 'All'), 'resident or not')}</td><td>${fs('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All' }]), q.get('status') || 'open'), 'status')}</td><td class="mh">${fs('hv', opt([{ v: 'none', l: 'Never' }, { v: 'old', l: 'More than 3 months ago' }, { v: 'new', l: 'In the last 3 months' }], q.get('hv'), 'All'), 'last home visit')}</td><td></td><td></td></tr>`;
+  return `<p class="sub chint">Tap a title to sort. Choose under a title to filter.${childFiltersOn(q) ? ' <a class="btn sm" href="#" data-q="age=&edu=&hv=&sex=&res=&section=&cs=&status=">Clear filters and order</a>' : ''}</p><div class="tw"><table class="ctable"><thead><tr>${th('id', 'ID', 'mh')}${th('name', 'Name')}${th('sex', 'Sex', 'mh')}${th('age', 'Age', 'n mh')}${th('edu', 'Education', 'mh')}${th('centre', 'Centre')}${th('res', 'Resident or not', 'mh')}${th('status', 'Status')}${th('hv', 'Last home visit', 'mh')}<th><span class="vh">Open</span></th><th><span class="vh">Photo</span></th></tr>${frow}</thead><tbody>${list.length ? '' : '<tr><td colspan="11"><p class="empty">No child matches.</p></td></tr>'}
   ${list.map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td><a class="cname" href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td><td class="op"><a class="btn sm" href="#/child/${esc(c.id)}">Open the file</a></td><td class="ph">${avatar(c, 40)}</td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
 function vChildren(r) {
   const q = r.q; const list = filteredChildren(q);
-  const sel = (name, options, val, label) => `<label class="f">${label}<select class="in" data-filter="${name}">${options}</select></label>`;
+  const sel = (name, options, val, label, cls) => `<label class="f${cls ? ' ' + cls : ''}">${label}<select class="in" data-filter="${name}">${options}</select></label>`;
   return `<div class="top"><div><h1>Children</h1><p class="lead">${childrenLead(list)}</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${q.get('grp') === 'ABA' ? `<button class="btn" data-mact="abasheet" data-y="${today().slice(0, 4)}">Export in Excel: scheda ABA ${today().slice(0, 4)} (italiano)</button>` : ''}<a class="btn" href="#/paths${SECTION_KEYS.includes(q.get('section')) ? '?ps=' + esc(q.get('section')) : q.get('section') === 'Minsundu' ? '?ps=UCC' : ''}">Admissions, transfers and discharges</a><button class="btn" data-act="exportlist">Export in Excel</button><a class="btn pri" href="#/child/new">Add a child</a></div></div>
   <div class="card filters fold${UI.fopen ? ' open' : ''}">
     <label class="f">Search<input class="in" id="search" placeholder="Name, nickname, ID or compound" value="${esc(UI.q)}"></label>${filtBtn()}
     ${secChips(q.get('section'))}
-    ${sel('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All, including closed' }]), q.get('status') || 'open'), '', 'Status')}
-    ${sel('res', opt(RES3, q.get('res'), 'All'), '', 'Residence')}
-    ${sel('sex', opt([{ v: 'M', l: 'Boys' }, { v: 'F', l: 'Girls' }], q.get('sex'), 'All'), '', 'Sex')}
+    ${sel('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All, including closed' }]), q.get('status') || 'open'), '', 'Status', 'mo')}
+    ${sel('res', opt(RES3, q.get('res'), 'All'), '', 'Residence', 'mo')}
+    ${sel('sex', opt([{ v: 'M', l: 'Boys' }, { v: 'F', l: 'Girls' }], q.get('sex'), 'All'), '', 'Sex', 'mo')}
     ${sel('who', opt(S.staff.map(s => ({ v: s.id, l: s.name })), q.get('who'), 'Anyone'), '', 'Followed by')}
     ${sel('grp', opt(GROUPS.map(([k, l]) => ({ v: k, l })), q.get('grp'), 'All children'), '', 'Group')}
     ${sel('issue', opt(Object.entries(ISSUES).map(([k, l]) => ({ v: k, l })), q.get('issue'), 'Any'), '', 'Missing information')}
   </div>
+  <div class="card csort"><label class="f">Age<select class="in" data-filter="age">${opt(AGE_BANDS.map(x => ({ v: x[0], l: x[1] })), q.get('age'), 'All ages')}</select></label><label class="f">Sort by<select class="in" data-filter="cs">${opt(CHILD_SORTS.map(x => ({ v: x[0], l: x[1] })), /^(sex|res)/.test(q.get('cs') || '') ? '' : q.get('cs') || 'name')}</select></label>${childFiltersOn(q) ? '<a class="btn" href="#" data-q="age=&edu=&hv=&sex=&res=&section=&cs=&status=">Clear filters and order</a>' : ''}</div>
   ${recordsPanel()}
   ${q.get('issue') === 'section' && list.length ? `<div class="note" style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><span>At import, children under 18 went to UCC and the others to the Youth Centre. Move the ones that are wrong (open the profile, then "Change status or centre"), then confirm the rest.</span><button class="btn" data-act="confirmall">Confirm UCC or Youth for these ${list.length}</button></div>` : ''}
   <div class="card" style="padding:6px 8px" id="childTable">${childRows(list)}</div>`;
@@ -2564,14 +2588,12 @@ function luigiReportHtml(a, b, label) {
 /* ---------- attendance: centre switch and the Luigi monthly sheets ---------- */
 function centreSeg(centre) { return `<div class="seg" role="group" aria-label="Centre">${CENTRES.concat(['School', 'Literacy']).map(k => `<a href="#" data-q="c=${k}&g=&only=&sec=&gr=&sg=" class="${centre === k ? 'on' : ''}">${CENTRE_LABEL[k]}</a>`).join('')}</div>`; }
 /* attIn is in nkwazi.js: a child is on the list of every centre he or she comes to */
-function luigiMonthMap(m, night) {
-  const map = {};
-  for (const s of S.outreach) {
-    if (!s.date || s.date.slice(0, 7) !== m) continue;
-    const v = s.type === 'Drop-in' ? 'C' : s.type === 'Day outreach' ? 'S' : s.type === 'Night outreach' ? 'N' : null;
-    if (!v || night !== (v === 'N')) continue;
-    for (const id of s.children || []) { const r = map[id] = map[id] || {}; r[s.date] = v === 'N' ? 'S' : (r[s.date] === 'C' ? 'C' : v); }
-  }
+/* the three month grids of Luigi: one sheet each, one tap marks, a second tap clears */
+const L_MODE = { centre: { type: 'Drop-in', mark: 'C', total: 'Days in centre', tap: 'came to the centre', met: 'At the centre this month' }, day: { type: 'Day outreach', mark: 'S', total: 'Days on the street', tap: 'met on the street', met: 'Met on the street this month' }, night: { type: 'Night outreach', mark: 'S', total: 'Nights on the street', tap: 'slept on the street', met: 'Met at night this month' } };
+function lMode(k) { return L_MODE[k] ? k : 'centre'; }
+function luigiMonthMap(m, mode) {
+  const T = L_MODE[lMode(mode)], map = {};
+  for (const s of S.outreach) { if (!s.date || s.date.slice(0, 7) !== m || s.type !== T.type) continue; for (const id of s.children || []) (map[id] = map[id] || {})[s.date] = T.mark; }
   return map;
 }
 function luigiSet(id, date, kind, night) {
@@ -2626,24 +2648,24 @@ function luigiStaffHtml(d, sh) {
     <div class="fs two" style="margin-top:8px"><label class="f">Places and facts of the day<textarea class="in" rows="2" data-lnote="${sh.k}" data-lf="notes" data-d="${d}" placeholder="Where you went, what happened">${esc(s ? s.notes || '' : '')}</textarea></label>
     <label class="f">Findings: what is your assessment?<textarea class="in" rows="2" data-lnote="${sh.k}" data-lf="findings" data-d="${d}" placeholder="What you understood today about the children and the street: new faces, changes, risks, what to do next">${esc(s ? s.findings || '' : '')}</textarea></label></div>${s && !GUEST ? `<p style="margin:10px 0 0"><button type="button" class="btn sm danger" data-dact="clearsheet" data-k="${sh.k}" data-d="${d}">Cancel this sheet</button></p>` : ''}</details>`;
 }
-function luigiKids(m, night) {
-  const map = luigiMonthMap(m, night), cat = route().q.get('lcat') || '', term = (UI.lattq || '').trim().toLowerCase(), seen = route().q.get('lseen') === '1';
+function luigiKids(m, mode) {
+  const map = luigiMonthMap(m, mode), cat = route().q.get('lcat') || '', term = (UI.lattq || '').trim().toLowerCase(), seen = route().q.get('lseen') === '1';
   const kids = S.children.filter(c => c.section === 'Luigi' && (c.status !== 'Closed' || map[c.id])
     && (!cat || (c.streetCat || '') === cat) && (!seen || map[c.id]) && (!term || [c.id, c.name, c.surname, c.nickname, c.compound].join(' ').toLowerCase().includes(term)))
     .sort((x, y) => (!!map[y.id] - !!map[x.id]) || fullName(x).localeCompare(fullName(y)));
   return { kids, map };
 }
-function luigiGrid(m, night) {
-  const { kids, map } = luigiKids(m, night), n = Number(monthEnd(m).slice(8)), days = [];
+function luigiGrid(m, mode) {
+  mode = lMode(mode); const T = L_MODE[mode], { kids, map } = luigiKids(m, mode), n = Number(monthEnd(m).slice(8)), days = [];
   for (let i = 1; i <= n; i++) days.push(m + '-' + String(i).padStart(2, '0'));
   if (!kids.length) return '<p class="empty">No child matches.</p>';
   const wd = d => new Date(d + 'T00:00:00').getDay();
-  const head = `<tr><th class="lname">Name</th>${days.map(d => `<th class="${[0, 6].includes(wd(d)) ? 'we' : ''}${d === today() ? ' td' : ''}">${'SMTWTFS'[wd(d)]}<br>${Number(d.slice(8))}</th>`).join('')}<th>${night ? 'Nights' : 'Centre'}</th>${night ? '' : '<th>Street</th>'}</tr>`;
-  const nMet = kids.filter(c => map[c.id]).length, sep = (t, k) => `<tr class="gsep"><th class="lname">${t} · ${k}</th><td colspan="${days.length + (night ? 1 : 2)}"></td></tr>`;
+  const head = `<tr><th class="lname">Name</th>${days.map(d => `<th class="${[0, 6].includes(wd(d)) ? 'we' : ''}${d === today() ? ' td' : ''}">${'SMTWTFS'[wd(d)]}<br>${Number(d.slice(8))}</th>`).join('')}<th>${mode === 'night' ? 'Nights' : 'Days'}</th></tr>`;
+  const nMet = kids.filter(c => map[c.id]).length, sep = (t, k) => `<tr class="gsep"><th class="lname">${t} · ${k}</th><td colspan="${days.length + 1}"></td></tr>`;
   const body = kids.map((c, i) => { const r = map[c.id] || {}; const vals = days.map(d => r[d] || '');
-    return `${nMet && i === 0 ? sep(night ? 'Met at night this month' : 'Met this month', nMet) : ''}${nMet && i === nMet && nMet < kids.length ? sep('Everyone else, A to Z', kids.length - nMet) : ''}<tr data-id="${esc(c.id)}"><th class="lname" scope="row"><a href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''} <span class="lcat ${c.streetCat || ''}" title="${esc(STREET_CATS[c.streetCat] || 'Street situation not recorded')}">${esc(c.streetCat || '?')}</span></th>${days.map((d, i) => `<td class="lc ${vals[i]}${[0, 6].includes(wd(d)) ? ' we' : ''}${d === today() ? ' td' : ''}" data-lact="cell" data-d="${d}">${vals[i]}</td>`).join('')}<td class="ln" data-t="C">${night ? vals.filter(v => v === 'S').length : vals.filter(v => v === 'C').length}</td>${night ? '' : `<td class="ln" data-t="S">${vals.filter(v => v === 'S').length}</td>`}</tr>`; }).join('');
-  const foot = `<tr class="lfoot"><th class="lname">Children marked</th>${days.map(d => `<td data-fd="${d}">${kids.filter(c => (map[c.id] || {})[d]).length || ''}</td>`).join('')}<td></td>${night ? '' : '<td></td>'}</tr>`;
-  return `<div class="tw lwrap"><table class="lgrid" data-night="${night ? 1 : 0}"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;
+    return `${nMet && i === 0 ? sep(T.met, nMet) : ''}${nMet && i === nMet && nMet < kids.length ? sep('Everyone else, A to Z', kids.length - nMet) : ''}<tr data-id="${esc(c.id)}"><th class="lname" scope="row"><a href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''} <span class="lcat ${c.streetCat || ''}" title="${esc(STREET_CATS[c.streetCat] || 'Street situation not recorded')}">${esc(c.streetCat || '?')}</span></th>${days.map((d, i) => `<td class="lc ${vals[i]}${[0, 6].includes(wd(d)) ? ' we' : ''}${d === today() ? ' td' : ''}${d > today() ? ' fut' : ''}" data-lact="cell" data-d="${d}">${vals[i]}</td>`).join('')}<td class="ln" data-t="T">${vals.filter(v => v).length}</td></tr>`; }).join('');
+  const foot = `<tr class="lfoot"><th class="lname">Children marked</th>${days.map(d => `<td data-fd="${d}">${kids.filter(c => (map[c.id] || {})[d]).length || ''}</td>`).join('')}<td></td></tr>`;
+  return `<div class="tw lwrap"><table class="lgrid" data-mode="${mode}"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;
 }
 function luigiSumData(year) {
   const st = {};
@@ -2704,8 +2726,8 @@ function luigiDayList(d, k) {
       <td>${also(c)}</td><td><div class="att"><button class="${sh.cls}${on(c) ? ' on' : ''}" data-lact="day" data-id="${esc(c.id)}" data-d="${d}" data-sheet="${sh.k}" style="min-width:150px">${on(c) ? '✓ ' : ''}${esc(sh.mark)}</button></div></td></tr>`).join('')}</tbody></table></div>`;
 }
 function vLuigiAtt(r) {
-  const q = r.q, m = q.get('lm') || thisMonth(), tab = q.get('lt') || 'today', night = tab === 'night', d = q.get('ld') || today();
-  const tabs = `<div class="seg">${[['today', 'Daily attendance', 'Daily'], ['day', 'Day outreach monthly view', 'Day: month'], ['night', 'Night outreach monthly view', 'Night: month'], ['sum', 'Whole year', 'Year']].map(([k, l, s]) => `<a href="#" data-q="lt=${k}" class="${tab === k ? 'on' : ''}"><span class="dlong">${l}</span><span class="dshort">${s}</span></a>`).join('')}</div>`;
+  const q = r.q, m = q.get('lm') || thisMonth(), tab = q.get('lt') || 'today', d = q.get('ld') || today();
+  const tabs = `<div class="seg">${[['today', 'Daily attendance', 'Daily'], ['centre', 'Drop-in centre monthly view', 'Centre: month'], ['day', 'Day outreach monthly view', 'Day: month'], ['night', 'Night outreach monthly view', 'Night: month'], ['sum', 'Whole year', 'Year']].map(([k, l, s]) => `<a href="#" data-q="lt=${k}" class="${tab === k ? 'on' : ''}"><span class="dlong">${l}</span><span class="dshort">${s}</span></a>`).join('')}</div>`;
   const search = `<label class="f">Find a name<input class="in" id="lattsearch" placeholder="Name, nickname, ID or place" value="${esc(UI.lattq || '')}"></label>`;
   const catSel = `<label class="f">Street situation<select class="in" data-filter="lcat">${opt([{ v: 'A', l: 'A · sleeps on the street' }, { v: 'B', l: 'B · street connected' }], q.get('lcat'), 'All')}</select></label>`;
   let body, filters, when;
@@ -2726,14 +2748,14 @@ function vLuigiAtt(r) {
     when = monthPicker(m, 'lm'); filters = `<div class="card filters" style="grid-template-columns:1fr">${search}</div>`;
     body = `<div id="lattBody">${luigiSummary(m.slice(0, 4))}</div>`;
   } else {
-    const { kids, map } = luigiKids(m, night); const seen = kids.filter(c => map[c.id]);
+    const T = L_MODE[lMode(tab)], { kids, map } = luigiKids(m, tab); const seen = kids.filter(c => map[c.id]);
     when = monthPicker(m, 'lm');
     filters = `<div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:2fr 1fr 1fr">${search}${filtBtn()}${catSel}<label class="f">Show<select class="in" data-filter="lseen">${opt([{ v: '1', l: 'Only children marked this month' }], q.get('lseen'), 'All children in town')}</select></label></div>`;
     body = `<div class="card" style="padding:6px 8px">
-      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px;align-items:center"><span class="sub">${night ? 'Tap a cell: <b class="lc S" style="padding:1px 6px">S</b> slept on the street, tap again to clear.' : 'Tap a cell: <b class="lc C" style="padding:1px 6px">C</b> came to the centre, <b class="lc S" style="padding:1px 6px">S</b> met on the street, then empty.'} ${seen.length} of ${kids.length} children marked this month (${sexText(seen)}; A ${seen.filter(c => c.streetCat === 'A').length} · B ${seen.filter(c => c.streetCat === 'B').length}).</span><button class="btn sm" data-lact="xlmonth">Export in Excel</button></div>
-      <div id="lattBody">${luigiGrid(m, night)}</div></div>`;
+      <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 4px;align-items:center"><span class="sub">Tap a cell: <b class="lc ${T.mark}" style="padding:1px 6px">${T.mark}</b> ${T.tap}. Tap again to clear. ${seen.length} of ${kids.length} children marked this month (${sexText(seen)}; A ${seen.filter(c => c.streetCat === 'A').length} · B ${seen.filter(c => c.streetCat === 'B').length}).</span><button class="btn sm" data-lact="xlmonth">Export in Excel</button></div>
+      <div id="lattBody">${luigiGrid(m, tab)}</div></div>`;
   }
-  const lead = tab === 'today' ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : tab === 'sum' ? 'Year ' + m.slice(0, 4) : fmtMonth(m) + '. Same sheets as the Luigi tool.';
+  const lead = tab === 'today' ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : tab === 'sum' ? 'Year ' + m.slice(0, 4) : (L_MODE[tab] ? lSheet(tab === 'centre' ? 'dropin' : tab).label + ' · ' : '') + fmtMonth(m);
   return `<div class="top"><div><h1>Attendance · Luigi</h1>${tab === 'today' ? '' : `<p class="lead">${esc(lead)}</p>`}</div></div>
   ${tab === 'today' ? dayBar(d, 'ld') + filters : ''}
   <div class="attctl"><div style="display:flex;gap:8px;flex-wrap:wrap">${centreSeg('Luigi')}${when}</div></div>
@@ -2777,7 +2799,7 @@ function pendingOf(c) {
 function knownHtml(text, ctx, skipId) {
   const list = knownMatches(text, skipId);
   if (list == null) return '';
-  const rq = route().q, tab = rq.get('lt') || 'today', shs = tab === 'today' ? [lSheet(rq.get('ls'))] : tab === 'night' ? [lSheet('night')] : [lSheet('dropin'), lSheet('day')];
+  const rq = route().q, tab = rq.get('lt') || 'today', shs = tab === 'today' ? [lSheet(rq.get('ls'))] : tab === 'night' ? [lSheet('night')] : tab === 'day' ? [lSheet('day')] : tab === 'centre' ? [lSheet('dropin')] : [lSheet('dropin'), lSheet('day')];
   if (!list.length) return ctx === 'form' ? '' : `<div class="note">Nobody with this name in the records of any centre. <button class="btn sm" data-lact="newchild" data-name="${esc(text)}">Add as a new Luigi child</button></div>`;
   return `<div class="${ctx === 'form' ? 'warn' : ''}" style="display:flex;flex-direction:column;gap:2px">${ctx === 'form' ? '<b>Already in the records? Check before saving a second file for the same child.</b>' : ''}
   ${list.map(c => { const p = pendingOf(c), lm = lastMet(c);
@@ -2793,13 +2815,12 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-lact]'); if (!b) return;
   const act = b.dataset.lact;
   if (act === 'cell') {
-    const table = b.closest('table'), night = table.dataset.night === '1', tr = b.closest('tr'), id = tr.dataset.id, d = b.dataset.d;
-    const cur = b.classList.contains('C') ? 'C' : b.classList.contains('S') ? 'S' : '';
-    const next = night ? (cur ? '' : 'S') : (cur === '' ? 'C' : cur === 'C' ? 'S' : '');
-    luigiSet(id, d, next, night); save();
+    const table = b.closest('table'), T = L_MODE[lMode(table.dataset.mode)], tr = b.closest('tr'), id = tr.dataset.id, d = b.dataset.d;
+    if (d > today()) { toast('This day is in the future'); return; }
+    const next = b.textContent ? '' : T.mark;
+    luigiToggle(id, d, T.type, !!next); save();
     b.classList.remove('C', 'S'); if (next) b.classList.add(next); b.textContent = next;
-    const cells = $$('td.lc', tr); const tc = $('[data-t=C]', tr), ts = $('[data-t=S]', tr);
-    if (tc) tc.textContent = cells.filter(x => x.classList.contains(night ? 'S' : 'C')).length; if (ts) ts.textContent = cells.filter(x => x.classList.contains('S')).length;
+    const tt = $('[data-t=T]', tr); if (tt) tt.textContent = $$('td.lc', tr).filter(x => x.textContent).length;
     const f = $(`[data-fd="${d}"]`, table); if (f) f.textContent = $$(`td.lc[data-d="${d}"]`, table).filter(x => x.textContent).length || '';
   } else if (act === 'day') {
     const c = child(b.dataset.id), sh = lSheet(b.dataset.sheet);
@@ -2817,11 +2838,11 @@ document.addEventListener('click', e => {
     downloadXlsx('luigi-daily-report-' + d, L_SHEETS.map(sh => { const s = luigiSess(d, sh.type), kids = S.children.filter(c => sets[sh.k].has(String(c.id))).sort((x, y) => fullName(x).localeCompare(fullName(y)));
       return { name: sh.label, rows: [[sh.label, fmtDate(d)], ['Done by', sessStaff(s) || 'not recorded'], ['Places and facts', s ? s.notes || '' : ''], ['Findings: assessment', s ? s.findings || '' : ''], ['Children', kids.length], ['Boys / girls', kids.filter(c => c.sex !== 'F').length + ' / ' + kids.filter(c => c.sex === 'F').length], [''], ['ID', 'Name', 'Nickname', 'Sex', 'Age', 'Situation', 'From']].concat(kids.map(c => [c.id, fullName(c), c.nickname || '', c.sex, curAge(c), c.streetCat || '', c.compound || ''])) }; }));
   } else if (act === 'xlmonth') {
-    const q = route().q, m = q.get('lm') || thisMonth(), night = q.get('lt') === 'night', { kids, map } = luigiKids(m, night), n = Number(monthEnd(m).slice(8)), days = [];
+    const q = route().q, m = q.get('lm') || thisMonth(), mode = lMode(q.get('lt')), T = L_MODE[mode], { kids, map } = luigiKids(m, mode), n = Number(monthEnd(m).slice(8)), days = [];
     for (let i = 1; i <= n; i++) days.push(m + '-' + String(i).padStart(2, '0'));
-    const rows = [['ID', 'Name', 'Nickname', 'Sex', 'Age', 'Situation', 'From'].concat(days.map(d => Number(d.slice(8)))).concat(night ? ['Nights on the street'] : ['Days in centre', 'Days on the street'])];
-    for (const c of kids) { const v = days.map(d => (map[c.id] || {})[d] || ''); rows.push([c.id, fullName(c), c.nickname || '', c.sex, curAge(c), c.streetCat || '', c.compound || ''].concat(v).concat(night ? [v.filter(x => x).length] : [v.filter(x => x === 'C').length, v.filter(x => x === 'S').length])); }
-    downloadXlsx('luigi-' + (night ? 'night' : 'day') + '-' + m, [{ name: fmtMonth(m), rows }]);
+    const rows = [['ID', 'Name', 'Nickname', 'Sex', 'Age', 'Situation', 'From'].concat(days.map(d => Number(d.slice(8)))).concat([T.total])];
+    for (const c of kids) { const v = days.map(d => (map[c.id] || {})[d] || ''); rows.push([c.id, fullName(c), c.nickname || '', c.sex, curAge(c), c.streetCat || '', c.compound || ''].concat(v).concat([v.filter(x => x).length])); }
+    downloadXlsx('luigi-' + mode + '-' + m, [{ name: fmtMonth(m), rows }]);
   } else if (act === 'xlreport') {
     const q = route().q, m = q.get('m') || thisMonth(), rg = periodRange(m, q.get('p') || 'M'), T = luigiTables(rg.a, rg.b);
     downloadXlsx('luigi-report-' + rg.a.slice(0, 7) + '-to-' + rg.b.slice(0, 7), [{ name: 'Statistics', rows: T.main }, { name: 'Places of origin', rows: T.origin }, { name: 'Ages', rows: T.ages }, { name: 'Street situation', rows: T.cat }, { name: 'Home visits', rows: T.visits }, { name: 'Staff by activity', rows: T.staffT }, { name: 'Relatives, back on street', rows: T.extra }, { name: 'Findings', rows: T.findings }]);
@@ -2840,7 +2861,7 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.id === 'knownq') { const box = $('#knownbox'); if (box) box.innerHTML = knownHtml(el.value, el.dataset.ctx || 'luigi'); return; }
-  if (el.id === 'lattsearch') { UI.lattq = el.value; const q = route().q, box = $('#lattBody'); if (box) { const lt = q.get('lt') || 'today'; box.innerHTML = lt === 'sum' ? luigiSummary((q.get('lm') || thisMonth()).slice(0, 4)) : lt === 'today' ? luigiDayList(q.get('ld') || today(), q.get('ls')) : luigiGrid(q.get('lm') || thisMonth(), lt === 'night'); } return; }
+  if (el.id === 'lattsearch') { UI.lattq = el.value; const q = route().q, box = $('#lattBody'); if (box) { const lt = q.get('lt') || 'today'; box.innerHTML = lt === 'sum' ? luigiSummary((q.get('lm') || thisMonth()).slice(0, 4)) : lt === 'today' ? luigiDayList(q.get('ld') || today(), q.get('ls')) : luigiGrid(q.get('lm') || thisMonth(), lt); } return; }
   const f = el.form; const box = $('#dupbox');
   if (box && f && f.dataset.form === 'child' && ['name', 'surname', 'nickname'].includes(el.name)) box.innerHTML = knownHtml([f.elements.name.value, f.elements.surname.value].join(' ').trim() || f.elements.nickname.value, 'form');
 });
@@ -5244,13 +5265,22 @@ function installHow() {
   return 'Click the small screen icon at the right of the address bar, then <b>Install</b>.';
 }
 function installKind() { const ua = navigator.userAgent || ''; if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'ios'; if (/Firefox/.test(ua)) return 'firefox'; if (/Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua)) return 'safari'; return 'chromium'; }
+/* where the icon is once the app is on the device */
+function installWhere() {
+  const k = installKind(), ua = navigator.userAgent || '';
+  if (k === 'ios') return 'Look for the CYP EDU icon on the Home Screen. On the last pages too: swipe left.';
+  if (/Android/.test(ua)) return 'Look for the CYP EDU icon among all the apps: swipe up on the home screen and type CYP. Press and hold the icon, then drag it to the home screen.';
+  if (k === 'safari') return 'Look for the CYP EDU icon in the Dock or in Launchpad.';
+  return 'Look for CYP EDU among the apps of the computer, or type chrome://apps in the address bar.';
+}
 function installCard(home) {
   if (!IS_WEB || isInstalled()) return '';
   if (home && (lsGet('cyp-install-hide') === '1' || lsGet('cyp-installed') === '1')) return '';
   /* Chrome and Edge offer the installation only while the app is not installed: no offer, no card on Home */
   if (home && installKind() === 'chromium' && !_installEvt) return '';
-  return `<section class="card soft" id="installcard"${home ? ' data-home="1"' : ''}><h2>Put CYP EDU on this ${isPhone() ? 'phone' : 'computer'}</h2>
-    ${_installEvt ? '<button class="btn pri" data-wact="install" style="width:100%;margin-top:8px">Install CYP EDU</button>' : `<p style="margin:6px 0 0">${installHow()}</p>`}
+  const dev = isPhone() ? 'phone' : 'computer', done = lsGet('cyp-installed') === '1' || (installKind() === 'chromium' && !_installEvt);
+  return `<section class="card soft" id="installcard"${home ? ' data-home="1"' : ''}><h2>Put CYP EDU on this ${dev}</h2>
+    ${_installEvt ? '<button class="btn pri" data-wact="install" style="width:100%;margin-top:8px">Install CYP EDU</button>' : home ? `<p style="margin:6px 0 0">${installHow()}</p>` : `${done ? `<p style="margin:6px 0 0"><b>CYP EDU is probably on this ${dev} already.</b> ${installWhere()}</p><p style="margin:10px 0 0"><b>No icon?</b> ${installHow()}</p>` : `<p style="margin:6px 0 0">${installHow()}</p><p class="sub" style="margin:8px 0 0">After that: ${installWhere()}</p>`}`}
     ${home ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${_installEvt ? '' : '<button class="btn sm" data-wact="installhide">Already done</button>'}<button class="btn sm" data-wact="installhide">Not now</button></div>` : ''}</section>`;
 }
 function offlineCard() {
