@@ -3,11 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#0091D5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="CYP EDU">
 <meta name="robots" content="noindex,nofollow">
 <title>CYP EDU</title>
@@ -557,7 +556,6 @@ td.lc.fut{background:var(--fill);cursor:not-allowed}
 @media (max-width:760px){.csort{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;padding:10px 12px}.csort>.btn{grid-column:1/-1}.ctable thead{display:none}.chint{display:none}}
 .frow td:nth-child(4) .fsel{min-width:88px}.frow td:nth-child(8) .fsel{min-width:104px}.frow td:nth-child(3) .fsel{min-width:56px}
 
-
 /* mobile polish: room for the iPhone notch and home bar, bigger tap target for the profile button */
 @media (max-width:760px){
   .hd{top:env(safe-area-inset-top);padding-left:calc(12px + env(safe-area-inset-left));padding-right:calc(12px + env(safe-area-inset-right))}
@@ -567,6 +565,23 @@ td.lc.fut{background:var(--fill);cursor:not-allowed}
 
 /* iPhone: keep the first bar clear of the notch when the app is installed */
 body{padding-top:env(safe-area-inset-top)}
+
+/* Comment button in the top bar (alpha 5.17): it no longer floats over the page */
+#fbbtn.inhd{position:static;box-shadow:none;border-radius:20px;padding:8px 14px;min-height:36px;font-size:13.5px;white-space:nowrap;flex:none}
+#fbbar{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:nowrap;padding:calc(6px + env(safe-area-inset-top)) 12px 6px;min-height:56px;text-align:left;line-height:1.25}
+#fbbar #fbstop{border:2px solid #FFFFFF;background:#FFFFFF;color:#8E1B14;border-radius:20px;padding:8px 18px;min-height:44px;font:700 14px Inter,system-ui,sans-serif;cursor:pointer}
+@media (max-width:760px){
+  #fbbtn.inhd{min-height:40px;padding:8px 12px}
+  .brand{min-width:0;flex-shrink:1;min-height:40px}
+  .foot a{display:inline-block;padding:12px 0;min-height:44px}
+  .stafft input[type=checkbox]{width:28px;height:28px;margin:8px}.stafft .in,.stafft input.in{min-height:44px!important;height:auto!important;font-size:16px!important}
+  .guide a{padding:12px 0;min-height:44px}
+}
+@media (max-width:350px){#fbbtn.inhd{padding:8px 9px;font-size:12.5px}}
+/* Luigi month grid on a touch screen: cells a finger can hit */
+@media (pointer:coarse),(max-width:760px){.lgrid th,.lgrid td{min-width:40px;height:40px;font-size:13px}.lgrid .lname{min-width:132px;max-width:150px;white-space:normal;line-height:1.25;font-size:13px}.lgrid .lname a{display:inline-block;padding:4px 0}}
+@media (max-width:380px){.mnav a{font-size:12px;letter-spacing:-.1px}}
+
 </style>
 </head>
 <body>
@@ -579,7 +594,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.16';
+const VERSION = 'alpha 5.17';
 const BUILD_DATE = '2026-11-19'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -1507,8 +1522,8 @@ function childRows(list) {
   const fs = (name, options, label) => `<select class="in fsel" data-filter="${name}" aria-label="Filter: ${label}">${options}</select>`, secs = secList(q.get('section'));
   const frow = `<tr class="frow"><td class="mh"></td><td></td><td class="mh">${fs('sex', opt([{ v: 'M', l: 'M' }, { v: 'F', l: 'F' }], q.get('sex'), 'All'), 'sex')}</td><td class="mh">${fs('age', opt(AGE_BANDS.map(x => ({ v: x[0], l: x[1] })), q.get('age'), 'All'), 'age')}</td><td class="mh">${fs('edu', opt(uniq(S.children.map(c => dayType(c)).filter(Boolean)).sort((x, y) => dayLabel(x).localeCompare(dayLabel(y))).map(x => ({ v: x, l: dayLabel(x) })).concat([{ v: 'none', l: 'Not written' }]), q.get('edu'), 'All'), 'education')}</td><td>${fs('section', opt([{ v: 'Luigi', l: 'Luigi' }, { v: 'Minsundu', l: 'Minsundu' }, { v: 'UCC', l: 'Minsundu · UCC' }, { v: 'Youth', l: 'Minsundu · Youth' }, { v: 'Nkwazi', l: 'Nkwazi Centre' }], secs.length === 1 ? secs[0] : secs.join(',') === 'UCC,Youth' ? 'Minsundu' : '', secs.length > 1 && secs.join(',') !== 'UCC,Youth' ? 'Several' : 'All'), 'centre')}</td><td class="mh">${fs('res', opt(RES3, q.get('res'), 'All'), 'resident or not')}</td><td>${fs('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All' }]), q.get('status') || 'open'), 'status')}</td><td class="mh">${fs('hv', opt([{ v: 'none', l: 'Never' }, { v: 'old', l: 'More than 3 months ago' }, { v: 'new', l: 'In the last 3 months' }], q.get('hv'), 'All'), 'last home visit')}</td><td></td><td></td></tr>`;
   return `<p class="sub chint">Tap a title to sort. Choose under a title to filter.${childFiltersOn(q) ? ' <a class="btn sm" href="#" data-q="age=&edu=&hv=&sex=&res=&section=&cs=&status=">Clear filters and order</a>' : ''}</p><div class="tw"><table class="ctable"><thead><tr>${th('id', 'ID', 'mh')}${th('name', 'Name')}${th('sex', 'Sex', 'mh')}${th('age', 'Age', 'n mh')}${th('edu', 'Education', 'mh')}${th('centre', 'Centre')}${th('res', 'Resident or not', 'mh')}${th('status', 'Status')}${th('hv', 'Last home visit', 'mh')}<th><span class="vh">Open</span></th><th><span class="vh">Photo</span></th></tr>${frow}</thead><tbody>${list.length ? '' : '<tr><td colspan="11"><p class="empty">No child matches.</p></td></tr>'}
-  ${list.map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td><a class="cname" href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td><td class="op"><a class="btn sm" href="#/child/${esc(c.id)}">Open the file</a></td><td class="ph">${avatar(c, 40)}</td></tr>`; }).join('')}
-  </tbody></table></div>`;
+  ${(isPhone() && q.get('call') !== '1' ? list.slice(0, 40) : list).map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td><a class="cname" href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td><td class="op"><a class="btn sm" href="#/child/${esc(c.id)}">Open the file</a></td><td class="ph">${avatar(c, 40)}</td></tr>`; }).join('')}
+  </tbody></table></div>${isPhone() && q.get('call') !== '1' && list.length > 40 ? `<p style="margin:12px 4px 6px"><a class="btn" href="#" data-q="call=1" style="width:100%">Show all ${list.length} children</a></p><p class="sub" style="margin:0 6px 8px">The first 40 are shown. Type a name above to find a child.</p>` : ''}`;
 }
 function vChildren(r) {
   const q = r.q; const list = filteredChildren(q);
@@ -2143,7 +2158,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
   app.innerHTML = zm(shell(active, body));
   const s = $('#search'); if (s && UI.focusSearch) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); UI.focusSearch = false; }
   if (IS_DEMO && typeof tourDraw === 'function') setTimeout(tourDraw, 0);
-  fbDraw(); editFill(); draftRestore();
+  fbDraw(); editFill(); draftRestore(); luigiGridToday();
 }
 
 /* ---------- actions ---------- */
@@ -2427,7 +2442,7 @@ function photos() { if (!S.photos) S.photos = {}; return S.photos; }
 function photoOf(c) { return photos()[c.id] || ''; }
 function avatar(c, size) {
   const p = photoOf(c), s = size || 34;
-  return p ? `<img class="cph" data-name="${esc(fullName(c))}" src="${p}" alt="" style="width:${s}px;height:${s}px;border-radius:50%;object-fit:cover;flex:none">` : `<span class="av" style="width:${s}px;height:${s}px;font-size:${Math.round(s / 3)}px">${esc(initials(fullName(c)))}</span>`;
+  return p ? `<img class="cph" data-name="${esc(fullName(c))}" src="${p}" alt="" style="width:${s}px;height:${s}px;border-radius:50%;object-fit:cover;flex:none">` : `<span class="av" style="width:${s}px;height:${s}px;font-size:${Math.max(12, Math.round(s / 3))}px">${esc(initials(fullName(c)))}</span>`;
 }
 /* a tap on a child's photo shows it large; inside a button (planner, quick marking) the tap keeps doing what the button does */
 function photoBig(src, name) {
@@ -2667,6 +2682,8 @@ function luigiKids(m, mode) {
     .sort((x, y) => (!!map[y.id] - !!map[x.id]) || fullName(x).localeCompare(fullName(y)));
   return { kids, map };
 }
+/* the month grid opens on today: no sideways search for the day */
+function luigiGridToday() { const t = document.querySelector('.lgrid thead th.td'), w = t && t.closest('.lwrap'); if (w) w.scrollLeft = Math.max(0, t.offsetLeft - w.clientWidth / 2); }
 function luigiGrid(m, mode) {
   mode = lMode(mode); const T = L_MODE[mode], { kids, map } = luigiKids(m, mode), n = Number(monthEnd(m).slice(8)), days = [];
   for (let i = 1; i <= n; i++) days.push(m + '-' + String(i).padStart(2, '0'));
@@ -4030,13 +4047,16 @@ function fbList() { const all = S.feedback || [], done = new Set(all.filter(x =>
 function fbDraw() {
   let b = document.getElementById('fbbtn');
   if (!fbCan()) { if (b) b.remove(); const bar = document.getElementById('fbbar'); if (bar) bar.remove(); UI.fbMode = false; document.body.classList.remove('fbmode'); return; }
-  if (!b) { b = document.createElement('button'); b.id = 'fbbtn'; b.type = 'button'; b.addEventListener('click', e => { e.stopPropagation(); fbMode(!UI.fbMode); }); document.body.appendChild(b); }
+  if (!b) { b = document.createElement('button'); b.id = 'fbbtn'; b.type = 'button'; b.addEventListener('click', e => { e.stopPropagation(); fbMode(!UI.fbMode); }); }
+  /* the button lives in the bar at the top, so it never covers a name or a button of the page */
+  const host = document.querySelector('.hd .who');
+  if (host) { if (b.parentNode !== host) host.insertBefore(b, host.firstChild); b.classList.add('inhd'); } else { if (b.parentNode !== document.body) document.body.appendChild(b); b.classList.remove('inhd'); }
   b.textContent = UI.fbMode ? 'Cancel' : 'Comment'; b.title = 'Write a comment on a word or a part of this page';
 }
 function fbMode(on) {
   UI.fbMode = on; document.body.classList.toggle('fbmode', on); fbDraw();
   let bar = document.getElementById('fbbar');
-  if (on && !bar) { bar = document.createElement('div'); bar.id = 'fbbar'; bar.textContent = 'Tap the word or the place you want to comment.'; document.body.appendChild(bar); }
+  if (on && !bar) { bar = document.createElement('div'); bar.id = 'fbbar'; bar.setAttribute('role', 'status'); bar.innerHTML = '<span>Tap the word or the place you want to comment.</span><button type="button" id="fbstop">Cancel</button>'; bar.querySelector('#fbstop').addEventListener('click', e => { e.stopPropagation(); fbMode(false); }); document.body.appendChild(bar); }
   if (!on && bar) bar.remove();
 }
 function fbOpen(text) {
@@ -4059,7 +4079,7 @@ function fbOpen(text) {
 }
 document.addEventListener('click', e => {
   if (!UI.fbMode) return;
-  if (e.target.closest && e.target.closest('#fbbtn, #fbbox')) return;
+  if (e.target.closest && e.target.closest('#fbbtn, #fbbox, #fbbar')) return;
   e.preventDefault(); e.stopPropagation();
   let el = e.target, text = '';
   for (let i = 0; i < 4 && el && el !== document.body; i++) { text = (el.innerText || el.value || el.placeholder || el.getAttribute('aria-label') || el.title || '').trim(); if (text) break; el = el.parentElement; }
