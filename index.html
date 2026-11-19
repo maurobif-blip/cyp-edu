@@ -1345,7 +1345,7 @@ function table6(m) {
 
 /* ---------- router ---------- */
 function route() {
-  const h = (location.hash || '#/home').slice(1);
+  let h = (location.hash || '#/home').slice(1); if (h.startsWith('c=')) h = '/home'; /* the address still holds the staff link: it is the Home page */
   const [p, qs] = h.split('?');
   const parts = p.split('/').filter(Boolean);
   return { path: parts[0] || 'home', id: parts[1], sub: parts[2], q: new URLSearchParams(qs || '') };
@@ -2127,8 +2127,7 @@ const XL = {
 /* ---------- render ---------- */
 function render() { _SI = null; UI.staleView = false; document.body.classList.toggle('guest', !!GUEST); dropCancelled();
   const app = $('#app');
-  if (!USER) { carryLink(); app.innerHTML = vLogin(); return; }
-  if (location.hash.startsWith('#c=')) { try { history.replaceState(null, '', location.pathname + location.search + '#/home'); } catch (e) {} }
+  if (!USER) { app.innerHTML = vLogin(); linkKeep(true); return; }
   const r = route();
   let body, active = r.path;
   try {
@@ -2164,7 +2163,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
   app.innerHTML = zm(shell(active, body));
   const s = $('#search'); if (s && UI.focusSearch) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); UI.focusSearch = false; }
   if (IS_DEMO && typeof tourDraw === 'function') setTimeout(tourDraw, 0);
-  fbDraw(); editFill(); draftRestore(); luigiGridToday();
+  fbDraw(); editFill(); draftRestore(); luigiGridToday(); linkKeep();
 }
 
 /* ---------- actions ---------- */
@@ -4076,7 +4075,7 @@ function fbOpen(text) {
     <label class="sub" for="fbnote">Your comment</label><textarea class="in" id="fbnote" rows="3"></textarea>
     <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn pri" type="button" id="fbsave">Save the comment</button><button class="btn" type="button" id="fbcancel">Cancel</button></div></div>`;
   document.body.appendChild(box);
-  const page = location.hash || '#/home';
+  const page = /^#c=/.test(location.hash) ? '#/home' : (location.hash || '#/home'); /* never the staff link in a comment */
   box.querySelector('#fbcancel').addEventListener('click', () => box.remove());
   box.addEventListener('click', e => { if (e.target === box) box.remove(); });
   box.querySelector('#fbsave').addEventListener('click', () => {
@@ -5157,13 +5156,13 @@ function syncCfg() {
   try { const c = JSON.parse(lsGet('cyp-sync') || 'null'); return c && c.url ? c : null; } catch (e) { return null; }
 }
 function syncOn() { return !!syncCfg() && !!(S.meta.sync && S.meta.sync.shared); }
-function parseLink(text) { const t = String(text || '').trim(), h = t.indexOf('#c='); if (h >= 0) { try { const o = JSON.parse(unb64u(t.slice(h + 3))); return o.u && o.k ? Object.assign({ url: o.u, key: o.k }, o.e ? { enc: o.e } : {}) : null; } catch (e) { return null; } } const i = t.indexOf('?'); if (!/^https?:\/\//.test(t) || i < 0) return null; const k = new URLSearchParams(t.slice(i + 1)).get('k'); return k ? { url: t.slice(0, i), key: k } : null; }
+function parseLink(text) { const t = String(text || '').trim(), h = t.indexOf('#c='); if (h >= 0) { try { const o = JSON.parse(unb64u((/^[A-Za-z0-9_-]+/.exec(t.slice(h + 3)) || [''])[0])); /* the whole message may have been copied: only the code after #c= counts */ return o.u && o.k ? Object.assign({ url: o.u, key: o.k }, o.e ? { enc: o.e } : {}) : null; } catch (e) { return null; } } const i = t.indexOf('?'); if (!/^https?:\/\//.test(t) || i < 0) return null; const k = new URLSearchParams(t.slice(i + 1)).get('k'); return k ? { url: t.slice(0, i), key: k } : null; }
 /* ---------- the lock: the records are locked on the device before they leave it ----------
    The key of the lock travels only inside the staff link, after the # (a browser never sends that part to a server).
    Google keeps what it receives and cannot read it. In clear stay only what the database needs to give the IDs:
    the ID and the random code of each child, the times, the sizes. Names of staff and of files are not sent. */
 const LOCK_FORMAT = 'cyp-edu-locked', LOCK_FILE = 'locked';
-const LOCK_MSG = { locked: 'This device does not have the key of the shared database. Open the new staff link on this device.', lockkey: 'The key on this device does not open the shared database. Open the new staff link on this device.', nolock: 'This browser cannot lock the records. Open the app in Chrome.' };
+const LOCK_MSG = { locked: 'This device does not have the key of the shared database. It needs the new staff link: More, Shared database.', lockkey: 'The key on this device does not open the shared database. It needs the new staff link: More, Shared database.', nolock: 'This browser cannot lock the records. Open the app in Chrome.' };
 function lockOn(cfg) { cfg = cfg || syncCfg(); return !!(cfg && cfg.enc); }
 function lockCan() { return typeof crypto !== 'undefined' && !!crypto.subtle && typeof TextEncoder !== 'undefined'; }
 function bytesB64(u8) { let t = ''; for (let i = 0; i < u8.length; i += 0x8000) t += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(t); }
@@ -5317,7 +5316,7 @@ function vSync() {
       ${offlineLine()}
       <button class="btn pri" style="margin-top:12px;width:100%" data-sact="now">Send and receive now</button></section>
     ${staffLinkCard()}${installCard()}
-    ${SY.state === 'err' && SY.lock ? `<section class="card" style="border:2px solid var(--red)"><h2>${SY.lock === 'nolock' ? 'This browser cannot lock the records' : 'This ' + dev + ' needs the new staff link'}</h2><p class="sub" style="margin:4px 0 10px">${SY.lock === 'nolock' ? 'Open the app in Chrome.' : 'The shared database is locked with a key. The key is inside the staff link. Ask the Education office for the new link and open it on this ' + dev + '.'}</p><button class="btn" data-sact="now">Try again</button></section>` : SY.state === 'err' ? `<section class="card" style="border:2px solid var(--red)"><h2>The shared database was replaced</h2><p class="sub" style="margin:4px 0 10px">${txt ? 'Not sent from this ' + dev + ': ' + esc(txt) + '. They are lost if you continue. ' : ''}This ${dev} has to take the new shared database.</p><button class="btn pri" data-sact="load">Use the shared database</button></section>` : ''}
+    ${SY.state === 'err' && SY.lock ? `<section class="card" style="border:2px solid var(--red)"><h2>${SY.lock === 'nolock' ? 'This browser cannot lock the records' : 'This ' + dev + ' needs the new staff link'}</h2><p class="sub" style="margin:4px 0 10px">${SY.lock === 'nolock' ? 'Open the app in Chrome.' : 'The shared database is locked with a key. The key is inside the staff link. Ask the Education office for the new link.'}</p>${SY.lock === 'nolock' ? '<button class="btn" data-sact="now">Try again</button>' : linkAsk('Paste the new staff link')}</section>` : SY.state === 'err' ? `<section class="card" style="border:2px solid var(--red)"><h2>The shared database was replaced</h2><p class="sub" style="margin:4px 0 10px">${txt ? 'Not sent from this ' + dev + ': ' + esc(txt) + '. They are lost if you continue. ' : ''}This ${dev} has to take the new shared database.</p><button class="btn pri" data-sact="load">Use the shared database</button></section>` : ''}
     ${USER.admin ? `<details class="card more"><summary>After an import on this ${dev}: replace the shared database</summary><p class="sub" style="margin:8px 0">Use it only when a starter pack or an import was loaded on this ${dev} after the shared database was started. The records of this ${dev} become the shared database and every other device takes them at its next exchange.</p><button class="btn" data-sact="restart">Replace the shared database with the records of this ${dev}</button></details>` : ''}
     ${USER.admin && !window.CYP_SYNC && SY.state !== 'err' ? `<details class="card more" id="lockbox"><summary>${lockOn() ? 'Change the key of the lock' : 'Lock the shared database'}</summary>
       <p class="sub" style="margin:8px 0">${lockOn() ? 'Use it when a phone is lost or a person leaves the project. The old staff link stops opening the records.' : 'With the lock, every phone and computer locks the records before sending them. Google keeps the records and cannot read them. The key of the lock is inside the staff link.'}</p>
@@ -5335,8 +5334,11 @@ function vSync() {
     <label class="f"><span>Link</span><input class="in" name="link" placeholder="https://script.google.com/macros/s/.../exec?k=..." autocomplete="off" required></label><button class="btn pri" style="margin-top:12px">Connect</button></form>` : '<section class="card"><p class="sub">An Education admin connects this device to the shared database.</p></section>'}`;
 }
 FORMS.synclink = function (o) {
-  const c = parseLink(o.link); if (!c) return toast(USER ? 'This is not the link of the shared database' : 'This is not the CYP EDU link. Copy the whole link from the message.');
-  lsSet('cyp-sync', JSON.stringify(c)); UI.syncPing = null; UI.syncMsg = ''; render(); if (USER) syncCheck(); else syncAuto();
+  const c = parseLink(o.link); if (!c) return toast('This is not the link of the shared database');
+  lsSet('cyp-sync', JSON.stringify(c)); UI.syncPing = null; UI.syncMsg = '';
+  /* a device already on the shared database that receives a new link (the key was changed): take the database again with it */
+  if (syncOn()) { SY.lock = ''; SY.state = 'wait'; render(); syncNow().then(() => { if (route().path === 'sync') render(); }); return; }
+  render(); if (USER) syncCheck(); else syncAuto();
 };
 async function syncCheck() { try { UI.syncPing = await syncPost({ action: 'ping' }); } catch (e) { UI.syncPing = { ok: false, error: 'no connection' }; } if (route().path === 'sync') render(); return UI.syncPing; }
 document.addEventListener('click', async e => {
@@ -5371,27 +5373,33 @@ const IS_WEB = /^https?:$/.test(location.protocol);
 var _installEvt = null;
 function b64u(s) { return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
 function unb64u(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return decodeURIComponent(escape(atob(s))); }
+/* the link of the staff as one code: where the database is, its key and, when the lock is on, the key of the lock */
+function linkCode(c) { c = c || syncCfg(); return c ? b64u(JSON.stringify(Object.assign({ u: c.url, k: c.key }, c.enc ? { e: c.enc } : {}))) : ''; }
+/* iPhone, iPad and Safari on a Mac: the icon on the Home Screen is another app with its own empty memory.
+   It starts from the address it was made from, so on these devices the address keeps the link until the icon is made. */
+function iconKeepsLink() { return /^https?:$/.test(location.protocol) && !window.CYP_SYNC && (installKind() === 'ios' || installKind() === 'safari'); } /* runs before IS_WEB exists */
 function linkFromHash() {
   const h = location.hash; if (!h.startsWith('#c=')) return false;
-  try { const o = JSON.parse(unb64u(h.slice(3))); if (o.u && o.k) lsSet('cyp-sync', JSON.stringify(Object.assign({ url: o.u, key: o.k }, o.e ? { enc: o.e } : {}))); } catch (e) {}
+  let o = null, had = null; try { o = JSON.parse(unb64u(h.slice(3))); } catch (e) {}
+  try { had = JSON.parse(lsGet('cyp-sync') || 'null'); } catch (e) {}
+  /* opened from the icon: the icon always carries the link it was made with, so a newer link pasted in the app stays */
+  if (o && o.u && o.k && !(isInstalled() && had && had.url)) lsSet('cyp-sync', JSON.stringify(Object.assign({ url: o.u, key: o.k }, o.e ? { enc: o.e } : {})));
+  if (iconKeepsLink() && !isInstalled()) return true;
   try { history.replaceState(null, '', location.pathname + location.search + '#/home'); } catch (e) { location.hash = '#/home'; }
   return true;
 }
-function staffLink(appUrl) { const c = syncCfg(); if (!c || !appUrl) return ''; return String(appUrl).trim().replace(/#.*$/, '') + '#c=' + b64u(JSON.stringify(Object.assign({ u: c.url, k: c.key }, c.enc ? { e: c.enc } : {}))); }
-function appUrl() { return IS_WEB ? location.origin + location.pathname : ((S.settings && S.settings.appUrl) || ''); }
-/* iPhone and iPad: the app on the Home Screen does not see what Safari saved, so the icon must carry the staff link.
-   The manifest starts from the link. In Safari, while nobody is signed in, the link also stays in the address:
-   it is after the #, the part a browser never sends to a server. */
-function carryLink() {
-  if (!IS_WEB || IS_DEMO || installKind() !== 'ios') return;
-  const link = staffLink(appUrl()), l = document.querySelector('link[rel="manifest"]');
-  if (!link) { if (l && l.getAttribute('href') !== 'manifest.webmanifest') l.setAttribute('href', 'manifest.webmanifest'); return; }
-  const base = location.origin + location.pathname.replace(/[^\/]*$/, '');
-  if (l && UI.carried !== link) { UI.carried = link; l.setAttribute('href', 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify({ name: 'CYP EDU', short_name: 'CYP EDU', description: 'Cicetekelo Youth Project, Education Department records', id: base, start_url: link, scope: base, display: 'standalone', background_color: '#FFFFFF', theme_color: '#0091D5',
-    icons: [{ src: base + 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: base + 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: base + 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }] }))); }
-  const tail = link.slice(link.indexOf('#'));
-  if (!USER && !GUEST && !isInstalled() && location.hash !== tail) { try { history.replaceState(null, '', location.pathname + location.search + tail); } catch (e) {} }
+var _manCode = '';
+/* tells the iPhone to start the icon with the link, and keeps the link in the address of the Home page */
+function linkKeep(anyPage) {
+  if (!iconKeepsLink()) return;
+  const code = linkCode(); if (!code) return;
+  if (code !== _manCode) { const l = document.querySelector('link[rel="manifest"]');
+    if (l) { const base = location.origin + location.pathname.replace(/[^\/]*$/, ''), icon = (f, s, p) => ({ src: base + f, sizes: s + 'x' + s, type: 'image/png', purpose: p });
+      l.href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify({ name: 'CYP EDU', short_name: 'CYP EDU', description: 'Cicetekelo Youth Project, Education Department records', id: base, start_url: base + '#c=' + code, scope: base, display: 'standalone', background_color: '#FFFFFF', theme_color: '#0091D5', icons: [icon('icon-192.png', 192, 'any'), icon('icon-512.png', 512, 'any'), icon('icon-maskable-512.png', 512, 'maskable')] })); _manCode = code; } }
+  if (!isInstalled() && (anyPage || route().path === 'home') && location.hash !== '#c=' + code) { try { history.replaceState(null, '', location.pathname + location.search + '#c=' + code); } catch (e) {} }
 }
+function staffLink(appUrl) { const c = syncCfg(); if (!c || !appUrl) return ''; return String(appUrl).trim().replace(/#.*$/, '') + '#c=' + linkCode(c); }
+function appUrl() { return IS_WEB ? location.origin + location.pathname : ((S.settings && S.settings.appUrl) || ''); }
 function isInstalled() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
 function installHow() {
   const ua = navigator.userAgent || '', ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
@@ -5428,6 +5436,14 @@ function offlineCard() {
   return `<div class="ok" id="offcard" style="display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap"><span><b>Ready.</b> CYP EDU now opens on this ${dev} without internet too.</span><button class="btn sm" data-wact="offseen">OK</button></div>`;
 }
 function offlineLine() { if (!IS_WEB) return ''; return `<div class="row"><span>Opens without a connection on this ${isPhone() ? 'phone' : 'computer'}</span><b>${UI.offlineReady ? 'yes' : 'not yet: keep the app open a moment with a connection'}</b></div>`; }
+/* asks for the link of the staff: one button that takes it from what was copied, and a box for the same thing by hand */
+function linkAsk(why) {
+  const paste = !!(navigator.clipboard && navigator.clipboard.readText);
+  return `<div class="card" id="linkask" style="width:100%;max-width:420px;text-align:left"><h2 style="margin:0 0 8px">${why || 'CYP EDU needs the staff link'}</h2>
+    <ol style="margin:0 0 12px;padding-left:20px;line-height:1.7"><li>Go to the message with the link (WhatsApp or email).</li><li>Hold the link, then tap <b>Copy</b>.</li><li>Come back here${paste ? ' and tap <b>Paste the link</b>' : ' and paste it in the box'}.</li></ol>
+    ${paste ? '<button class="btn pri" data-wact="linkpaste" style="width:100%">Paste the link</button>' : ''}
+    <form data-form="synclink" style="display:flex;flex-direction:column;gap:8px;margin-top:12px"><label class="f"><span>${paste ? 'Or paste it here' : 'Link'}</span><input class="in" name="link" autocomplete="off" required></label><button class="btn${paste ? '' : ' pri'}">Open</button></form></div>`;
+}
 /* first screen of a phone that has nothing yet */
 function vConnect() {
   const cfg = syncCfg(), st = UI.syncPing;
@@ -5435,7 +5451,7 @@ function vConnect() {
     <img src="${LOGO}" alt="Cicetekelo Youth Project logo" style="width:72px">
     <div>${logoSvg(46)}<p class="lead" style="margin-top:10px">Cicetekelo Youth Project · Education Department</p></div>
     ${cfg ? `<div class="card" style="width:100%;max-width:420px">${UI.syncMsg ? `<div class="warn" style="margin:0 0 10px">${UI.syncMsg}</div>` : ''}${st && !st.ok ? `<p class="sub">The shared database does not answer. Check the connection of this ${isPhone() ? 'phone' : 'computer'}.</p><button class="btn pri" data-wact="retry" style="width:100%">Try again</button>` : st && st.ok && !st.hasSnapshot ? `<p class="sub">The shared database is still empty. An Education admin starts it once, from the computer where the records are today.</p><button class="btn" data-wact="retry" style="width:100%">Try again</button>` : '<p class="sub" style="margin:0"><b>Loading the records…</b><br>The first time this takes about a minute. Keep this page open.</p>'}</div>`
-      : `<form class="card" data-form="synclink" style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px"><p style="margin:0">Copy the CYP EDU link from the message you received.</p>${navigator.clipboard && navigator.clipboard.readText ? '<button type="button" class="btn pri" data-wact="pastelink">Paste the link</button>' : ''}<label class="f"><span>The link</span><input class="in" name="link" autocomplete="off" autocapitalize="off" required></label><button class="btn${navigator.clipboard && navigator.clipboard.readText ? '' : ' pri'}">Open</button></form>`}
+      : linkAsk()}
     <p class="sub" style="max-width:420px">The names of the children are on this ${isPhone() ? 'phone' : 'computer'} only after the link is opened and the staff PIN is typed.</p>
   </div>`;
 }
@@ -5443,16 +5459,16 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('[data-wact]'); if (!b) return;
   const act = b.dataset.wact;
   if (act === 'copytext') { const el = document.getElementById(b.dataset.src), t = el ? el.value : ''; try { await navigator.clipboard.writeText(t); toast('Copied'); } catch (x) { if (el) { el.select(); document.execCommand('copy'); toast('Copied'); } } return; }
-  if (act === 'pastelink') { try { FORMS.synclink({ link: await navigator.clipboard.readText() }); } catch (x) { toast('The phone did not let CYP EDU read the copied link. Paste it in the box.'); } return; }
   if (act === 'offseen') { lsSet('cyp-offline-seen', '1'); render(); return; }
   if (act === 'installhide') { lsSet('cyp-install-hide', '1'); render(); return; }
   if (act === 'install' && _installEvt) { _installEvt.prompt(); try { await _installEvt.userChoice; } catch (x) {} _installEvt = null; render(); }
   else if (act === 'retry') { UI.syncPing = null; UI.syncMsg = ''; render(); syncAuto(); }
+  else if (act === 'linkpaste') { let t = ''; try { t = await navigator.clipboard.readText(); } catch (x) { return toast('The phone did not give the copied link. Paste it in the box.'); } if (!parseLink(t)) return toast('What you copied is not the staff link. Copy the link from the message.'); FORMS.synclink({ link: t }); }
   else if (act === 'copylink') { const t = staffLink(appUrl()); try { await navigator.clipboard.writeText(t); toast('Link copied'); } catch (x) { const i = document.getElementById('stafflink'); if (i) { i.select(); document.execCommand('copy'); toast('Link copied'); } } }
   else if (act === 'sharelink') { try { await navigator.share({ title: 'CYP EDU', text: 'CYP EDU, the records of the Education Department. Open this link once with a connection, then it also opens without.', url: staffLink(appUrl()) }); } catch (x) {} }
 });
 FORMS.appurl = function (o) { const u = String(o.appUrl || '').trim(); if (u && !/^https:\/\//.test(u)) return toast('The address must start with https://'); S.settings.appUrl = u; save(); toast('Saved'); render(); };
-function inviteText(link) { return ['CYP EDU, the app of the Education Department.', '', '1. Open this link on your phone or computer, with internet:', link, '', '2. Keep it on the phone or computer.', 'iPhone: Share button, then Add to Home Screen.', 'Android: three dots, then Install app.', 'Computer with Chrome or Edge: icon at the right of the address bar, then Install.', 'Mac with Safari: File, then Add to Dock.', '', '3. Tap your name and type the PIN. The PIN comes in another message.', '', 'Do not forward this link: it opens the records of the children.'].join('\n'); }
+function inviteText(link) { return ['CYP EDU, the app of the Education Department.', '', '1. Open this link on your phone or computer, with internet:', link, '', '2. Keep it on the phone or computer.', 'iPhone: Share button, then Add to Home Screen. If the app then asks for the link: copy the link above and tap Paste the link.', 'Android: three dots, then Install app.', 'Computer with Chrome or Edge: icon at the right of the address bar, then Install.', 'Mac with Safari: File, then Add to Dock.', '', '3. Tap your name and type the PIN. The PIN comes in another message.', '', 'Do not forward this link: it opens the records of the children.'].join('\n'); }
 function pinText() { return 'CYP EDU PIN: ' + pinValue(); }
 function staffLinkCard() {
   if (!USER.admin || !syncOn()) return '';
@@ -5465,6 +5481,9 @@ function staffLinkCard() {
       : `<p class="sub" style="margin:4px 0 10px">The app needs a web address first.</p>`}
     ${IS_WEB ? '' : `<form data-form="appurl" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;margin-top:12px"><label class="f"><span>Web address of the app</span><input class="in" name="appUrl" value="${esc(S.settings.appUrl || '')}" placeholder="https://..."></label><button class="btn">Save</button></form>`}</section>`;
 }
+/* a new staff link tapped while the app is open: the page does not load again, so the link is read here.
+   Only when this device has no working link: an old address in the history must not replace a link that works. */
+window.addEventListener('hashchange', () => { if (!location.hash.startsWith('#c=') || IS_DEMO) return; const c = parseLink(location.hash); if (!c || linkCode(c) === linkCode()) return; if (syncOn() && !SY.lock) return; FORMS.synclink({ link: location.hash }); });
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); _installEvt = e; const c = document.getElementById('installcard'); if (c) c.outerHTML = installCard(c.dataset.home === '1'); else if (USER && route().path === 'home') render(); });
 window.addEventListener('appinstalled', () => { _installEvt = null; lsSet('cyp-installed', '1'); if (USER) render(); });
 if (IS_WEB && isInstalled()) lsSet('cyp-installed', '1');
