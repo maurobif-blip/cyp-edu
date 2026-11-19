@@ -576,6 +576,8 @@ body{padding-top:env(safe-area-inset-top)}
   .foot a{display:inline-block;padding:12px 0;min-height:44px}
   .stafft input[type=checkbox]{width:28px;height:28px;margin:8px}.stafft .in,.stafft input.in{min-height:44px!important;height:auto!important;font-size:16px!important}
   .guide a{padding:12px 0;min-height:44px}
+  form[data-form=target] .in,form[data-form=target] .btn{min-height:44px!important;font-size:16px!important}
+  .main table input[type=checkbox]{width:28px;height:28px;margin:8px}
 }
 @media (max-width:350px){#fbbtn.inhd{padding:8px 9px;font-size:12.5px}}
 /* Luigi month grid on a touch screen: cells a finger can hit */
@@ -594,7 +596,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.17';
+const VERSION = 'alpha 5.18';
 const BUILD_DATE = '2026-11-19'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
