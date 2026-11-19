@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#0091D5">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -555,6 +557,16 @@ td.lc.fut{background:var(--fill);cursor:not-allowed}
 @media (max-width:760px){.csort{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;padding:10px 12px}.csort>.btn{grid-column:1/-1}.ctable thead{display:none}.chint{display:none}}
 .frow td:nth-child(4) .fsel{min-width:88px}.frow td:nth-child(8) .fsel{min-width:104px}.frow td:nth-child(3) .fsel{min-width:56px}
 
+
+/* mobile polish: room for the iPhone notch and home bar, bigger tap target for the profile button */
+@media (max-width:760px){
+  .hd{top:env(safe-area-inset-top);padding-left:calc(12px + env(safe-area-inset-left));padding-right:calc(12px + env(safe-area-inset-right))}
+  .hd a.av{width:40px;height:40px;font-size:14px}
+  .mnav a{-webkit-tap-highlight-color:transparent}
+}
+
+/* iPhone: keep the first bar clear of the notch when the app is installed */
+body{padding-top:env(safe-area-inset-top)}
 </style>
 </head>
 <body>
