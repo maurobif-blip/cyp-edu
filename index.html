@@ -597,7 +597,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.20';
+const VERSION = 'alpha 5.21';
 const BUILD_DATE = '2026-11-19'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -2127,7 +2127,8 @@ const XL = {
 /* ---------- render ---------- */
 function render() { _SI = null; UI.staleView = false; document.body.classList.toggle('guest', !!GUEST); dropCancelled();
   const app = $('#app');
-  if (!USER) { app.innerHTML = vLogin(); return; }
+  if (!USER) { carryLink(); app.innerHTML = vLogin(); return; }
+  if (location.hash.startsWith('#c=')) { try { history.replaceState(null, '', location.pathname + location.search + '#/home'); } catch (e) {} }
   const r = route();
   let body, active = r.path;
   try {
@@ -5334,7 +5335,7 @@ function vSync() {
     <label class="f"><span>Link</span><input class="in" name="link" placeholder="https://script.google.com/macros/s/.../exec?k=..." autocomplete="off" required></label><button class="btn pri" style="margin-top:12px">Connect</button></form>` : '<section class="card"><p class="sub">An Education admin connects this device to the shared database.</p></section>'}`;
 }
 FORMS.synclink = function (o) {
-  const c = parseLink(o.link); if (!c) return toast('This is not the link of the shared database');
+  const c = parseLink(o.link); if (!c) return toast(USER ? 'This is not the link of the shared database' : 'This is not the CYP EDU link. Copy the whole link from the message.');
   lsSet('cyp-sync', JSON.stringify(c)); UI.syncPing = null; UI.syncMsg = ''; render(); if (USER) syncCheck(); else syncAuto();
 };
 async function syncCheck() { try { UI.syncPing = await syncPost({ action: 'ping' }); } catch (e) { UI.syncPing = { ok: false, error: 'no connection' }; } if (route().path === 'sync') render(); return UI.syncPing; }
@@ -5378,6 +5379,19 @@ function linkFromHash() {
 }
 function staffLink(appUrl) { const c = syncCfg(); if (!c || !appUrl) return ''; return String(appUrl).trim().replace(/#.*$/, '') + '#c=' + b64u(JSON.stringify(Object.assign({ u: c.url, k: c.key }, c.enc ? { e: c.enc } : {}))); }
 function appUrl() { return IS_WEB ? location.origin + location.pathname : ((S.settings && S.settings.appUrl) || ''); }
+/* iPhone and iPad: the app on the Home Screen does not see what Safari saved, so the icon must carry the staff link.
+   The manifest starts from the link. In Safari, while nobody is signed in, the link also stays in the address:
+   it is after the #, the part a browser never sends to a server. */
+function carryLink() {
+  if (!IS_WEB || IS_DEMO || installKind() !== 'ios') return;
+  const link = staffLink(appUrl()), l = document.querySelector('link[rel="manifest"]');
+  if (!link) { if (l && l.getAttribute('href') !== 'manifest.webmanifest') l.setAttribute('href', 'manifest.webmanifest'); return; }
+  const base = location.origin + location.pathname.replace(/[^\/]*$/, '');
+  if (l && UI.carried !== link) { UI.carried = link; l.setAttribute('href', 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify({ name: 'CYP EDU', short_name: 'CYP EDU', description: 'Cicetekelo Youth Project, Education Department records', id: base, start_url: link, scope: base, display: 'standalone', background_color: '#FFFFFF', theme_color: '#0091D5',
+    icons: [{ src: base + 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' }, { src: base + 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' }, { src: base + 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }] }))); }
+  const tail = link.slice(link.indexOf('#'));
+  if (!USER && !GUEST && !isInstalled() && location.hash !== tail) { try { history.replaceState(null, '', location.pathname + location.search + tail); } catch (e) {} }
+}
 function isInstalled() { return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; }
 function installHow() {
   const ua = navigator.userAgent || '', ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
@@ -5421,7 +5435,7 @@ function vConnect() {
     <img src="${LOGO}" alt="Cicetekelo Youth Project logo" style="width:72px">
     <div>${logoSvg(46)}<p class="lead" style="margin-top:10px">Cicetekelo Youth Project · Education Department</p></div>
     ${cfg ? `<div class="card" style="width:100%;max-width:420px">${UI.syncMsg ? `<div class="warn" style="margin:0 0 10px">${UI.syncMsg}</div>` : ''}${st && !st.ok ? `<p class="sub">The shared database does not answer. Check the connection of this ${isPhone() ? 'phone' : 'computer'}.</p><button class="btn pri" data-wact="retry" style="width:100%">Try again</button>` : st && st.ok && !st.hasSnapshot ? `<p class="sub">The shared database is still empty. An Education admin starts it once, from the computer where the records are today.</p><button class="btn" data-wact="retry" style="width:100%">Try again</button>` : '<p class="sub" style="margin:0"><b>Loading the records…</b><br>The first time this takes about a minute. Keep this page open.</p>'}</div>`
-      : `<form class="card" data-form="synclink" style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px"><p class="sub" style="margin:0">Open the link you received from the Education Department. If you are here without it, paste it below.</p><label class="f"><span>Link</span><input class="in" name="link" autocomplete="off" required></label><button class="btn pri">Open</button></form>`}
+      : `<form class="card" data-form="synclink" style="width:100%;max-width:420px;display:flex;flex-direction:column;gap:12px"><p style="margin:0">Copy the CYP EDU link from the message you received.</p>${navigator.clipboard && navigator.clipboard.readText ? '<button type="button" class="btn pri" data-wact="pastelink">Paste the link</button>' : ''}<label class="f"><span>The link</span><input class="in" name="link" autocomplete="off" autocapitalize="off" required></label><button class="btn${navigator.clipboard && navigator.clipboard.readText ? '' : ' pri'}">Open</button></form>`}
     <p class="sub" style="max-width:420px">The names of the children are on this ${isPhone() ? 'phone' : 'computer'} only after the link is opened and the staff PIN is typed.</p>
   </div>`;
 }
@@ -5429,6 +5443,7 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('[data-wact]'); if (!b) return;
   const act = b.dataset.wact;
   if (act === 'copytext') { const el = document.getElementById(b.dataset.src), t = el ? el.value : ''; try { await navigator.clipboard.writeText(t); toast('Copied'); } catch (x) { if (el) { el.select(); document.execCommand('copy'); toast('Copied'); } } return; }
+  if (act === 'pastelink') { try { FORMS.synclink({ link: await navigator.clipboard.readText() }); } catch (x) { toast('The phone did not let CYP EDU read the copied link. Paste it in the box.'); } return; }
   if (act === 'offseen') { lsSet('cyp-offline-seen', '1'); render(); return; }
   if (act === 'installhide') { lsSet('cyp-install-hide', '1'); render(); return; }
   if (act === 'install' && _installEvt) { _installEvt.prompt(); try { await _installEvt.userChoice; } catch (x) {} _installEvt = null; render(); }
