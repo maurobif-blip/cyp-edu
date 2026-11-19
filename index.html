@@ -597,7 +597,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.21';
+const VERSION = 'alpha 5.22';
 const BUILD_DATE = '2026-11-19'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -5442,7 +5442,7 @@ function linkAsk(why) {
   return `<div class="card" id="linkask" style="width:100%;max-width:420px;text-align:left"><h2 style="margin:0 0 8px">${why || 'CYP EDU needs the staff link'}</h2>
     <ol style="margin:0 0 12px;padding-left:20px;line-height:1.7"><li>Go to the message with the link (WhatsApp or email).</li><li>Hold the link, then tap <b>Copy</b>.</li><li>Come back here${paste ? ' and tap <b>Paste the link</b>' : ' and paste it in the box'}.</li></ol>
     ${paste ? '<button class="btn pri" data-wact="linkpaste" style="width:100%">Paste the link</button>' : ''}
-    <form data-form="synclink" style="display:flex;flex-direction:column;gap:8px;margin-top:12px"><label class="f"><span>${paste ? 'Or paste it here' : 'Link'}</span><input class="in" name="link" autocomplete="off" required></label><button class="btn${paste ? '' : ' pri'}">Open</button></form></div>`;
+    <form data-form="synclink" style="display:flex;flex-direction:column;gap:8px;margin-top:12px"><label class="f"><span>${paste ? 'Or paste it here' : 'Link'}</span><input class="in" name="link" autocomplete="off" autocapitalize="off" spellcheck="false" required></label><button class="btn${paste ? '' : ' pri'}">Open</button></form></div>`;
 }
 /* first screen of a phone that has nothing yet */
 function vConnect() {
