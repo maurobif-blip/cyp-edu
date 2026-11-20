@@ -1,6 +1,6 @@
 /* CYP EDU: keeps the app on the device so that it opens without a connection.
    Newest version first when there is internet, the kept copy when there is none. Change V at every update. */
-const V = 'cyp-edu-b36911f627';
+const V = 'cyp-edu-28f80f795c';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
