@@ -600,7 +600,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.23';
+const VERSION = 'alpha 5.24';
 const BUILD_DATE = '2026-11-20'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -1792,7 +1792,8 @@ function vVisits(r) {
     const th = (key, label, cls) => `<th class="${cls || ''}"><a href="#" class="sortth" data-q="vso=${key}&vsd=${so === key && sd === 'desc' ? 'asc' : 'desc'}" title="Sort by this column">${label}${so === key ? (sd === 'asc' ? ' ▲' : ' ▼') : ''}</a></th>`;
     const names = {}; for (const v of base) { const n = visitSchool(v); if (n) names[n] = (names[n] || 0) + 1; }
     const oneTeam = team === 'Family' || team === 'School'; /* the page is already of one section: the section is not written again on every row */
-    body = `${team === 'School' ? schoolTripsHtml(per === 'year' ? yy + '-01-01' : per === 'all' ? '0000' : m + '-01', per === 'year' ? yy + '-12-31' : per === 'all' ? '9999' : m + '-31', per === 'year' ? yy : per === 'all' ? 'all years' : fmtMonth(m)) : ''}<div class="dbline"><p class="sec" style="margin:0">Database of visits${team === 'School' ? ' · one row for each form' : ''} · ${esc(per === 'year' ? yy : per === 'all' ? 'all years' : fmtMonth(m))}</p><button class="btn sm" data-act="xl" data-k="visits">Export in Excel</button></div>
+    const who = ' · ' + (team === 'Others' ? 'Others' : teamLabel(team)) + (centre === 'all' ? '' : ' · children of ' + CENTRE_LABEL[centre]);
+    body = `${team === 'School' ? schoolTripsHtml(per === 'year' ? yy + '-01-01' : per === 'all' ? '0000' : m + '-01', per === 'year' ? yy + '-12-31' : per === 'all' ? '9999' : m + '-31', per === 'year' ? yy : per === 'all' ? 'all years' : fmtMonth(m)) : ''}<div class="spot plain"><div><span class="sk">Database of visits${team === 'School' ? ' · one row for each form' : ''}</span><b>${team === 'School' ? 'Forms filled' : 'Visits done'}${esc(who)} · ${esc(per === 'year' ? yy : per === 'all' ? 'all years' : fmtMonth(m))}</b></div><div class="sr"><span class="sn">${vs.length}</span><button class="btn sm" data-act="xl" data-k="visits">Export in Excel</button></div></div>
   <div class="card filters fold${UI.fopen ? ' open' : ''}" style="grid-template-columns:repeat(4,minmax(0,1fr))">${filtBtn()}
     ${sel('vper', opt([{ v: 'year', l: 'Whole year ' + yy }, { v: 'all', l: 'All years' }], per, 'The month chosen above'), 'Period')}
     ${txt('vq', 'Child', 'Name or ID')}
@@ -4560,7 +4561,7 @@ function schoolPupils(sn) { return S.children.filter(c => isPupil(c) && schoolOf
 function sheetOn(c, d) { return visitsOf(c.id).find(v => v.purpose === 'School visit' && v.date === d) || null; }
 /* a school visit is a school on a day; the forms filled that day belong to it */
 function schoolTrips(a, b) { const m = {}; for (const v of S.visits) { if (v.purpose !== 'School visit' || !inRange(v.date, a, b) || !child(v.childId)) continue; const sn = visitSchool(v); if (!sn) continue; const k = v.date + '|' + sn; (m[k] = m[k] || { date: v.date, school: sn, forms: [] }).forms.push(v); } return Object.values(m).sort((x, y) => y.date.localeCompare(x.date) || x.school.localeCompare(y.school)); }
-function schoolTripsHtml(a, b, label) { const T = schoolTrips(a, b); return `<section class="card" id="trips"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><h2 style="margin:0">School visits · ${esc(label)} · ${T.length}</h2></div>${T.length ? T.map(t => `<div class="it"><div class="w"><b>${esc(t.school)}</b><span>${esc(fmtDate(t.date))} · ${t.forms.length} ${t.forms.length === 1 ? 'pupil' : 'pupils'} seen</span></div><a class="btn sm" href="#/schoolvisit?sn=${encodeURIComponent(t.school)}&d=${t.date}">Open the visit</a></div>`).join('') : '<p class="empty">No school visit recorded.</p>'}</section>`; }
+function schoolTripsHtml(a, b, label) { const T = schoolTrips(a, b); return `<section class="card" id="trips"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><h2 style="margin:0">School visits · ${esc(label)} · ${T.length}</h2><a class="btn pri" href="#/schoolvisit">Record a school visit</a></div>${T.length ? T.map(t => `<div class="it"><div class="w"><b>${esc(t.school)}</b><span>${esc(fmtDate(t.date))} · ${t.forms.length} ${t.forms.length === 1 ? 'pupil' : 'pupils'} seen</span></div><a class="btn sm" href="#/schoolvisit?sn=${encodeURIComponent(t.school)}&d=${t.date}">Open the visit</a></div>`).join('') : '<p class="empty">No school visit recorded.</p>'}</section>`; }
 function vSchoolVisit(r) {
   const q = r.q, sn = q.get('sn') || '', d = q.get('d') && q.get('d') <= today() ? q.get('d') : today(), n = termNow(), [ta, tb] = termRange(n.y, n.t), kids = sn ? schoolPupils(sn) : [];
   if (!kids.length) {
