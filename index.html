@@ -591,6 +591,17 @@ body{padding-top:env(safe-area-inset-top)}
 /* one line above a database table: its name on the left, the export on the right */
 .dbline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 2px 8px}
 
+/* alpha 5.27: Street at Minsundu, registers always visible, a marked row stays in the list */
+.att button.on.T{background:var(--redsoft);border-color:#F0C9C6;color:var(--red)}
+.qmark.T{background:var(--redsoft);border-color:#F0C9C6;color:var(--red)}
+table.mreg td.mT{color:var(--red);font-weight:700;background:var(--redsoft)}
+.qrow.done{background:var(--fill)}
+.qrow.done.P{background:var(--greensoft)}
+.qrow.done.T,.qrow.done.A{background:var(--redsoft)}
+.seg.regbar{display:flex;width:100%;margin:2px 0 4px}
+.seg.regbar a{flex:1 1 auto;text-align:center}
+.seg.regbar a.on{background:var(--ink);color:#FFFFFF}
+
 </style>
 </head>
 <body>
@@ -603,7 +614,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'alpha 5.26';
+const VERSION = 'test-new-version';
 const BUILD_DATE = '2026-11-20'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
@@ -1856,12 +1867,13 @@ function vAttendance(r) {
   const tile = (k, n, l) => `<a href="#" class="tile" data-q="only=${only === k ? '' : k}" style="${only === k ? 'border-color:var(--ink)' : ''}"><b>${n}</b><span>${l}</span><span class="sub">${sx(k)}</span></a>`;
   return `<div class="top"><div><h1>Attendance · ${esc(CENTRE_LABEL[centre] || centre)} · ${esc(grpText(grp))}</h1>${month ? `<p class="lead">${esc(fmtMonth(d.slice(0, 7)))}</p>` : ''}</div>
   </div>
+  ${centreSeg(centre)}
   ${month ? '' : dayBar(d, 'd')}
   ${quick ? '' : `<div class="grid g4">
     ${centre === 'Minsundu' ? attMarks(centre, grp).map(k => tile(k, cnt(k), ATT_L[k])).join('') : tile('P', cnt('P'), 'Present') + tile('A', cnt('A'), 'Absent') + tile('S', cnt('S') + cnt('E'), 'Sick or with permission')}${tile('unmarked', notDone, 'Not marked yet')}
   </div>`}
   <div class="attctl">
-    ${quick ? `<details class="qctl"${window.matchMedia && window.matchMedia('(max-width:760px)').matches ? '' : ' open'}><summary>Change centre, group, day or view</summary>` : ''}<div style="display:flex;gap:8px;flex-wrap:wrap">${centreSeg(centre)}<div class="seg" role="group" aria-label="Register">${attGroups(centre).map(([k, l]) => `<a href="#" data-q="g=${k}" class="${grp === k ? 'on' : ''}">${l} · ${S.children.filter(c => isCurrent(c) && attIn(c, centre, k)).length}</a>`).join('')}</div>
+    ${quick ? `<details class="qctl"${window.matchMedia && window.matchMedia('(max-width:760px)').matches ? '' : ' open'}><summary>Change group, day or view</summary>` : ''}<div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Group">${attGroups(centre).map(([k, l]) => `<a href="#" data-q="g=${k}" class="${grp === k ? 'on' : ''}">${l} · ${S.children.filter(c => isCurrent(c) && attIn(c, centre, k)).length}</a>`).join('')}</div>
     <input class="in" type="date" value="${d}" max="${today()}" data-filter="d" style="width:auto" aria-label="Another day">
     <div class="seg" role="group" aria-label="How to mark"><a href="#" data-q="av=quick" class="${quick ? 'on' : ''}">Quick marking</a><a href="#" data-q="av=day" class="${mode === 'day' ? 'on' : ''}">Full list</a><a href="#" data-q="av=month" class="${month ? 'on' : ''}">Month register</a></div></div>${quick ? '</details>' : ''}</div>
   ${quick ? attQuick(q, centre, grp, d) + attWho(centre) + attCheckTop(centre, grp, d) : `${attWho(centre)}
@@ -2105,8 +2117,8 @@ const XL = {
     const q = route().q, d = q.get('d') || today(), m = d.slice(0, 7), n = Number(monthEnd(m).slice(8));
     const q2 = new URLSearchParams(q.toString()); q2.delete('only');
     const kids = attKids(q2, true); const days = []; for (let i = 1; i <= n; i++) days.push(m + '-' + String(i).padStart(2, '0'));
-    const rows = [['ID', 'Name', 'Section', 'Residence'].concat(days.map(x => Number(x.slice(8)))).concat(['Present', 'Home', 'Boarding school', 'Absent', 'Sick', 'Permission'])];
-    for (const c of kids) { const v = days.map(x => (S.attendance[x] || {})[attKey(c, q.get('c') || defCentre())] || ''); rows.push([c.id, fullName(c), SECTIONS[c.section].label, c.residence].concat(v).concat(['P', 'H', 'B', 'A', 'S', 'E'].map(k => v.filter(x => x === k).length))); }
+    const rows = [['ID', 'Name', 'Section', 'Residence'].concat(days.map(x => Number(x.slice(8)))).concat(['Present', 'Home', 'Boarding school', 'Street', 'Absent', 'Sick', 'Permission'])];
+    for (const c of kids) { const v = days.map(x => (S.attendance[x] || {})[attKey(c, q.get('c') || defCentre())] || ''); rows.push([c.id, fullName(c), SECTIONS[c.section].label, c.residence].concat(v).concat(['P', 'H', 'B', 'T', 'A', 'S', 'E'].map(k => v.filter(x => x === k).length))); }
     downloadXlsx('attendance-register-' + m, [{ name: fmtMonth(m), rows }]);
   },
   outreach() { const m = route().q.get('m') || thisMonth(), { a, b } = monthCtx(m); const name = x => { const c = child(x); return c ? fullName(c) : ''; }; downloadXlsx('outreach-' + m, [{ name: 'Sessions', rows: colsToRows(S.outreach.filter(s => inRange(s.date, a, b)), [{ key: 'date', label: 'Date' }, { key: 'type', label: 'Session' }, { key: 'staff', label: 'Staff' }, { label: 'Children', get: v => (v.children || []).length }, { label: 'Names', get: v => (v.children || []).map(name).join('; ') }, { key: 'notes', label: 'Notes' }]) }]); },
@@ -2138,6 +2150,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
   const app = $('#app');
   if (!USER) { app.innerHTML = vLogin(); linkKeep(true); return; }
   const r = route();
+  if (r.path !== 'attendance') UI.qJust = null; /* the names kept in the quick list are let go when the page is left */
   let body, active = r.path;
   try {
     switch (r.path) {
@@ -2629,7 +2642,7 @@ function luigiReportHtml(a, b, label) {
 }
 
 /* ---------- attendance: centre switch and the Luigi monthly sheets ---------- */
-function centreSeg(centre) { return `<div class="seg" role="group" aria-label="Centre">${CENTRES.concat(['School', 'Literacy']).map(k => `<a href="#" data-q="c=${k}&g=&only=&sec=&gr=&sg=" class="${centre === k ? 'on' : ''}">${CENTRE_LABEL[k]}</a>`).join('')}</div>`; }
+function centreSeg(centre) { return `<div class="seg regbar" role="group" aria-label="Register">${CENTRES.concat(['School', 'Literacy']).map(k => `<a href="#" data-q="c=${k}&g=&only=&sec=&gr=&sg=" class="${centre === k ? 'on' : ''}">${CENTRE_LABEL[k]}</a>`).join('')}</div>`; }
 /* attIn is in nkwazi.js: a child is on the list of every centre he or she comes to */
 /* the three month grids of Luigi: one sheet each, one tap marks, a second tap clears */
 const L_MODE = { centre: { type: 'Drop-in', mark: 'C', total: 'Days in centre', tap: 'came to the centre', met: 'At the centre this month' }, day: { type: 'Day outreach', mark: 'S', total: 'Days on the street', tap: 'met on the street', met: 'Met on the street this month' }, night: { type: 'Night outreach', mark: 'S', total: 'Nights on the street', tap: 'slept on the street', met: 'Met at night this month' } };
@@ -2802,9 +2815,10 @@ function vLuigiAtt(r) {
   }
   const lead = tab === 'today' ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : tab === 'sum' ? 'Year ' + m.slice(0, 4) : (L_MODE[tab] ? lSheet(tab === 'centre' ? 'dropin' : tab).label + ' · ' : '') + fmtMonth(m);
   return `<div class="top"><div><h1>Attendance · Luigi</h1>${tab === 'today' ? '' : `<p class="lead">${esc(lead)}</p>`}</div></div>
+  ${centreSeg('Luigi')}
   ${tab === 'today' ? dayBar(d, 'ld') + filters : ''}
   ${tabs}
-  <details class="more attctl"${r.q.get('lc') ? ' open' : ''}><summary>Change centre${when ? ' or date' : ''}</summary><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${centreSeg('Luigi')}${when}</div></details>
+  ${when ? `<div class="attctl">${when}</div>` : ''}
   <details class="card soft more knowncard"${r.q.get('go') === 'knownq' ? ' open' : ''}><summary>New face? Check if the child is already known</summary>
     <div style="margin-top:10px"><input class="in" id="knownq" data-ctx="luigi" placeholder="Name or nickname" autocomplete="off" aria-label="Name or nickname of the child"><div id="knownbox" style="margin-top:8px"></div></div></details>
   ${tab === 'today' ? '' : filters}${body}`;
@@ -3399,7 +3413,9 @@ function overviewData() {
     }
     referLine(lines, 'Luigi'); backLine(lines, 'Luigi'); cards.push({ k: 'Luigi', title: 'Luigi Drop-in', color: SECTIONS.Luigi.color, lines, empty: !kids.length ? 'No children recorded yet.' : '' }); }
   for (const centre of ['Minsundu', 'Nkwazi']) { const n = S.children.filter(c => isCurrent(c) && centreOf(c) === centre).length;
-    cards.push({ k: centre, title: centre, color: CENTRE_COLOR[centre], lines: referLine(monthlyLine(n ? gapLines(centre) : [], centre), centre), empty: n ? '' : 'No children recorded yet.' }); }
+    const gl = n ? gapLines(centre) : [];
+    if (centre === 'Minsundu') { const t0 = addDays(today(), -6), ids = new Set(); for (const d of Object.keys(S.attendance)) if (d >= t0 && d <= today()) for (const [id, v] of Object.entries(S.attendance[d] || {})) if (v === 'T') ids.add(String(id)); if (ids.size) gl.unshift(L(ids.size, 'children marked Street in the last 7 days', '#/attendance?c=Minsundu&g=All&av=month')); }
+    cards.push({ k: centre, title: centre, color: CENTRE_COLOR[centre], lines: referLine(monthlyLine(gl, centre), centre), empty: n ? '' : 'No children recorded yet.' }); }
   // Family
   { const lines = [], d2 = P.due.length, nv = P.never.length;
     if (d2) lines.push(L(d2, 'home visits late', '#/visits?vt=Family&vtab=need'));
@@ -3888,7 +3904,7 @@ function absenceList() {
     for (const centre of attCentres(c)) {
       if (centre === 'Luigi') continue;
       const key = attKey(c, centre); let run = 0, since = '';
-      for (const d of dates) { if (d > t) continue; const s = (S.attendance[d] || {})[key]; if (s == null) continue; if (s === 'A') { run++; since = d; } else if (s === 'S' || s === 'E') continue; else break; }
+      for (const d of dates) { if (d > t) continue; const s = (S.attendance[d] || {})[key]; if (s == null) continue; if (s === 'A' || s === 'T') { run++; since = d; } else if (s === 'S' || s === 'E') continue; else break; }
       if (!run) continue;
       const days = daysBetween(since, t);
       if (days >= A.review) out.push({ c, centre, run, since, days, long: true }); else if (run >= A.alert) out.push({ c, centre, run, since, days, long: false });
@@ -3914,7 +3930,7 @@ function zmText(t) { for (const [a, b] of WORDS) t = t.replace(a, b); return t; 
 function zm(html) { return String(html).replace(/>([^<]+)</g, (m, t) => '>' + zmText(t) + '<'); }
 
 /* ---------- attendance: the month as a register, like the paper one ---------- */
-const ATT_SHOW = { P: '✓', A: 'X', S: 'S', E: 'P', H: 'H', B: 'B' };
+const ATT_SHOW = { P: '✓', A: 'X', S: 'S', E: 'P', H: 'H', B: 'B', T: 'St' };
 function attMonthTable(q) {
   const d = q.get('d') || today(), m = d.slice(0, 7), n = Number(monthEnd(m).slice(8));
   const q2 = new URLSearchParams(q.toString()); q2.delete('only');
@@ -3927,7 +3943,8 @@ function attMonthTable(q) {
 
 /* ---------- section, where the child sleeps, where the child comes by day: three separate things ---------- */
 const DAY_CENTRE = { Luigi: 'Luigi Drop-in', Minsundu: 'Minsundu Centre', Nkwazi: 'Nkwazi Centre' };
-const ATT_L = { P: 'Present', H: 'Home', B: 'Boarding school', A: 'Absent', S: 'Sick', E: 'Permission' };
+/* T = Street: a resident of Minsundu who left the centre without permission and is on the street (alpha 5.27) */
+const ATT_L = { P: 'Present', H: 'Home', B: 'Boarding school', T: 'Street', A: 'Absent', S: 'Sick', E: 'Permission' };
 const DAY_LABEL = { 'Nkwazi community school': 'Community school', 'Literacy class (Minsundu)': 'Literacy class', 'GRZ primary': 'GRZ school, primary', 'GRZ secondary': 'GRZ school, secondary' };
 /* the school of the children at Minsundu is the literacy class: files written before 12/11 say 'Minsundu school' */
 const LITERACY = 'Literacy class (Minsundu)';
@@ -3959,7 +3976,7 @@ function attIn(c, centre, grp) {
 function attGroups(centre) { return centre === 'Minsundu' ? [['UCC', 'UCC'], ['Youth', 'Youth'], ['Non-resident', 'Non-residents'], ['All', 'Everyone']] : [['All', 'Everyone'], ['Resident', 'Residents'], ['Non-resident', 'Non-residents']]; }
 function grpText(grp) { return grp === 'All' ? 'everyone' : grp === 'Resident' ? 'residents' : grp === 'Non-resident' ? 'non-residents' : grp; }
 /* the marks of each register, as on the paper ones: at Minsundu a resident is present, at home (H) or at boarding school */
-function attMarks(centre, grp) { return centre !== 'Minsundu' ? ['P', 'A', 'S', 'E'] : grp === 'Non-resident' ? ['P', 'A'] : grp === 'All' ? ['P', 'H', 'B', 'A'] : ['P', 'H', 'B']; }
+function attMarks(centre, grp) { return centre !== 'Minsundu' ? ['P', 'A', 'S', 'E'] : grp === 'Non-resident' ? ['P', 'A'] : grp === 'All' ? ['P', 'H', 'B', 'T', 'A'] : ['P', 'H', 'B', 'T']; }
 function attOpts(c, centre) { return attMarks(centre, centre === 'Minsundu' && !sleepsHere(c) ? 'Non-resident' : 'UCC').map(k => [k, ATT_L[k]]); }
 function sleepsText(c) {
   if (c.residence === 'Resident') return 'At Minsundu Centre (resident)';
@@ -3991,31 +4008,42 @@ function attQuick(q, centre, grp, d) {
   let chips;
   if (centre !== 'Minsundu') { const grades = uniq(all.map(c => c.grade).filter(Boolean).map(String)).sort((x, y) => gradeSort(x) - gradeSort(y)); chips = [['', 'All classes']].concat(grades.map(g => [g, /^\d+$/.test(g) ? 'Grade ' + g : g])).map(([v, l]) => `<a href="#" data-q="gr=${esc(v)}" class="${(q.get('gr') || '') === v ? 'on' : ''}">${esc(l)}</a>`).join(''); }
   else chips = attGroups(centre).map(([v, l]) => `<a href="#" data-q="g=${v}" class="${grp === v ? 'on' : ''}">${l}</a>`).join('');
-  const base = attQuickBase(q), day = S.attendance[d] || {}, n = k => base.filter(c => day[attKey(c, centre)] === k).length, todo = base.filter(c => day[attKey(c, centre)] == null).length;
-  const lm = UI.lastMark && UI.lastMark.d === d && UI.lastMark.centre === centre ? UI.lastMark : null, lc = lm ? child(String(lm.id).split('@')[0]) : null;
-  const done = q.get('qt') === 'done';
   return `<div class="qtop"><input class="in qsearch" id="attsearch" type="search" autocomplete="off" placeholder="Type a name, tap it" aria-label="Find a name" value="${esc(UI.attq || '')}">
     <div class="qchips">${chips}</div>
-    <div class="qcount"><span><b class="qday${d === today() ? '' : ' other'}">${esc(new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }))}</b> · <b>${n('P')}</b> present${n('A') ? ` · ${n('A')} absent` : ''}${n('H') ? ` · ${n('H')} home` : ''}${n('B') ? ` · ${n('B')} boarding school` : ''}${n('S') + n('E') ? ` · ${n('S') + n('E')} other` : ''} · <b>${todo}</b> to mark</span>${lm && lc ? `<button class="btn sm" data-act="qundo">Undo: ${esc(lc.name || fullName(lc))}</button>` : ''}</div>
-    <div class="seg" role="group" aria-label="To mark or marked"><a href="#" data-q="qt=" class="${done ? '' : 'on'}">To mark · ${todo}</a><a href="#" data-q="qt=done" class="${done ? 'on' : ''}">Marked · ${base.length - todo}</a></div></div>
+    <div id="qstat">${attQuickStat(q, centre, grp, d)}</div></div>
   <div class="card" style="padding:0 8px"><div id="attTable">${attQuickList(q)}</div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="xl" data-k="attday">Export in Excel</button></div>`;
 }
+function attQuickStat(q, centre, grp, d) {
+  const base = attQuickBase(q), day = S.attendance[d] || {}, n = k => base.filter(c => day[attKey(c, centre)] === k).length, todo = base.filter(c => day[attKey(c, centre)] == null).length;
+  const lm = UI.lastMark && UI.lastMark.d === d && UI.lastMark.centre === centre ? UI.lastMark : null, lc = lm ? child(String(lm.id).split('@')[0]) : null;
+  const done = q.get('qt') === 'done';
+  return `<div class="qcount"><span><b class="qday${d === today() ? '' : ' other'}">${esc(new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }))}</b> · <b>${n('P')}</b> present${n('A') ? ` · ${n('A')} absent` : ''}${n('H') ? ` · ${n('H')} home` : ''}${n('B') ? ` · ${n('B')} boarding school` : ''}${n('T') ? ` · ${n('T')} street` : ''}${n('S') + n('E') ? ` · ${n('S') + n('E')} other` : ''} · <b>${todo}</b> to mark</span>${lm && lc ? `<button class="btn sm" data-act="qundo">Undo: ${esc(lc.name || fullName(lc))}</button>` : ''}</div>
+    <div class="seg" role="group" aria-label="To mark or marked"><a href="#" data-q="qt=" class="${done ? '' : 'on'}">To mark · ${todo}</a><a href="#" data-q="qt=done" class="${done ? 'on' : ''}">Marked · ${base.length - todo}</a></div>`;
+}
+/* the names tapped on this page stay in the list until the page changes: on a slow phone a name that goes away looks like a tap that was lost */
+function qJust(q, centre, d) { const k = [centre, q.get('g') || '', q.get('gr') || '', q.get('sg') || '', d, q.get('qt') || ''].join('|'); if (!UI.qJust || UI.qJust.k !== k) UI.qJust = { k, ids: new Set() }; return UI.qJust.ids; }
 function attQuickList(q) {
   const centre = q.get('c') || defCentre(), d = q.get('d') || today(), day = S.attendance[d] || {}, term = (UI.attq || '').trim();
   const q2 = new URLSearchParams(q.toString()); q2.delete('only');
   const all = attKids(q2, true), done = q.get('qt') === 'done';
-  const kids = term ? all : all.filter(c => (day[attKey(c, centre)] != null) === done);
+  const keep = qJust(q, centre, d);
+  const kids = term ? all : all.filter(c => { const key = attKey(c, centre); return (day[key] != null) === done || keep.has(key); });
   if (!kids.length) return `<p class="empty">${term ? 'No child with this name on this list.' : done ? 'Nobody marked yet.' : 'Everyone on this list is marked.'}</p>`;
-  const rows = kids.map(c => {
+  const rows = kids.map(c => attQuickRow(c, centre, d, day)).join('');
+  return rows + `<div id="qrestbox">${attQuickRest(q, centre, d)}</div>`;
+}
+function attQuickRest(q, centre, d) {
+  if ((UI.attq || '').trim() || q.get('qt') === 'done') return '';
+  const day = S.attendance[d] || {}, left = attQuickBase(q).filter(c => day[attKey(c, centre)] == null).length;
+  return left ? `<div class="qrest"><p class="sub" style="margin:0">${left} not marked yet.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="qrest" data-v="A" data-d="${d}">The others are absent</button><button class="btn" data-act="qrest" data-v="P" data-d="${d}">The others are present</button></div></div>` : '';
+}
+function attQuickRow(c, centre, d, day) {
     const key = attKey(c, centre), v = day[key], open = UI.qopen === key;
     const sub = [teacherReg(centre) ? (CENTRE_LABEL[centreOf(c)] || '') + (c.residence === 'Resident' ? ', resident' : '') : centre !== centreOf(c) || (centre === 'Nkwazi' && c.residence === 'Resident') ? 'Sleeps at ' + (c.residence === 'Resident' ? 'Minsundu' : 'home') : '', centre === 'Minsundu' || (!teacherReg(centre) && centre !== centreOf(c)) ? c.section : '', c.residence === 'In transit' ? 'In transit' : '', c.grade ? (/^\d+$/.test(String(c.grade)) ? 'Grade ' + c.grade : c.grade) : '', 'ID ' + c.id].filter(Boolean).join(' · ');
-    return `<div class="qrow"><button class="qmain" data-act="${v ? 'qopen' : 'qatt'}" data-d="${d}" data-id="${esc(key)}" data-v="P">${avatar(c, 44)}<span class="qn"><b>${esc(fullName(c))}</b><small>${c.nickname ? '"' + esc(c.nickname) + '" · ' : ''}${esc(sub)}</small></span>${v ? `<span class="qmark ${v}">${ATT_L[v]}</span>` : '<span class="qtick">Present</span>'}</button>
+    return `<div class="qrow${v ? ' done ' + v : ''}"><button class="qmain" data-act="${v ? 'qopen' : 'qatt'}" data-d="${d}" data-id="${esc(key)}" data-v="P">${avatar(c, 44)}<span class="qn"><b>${esc(fullName(c))}</b><small>${c.nickname ? '"' + esc(c.nickname) + '" · ' : ''}${esc(sub)}</small></span>${v ? `<span class="qmark ${v}">${ATT_L[v]}</span>` : '<span class="qtick">Present</span>'}</button>
       <button class="qmore" data-act="qopen" data-id="${esc(key)}" aria-expanded="${open}">${v ? 'Change' : 'Other'}</button>
       ${open ? `<div class="qopts">${attOpts(c, centre).filter(([k]) => k !== v && (v || k !== 'P')).map(([k, l]) => `<button class="btn ${k}" data-act="qatt" data-d="${d}" data-id="${esc(key)}" data-v="${k}">${l}</button>`).join('')}${v ? `<button class="btn" data-act="qatt" data-d="${d}" data-id="${esc(key)}" data-v="">Remove the mark</button>` : ''}<a class="btn" href="#/child/${esc(c.id)}">Open the file</a></div>` : ''}</div>`;
-  }).join('');
-  const rest = !term && !done ? `<div class="qrest"><p class="sub" style="margin:0">${kids.length} not marked yet.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="qrest" data-v="A" data-d="${d}">The others are absent</button><button class="btn" data-act="qrest" data-v="P" data-d="${d}">The others are present</button></div></div>` : '';
-  return rows + rest;
 }
 function attQuickAct(act, b) {
   if (!['qatt', 'qopen', 'qundo', 'qrest'].includes(act)) return false;
@@ -4024,8 +4052,12 @@ function attQuickAct(act, b) {
   if (act === 'qatt') {
     const d = b.dataset.d, id = b.dataset.id, v = b.dataset.v; S.attendance[d] = S.attendance[d] || {};
     const prev = S.attendance[d][id]; touchAtt(d, id); if (v) S.attendance[d][id] = v; else delete S.attendance[d][id];
-    UI.lastMark = { d, id, centre, prev: prev == null ? '' : prev }; UI.qopen = null;
-    const had = (UI.attq || '') !== ''; UI.attq = ''; save(); render();
+    UI.lastMark = { d, id, centre, prev: prev == null ? '' : prev }; UI.qopen = null; qJust(q, centre, d).add(id);
+    const had = (UI.attq || '') !== ''; UI.attq = ''; save();
+    /* only the row and the counts are drawn again: the answer to the tap is immediate, also on a slow phone */
+    const rowEl = b.closest('.qrow'), kid = child(String(id).split('@')[0]), stat = $('#qstat');
+    if (!had && rowEl && kid && stat) { rowEl.outerHTML = attQuickRow(kid, centre, d, S.attendance[d] || {}); stat.innerHTML = attQuickStat(q, centre, attGrp(q, centre), d); const rb = $('#qrestbox'); if (rb) rb.innerHTML = attQuickRest(q, centre, d); if (typeof syncBadge === 'function') syncBadge(); return true; }
+    render();
     if (had) { const s = $('#attsearch'); if (s) s.focus(); }
     return true;
   }
@@ -4640,9 +4672,9 @@ function monthDue() { const m = Number(today().slice(8)) >= 25 ? thisMonth() : a
 function canCheck() { return USER.admin || /supervisor|head/i.test(USER.role || ''); }
 /* what the app already knows about the child in the month */
 function monthFacts(c, m) {
-  const { a, b } = monthCtx(m), out = [], key = String(c.id); let p = 0, h = 0, bs = 0, ab = 0, n = 0;
-  for (const d of Object.keys(S.attendance)) { if (!inRange(d, a, b)) continue; const v = S.attendance[d][key]; if (v == null) continue; n++; if (v === 'P') p++; else if (v === 'H') h++; else if (v === 'B') bs++; else if (v === 'A') ab++; }
-  out.push(['Register of the centre', n ? `present ${p} of ${n} days marked${h ? ', home ' + h : ''}${bs ? ', boarding school ' + bs : ''}${ab ? ', absent ' + ab : ''}` : 'no marks this month']);
+  const { a, b } = monthCtx(m), out = [], key = String(c.id); let p = 0, h = 0, bs = 0, ab = 0, st = 0, n = 0;
+  for (const d of Object.keys(S.attendance)) { if (!inRange(d, a, b)) continue; const v = S.attendance[d][key]; if (v == null) continue; n++; if (v === 'P') p++; else if (v === 'H') h++; else if (v === 'B') bs++; else if (v === 'T') st++; else if (v === 'A') ab++; }
+  out.push(['Register of the centre', n ? `present ${p} of ${n} days marked${h ? ', home ' + h : ''}${bs ? ', boarding school ' + bs : ''}${st ? ', on the street ' + st : ''}${ab ? ', absent ' + ab : ''}` : 'no marks this month']);
   for (const k of attCentres(c).filter(x => teacherReg(x))) { const kk = attKey(c, k); let pp = 0, nn = 0; for (const d of Object.keys(S.attendance)) { if (!inRange(d, a, b)) continue; const v = S.attendance[d][kk]; if (v == null) continue; nn++; if (v === 'P') pp++; } out.push([CENTRE_LABEL[k], nn ? `present ${pp} of ${nn} days marked` : 'no marks this month']); }
   const sv = schoolVisits(c)[0], T = termsOf(c)[0];
   out.push(['School', schoolOf(c) + (c.grade ? ', ' + gradeLabel(c.grade) : '')]);
