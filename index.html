@@ -602,6 +602,25 @@ table.mreg td.mT{color:var(--red);font-weight:700;background:var(--redsoft)}
 .seg.regbar a{flex:1 1 auto;text-align:center}
 .seg.regbar a.on{background:var(--ink);color:#FFFFFF}
 
+/* alpha 5.28: tasks */
+.taskline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.tbtns{display:inline-flex;gap:8px;flex-wrap:wrap}
+.thead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.taskcard h2{margin:0}
+.trow{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 10px;margin-top:8px;border-radius:8px;border-left:5px solid var(--pri);background:var(--fill)}
+.trow.late{border-left-color:var(--red);background:var(--redsoft)}
+.trow.done{border-left-color:var(--green);background:#FFFFFF;border:1px solid var(--line2);border-left:5px solid var(--green)}
+.trow .w{flex:1;min-width:0}.trow .w b{display:block;font-size:15.5px;font-weight:600}
+.trow .w span{display:block;font-size:13px;color:var(--soft);margin-top:2px}
+.trow .w span.tnote{color:var(--ink)}
+.trow .tact{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:none}
+.trow .tact .btn.pri{min-width:92px;min-height:44px}
+.tlab{font-size:14px;margin:14px 0 4px}
+.tseg{margin:0 0 12px}
+table.ttab{width:100%;border-collapse:collapse;font-size:14px}
+table.ttab th,table.ttab td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line2)}
+@media (max-width:700px){.trow{flex-direction:column;align-items:stretch}.trow .tact{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}.tseg{display:flex;width:100%}.tseg a{flex:1 1 auto;text-align:center}}
+
 </style>
 </head>
 <body>
@@ -614,8 +633,8 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'test-new-version';
-const BUILD_DATE = '2026-11-20'; /* the day this version was made: a device with an earlier date has a wrong clock */
+const VERSION = 'alpha 5.28';
+const BUILD_DATE = '2026-11-23'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#D9730D', ink: '#A25609' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#337EA9', ink: '#2D7198' },
@@ -1375,7 +1394,7 @@ function setQuery(changes) {
 }
 
 /* ---------- layout ---------- */
-const NAV = [['home', 'Home'], ['pending', 'To do'], ['children', 'Children'], ['attendance', 'Attendance'], ['visits', 'Monitoring'], ['counseling', 'Counseling'], ['reports', 'Reports'], ['activities', 'Activities'], ['logframe', 'Logframe', true], ['staff', 'Admin', true]];
+const NAV = [['home', 'Home'], ['pending', 'To do'], ['tasks', 'Tasks'], ['children', 'Children'], ['attendance', 'Attendance'], ['visits', 'Monitoring'], ['counseling', 'Counseling'], ['reports', 'Reports'], ['activities', 'Activities'], ['logframe', 'Logframe', true], ['staff', 'Admin', true]];
 function shell(active, body) {
   const pc = todoCount();
   const sup = USER && USER.admin;
@@ -1467,7 +1486,9 @@ function vHome(r) {
   return `<div class="top"><div><h1>Home</h1><p class="lead"></p></div></div>
   ${offlineCard()}
   ${installCard(true)}
+  ${taskHome(true)}
   ${centreGuide()}
+  ${taskHome(false)}
   ${homeBirthdays()}
   ${homeTodo()}
   ${syncReminder()}
@@ -2029,6 +2050,7 @@ function vHelp() {
   return `<div class="top"><div><h1>How it works</h1><p class="lead">CYP EDU ${VERSION}</p></div></div>
   ${centreGuide(true)}
   ${secExplain()}
+  <section class="card"><h2>Tasks</h2><p style="margin:8px 0 0">A task is given to a person, to several people or to a team. It shows in their Home until one of them taps Done. The person who gave it and the Education admins see who did it and when.</p></section>
   <section class="card"><h2>Who sees what</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6"><li><b>Health, disabilities and notes of a child:</b> the staff of the child's centre, the person who follows the child, the counsellors, the Education admins.</li><li><b>Child protection concerns and what is said in counselling:</b> the person who wrote it, the person who follows the child, the head of the child's centre, the counsellors, the Education admins.</li><li>Everyone else sees "${HIDDEN_TXT}".</li><li>An Education admin can tick "Confidential" in Admin for a person who needs to see more.</li></ul></section>
   <section class="card"><h2>Where the records are kept</h2><ul style="margin:10px 0 0;padding-left:18px;line-height:1.6"><li>On this phone or computer, so the app works without internet.</li><li>In the shared database, in the Google account of the project, so every phone shows the same records.</li><li>When the lock is on (More, Shared database), the records are locked on the phone before they are sent. Google keeps them and cannot read them. Only a phone opened with the staff link can read them.</li><li>Do not forward the staff link. If a phone is lost, tell the Education office the same day.</li></ul></section>
   <div class="grid g2" style="align-items:start">
@@ -2175,6 +2197,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'schoolvisit': body = vSchoolVisit(r); active = 'visits'; break;
       case 'pupil': body = vPupil(r); active = 'visits'; break;
       case 'referrals': body = r.id === 'new' ? vReferNew(r) : vReferrals(r); active = 'visits'; break;
+      case 'tasks': body = vTasks(r); active = 'tasks'; break;
       case 'monthly': body = vMonthly(r); active = 'children'; break;
       case 'review': body = vReview(); active = 'pending'; break;
       case 'paths': body = vPaths(r); active = 'children'; break;
@@ -3445,11 +3468,12 @@ function overviewData() {
     if (P.review) lines.push(L(P.review, 'open files of children who seem to have left', '#/review', 'orange'));
     if (S.children.length && (P.backupDays == null || P.backupDays > 7)) lines.push(L(P.backupDays == null ? '!' : P.backupDays, P.backupDays == null ? 'No backup made on this ' + (isPhone() ? 'phone' : 'computer') + ' yet' : 'days since the last backup', USER && USER.admin ? '#/staff/data' : '#/help', 'red'));
     { const sl = referLine([], 'Sports'); if (sl.length) cards.push({ k: 'Sports', title: 'Sports', color: '#73726E', lines: sl }); }
-    checkLine(lines); cards.push({ k: 'Admin', title: 'Education office', color: '#37352F', lines }); }
+    checkLine(lines); taskLine(lines); cards.push({ k: 'Admin', title: 'Education office', color: '#37352F', lines }); }
   return cards;
 }
 /* the red number in the menu: supervisors count everything, the others only their own sections */
-function todoCount() {
+function todoCount() { return todoCount0() + taskLateMine(); }
+function todoCount0() {
   if (!USER || USER.admin) return pendingData().urgent;
   const mine = staffAreas(USER); if (!mine.length) return 0;
   const own = c => mine.includes(c.k) || (mine.includes('Sports') && CENTRES.includes(c.k));
@@ -3537,6 +3561,7 @@ function vMore() {
     ${item('#/reports', 'Reports', 'Tables of each section')}
     ${USER.admin || staffAreas(USER).includes('Sports') ? item('#/activities', 'Activities', 'Sports and VET training · draft') : ''}
     ${item('#/school', 'Pupils by school', 'School visits and results per term')}
+    ${item('#/tasks', 'Tasks', 'Given to a person or to a team', taskOpenFor(USER).length)}
     ${item('#/referrals', 'Referrals', 'Between sections')}
     ${item('#/monthly', 'Monthly reports', 'Minsundu key child form')}
     ${USER.admin ? item('#/logframe', 'Logframe', 'Indicators · draft') : ''}
@@ -4437,6 +4462,7 @@ function referOpen(to) { return S.events.filter(e => e.type === 'Referral' && !r
 function referAdd(childId, from, to, reason, note, date, visitId) { S.events.push({ id: uid('e'), childId: String(childId), type: 'Referral', date: date || today(), from: from || '', to, reason: reason || '', note: note || '', by: USER.id, visitId: visitId || '' }); }
 function referLine(lines, k) { const n = referOpen(k).length; if (n) lines.unshift({ n, text: n === 1 ? 'child referred by colleagues' : 'children referred by colleagues', href: '#/referrals?to=' + k, lvl: 'red' }); return lines; }
 function eventLine(e) {
+  if (e.type === 'Task' || TASK_EV.includes(e.type)) return taskEventLine(e);
   if (VISIT_EV.includes(e.type) || e.type === 'Visit corrected') return '';
   if (e.type === 'Record cancelled' || e.type === 'Visit cancelled') return `<b>Cancelled</b> <span class="sub">by ${esc(staffName(e.by))}</span>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}`;
   if (e.type === 'Referral') { const cl = referClosed(e.id); return `<b>Referred to ${esc(referLabel(e.to))}</b>${e.from ? ' by ' + esc(referLabel(e.from)) : ''}: ${esc(e.reason || '')} ${cl ? '<span class="chip c-green">Done</span>' : '<span class="chip c-orange">Open</span>'} <span class="sub">${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`; }
@@ -4682,7 +4708,7 @@ function monthFacts(c, m) {
   if (T) out.push(['Last term result', T.y + ' Term ' + T.t + (T.perf ? ', ' + T.perf.toLowerCase() : '') + (T.pos ? ', position ' + T.pos : '')]);
   const hv = visitsOf(c.id).filter(v => v.purpose !== 'School visit' && inRange(v.date, a, b)); if (hv.length) out.push(['Home visits this month', hv.map(v => fmtDate(v.date)).join(', ')]);
   const ses = S.sessions.filter(s => inRange(s.date, a, b) && (s.children || []).map(String).includes(key)); if (ses.length) out.push(['Counselling this month', ses.length + (ses.length === 1 ? ' session' : ' sessions')]);
-  const ev = S.events.filter(e => String(e.childId) === key && inRange(e.date, a, b) && !/^Referral|^Visit /.test(e.type)); if (ev.length) out.push(['Happened this month', ev.map(e => e.type + (e.note && !CONF_EVENTS.includes(e.type) && (!HEALTH_EVENTS.includes(e.type) || seesHealth(c)) ? ': ' + e.note : '')).join('; ')]);
+  const ev = S.events.filter(e => String(e.childId) === key && inRange(e.date, a, b) && !/^Referral|^Visit |^Task/.test(e.type)); if (ev.length) out.push(['Happened this month', ev.map(e => e.type + (e.note && !CONF_EVENTS.includes(e.type) && (!HEALTH_EVENTS.includes(e.type) || seesHealth(c)) ? ': ' + e.note : '')).join('; ')]);
   const rf = referOpen().filter(e => String(e.childId) === key); if (rf.length) out.push(['Referred, still open', rf.map(e => referLabel(e.to) + ': ' + e.reason).join('; ')]);
   return out;
 }
@@ -5006,6 +5032,123 @@ function seesHealth(c) { return seesAll() || (!!USER && !GUEST && (!c || !c.id |
 function seesProtection(c, rec) { return seesAll() || (!!USER && !GUEST && ((rec && (rec.by === USER.id || rec.recordedBy === USER.id)) || (!!c && (c.responsible === USER.id || (isHead(USER) && inMyCentre(c)))))); }
 const HIDDEN_TXT = 'Hidden: only for the staff who need it';
 function hiddenChip() { return `<span class="chip c-hid">${HIDDEN_TXT}</span>`; }
+/* ====================================================================
+   Tasks (alpha 5.28): a task is given to a person, to several people or to a team.
+   It shows in the Home of each of them until one of them taps Done.
+   Stored as events (type "Task", closed by "Task done", opened again by "Task reopened"),
+   so it travels with the shared database as it is, locked or not, with no change to the script.
+   ==================================================================== */
+const TASK_TEAMS = [['Admin', 'Education office'], ['Luigi', 'Luigi'], ['Minsundu', 'Minsundu'], ['Nkwazi', 'Nkwazi Centre'], ['Family', 'Family Section'], ['School', 'School Section'], ['Counseling', 'Counselling'], ['Sports', 'Sports']];
+const TASK_EV = ['Task done', 'Task reopened'];
+const TASK_REPEAT = [['', 'No'], ['week', 'Every week'], ['month', 'Every month']];
+function taskTeamLabel(k) { const x = TASK_TEAMS.find(t => t[0] === k); return x ? x[1] : k; }
+function taskAll() { return S.events.filter(e => e.type === 'Task'); }
+/* the last "done" or "reopened" of each task */
+function taskEnds() { const m = {}; for (const e of S.events) if (e.ref && TASK_EV.includes(e.type) && (!m[e.ref] || (e.ts || 0) >= (m[e.ref].ts || 0))) m[e.ref] = e; return m; }
+function taskDone(t, ends) { const e = (ends || taskEnds())[t.id]; return e && e.type === 'Task done' ? e : null; }
+function taskMine(t, s) { s = s || USER; return !!s && ((t.staff || []).includes(s.id) || (t.teams || []).some(k => hasFlag(k, s))); }
+function taskSees(t) { return !!USER && !GUEST && (USER.admin || t.by === USER.id || taskMine(t)); }
+function taskWho(t) { return (t.teams || []).map(taskTeamLabel).concat((t.staff || []).map(staffName)).join(', ') || 'Nobody'; }
+function taskLate(t) { return !!t.due && t.due < today(); }
+function taskOrder(a, b) { return (a.due || '9999').localeCompare(b.due || '9999') || (a.ts || 0) - (b.ts || 0); }
+function taskOpenFor(s) { const ends = taskEnds(); return taskAll().filter(t => taskMine(t, s) && !taskDone(t, ends)).sort(taskOrder); }
+function taskDueChip(t, done) {
+  if (done) return `<span class="chip c-green">Done</span>`;
+  if (!t.due) return '';
+  const d = daysBetween(today(), t.due), late = t.due < today();
+  return `<span class="chip ${late ? 'c-red' : t.due === today() ? 'c-orange' : ''}">${late ? 'Late: ' + esc(fmtDate(t.due)) : t.due === today() ? 'Today' : 'By ' + esc(fmtDate(t.due))}</span>`;
+}
+function taskRow(t, ends, o2) {
+  o2 = o2 || {}; const done = taskDone(t, ends), c = t.childId ? child(t.childId) : null, can = taskMine(t) || USER.admin || t.by === USER.id;
+  return `<div class="trow${done ? ' done' : taskLate(t) ? ' late' : ''}"><div class="w"><b>${esc(t.title || '')}</b>
+      <span>For: <strong>${esc(taskWho(t))}</strong> · from ${esc(staffName(t.by))}, ${esc(fmtDate(t.date))}${t.repeat ? ' · ' + (t.repeat === 'week' ? 'every week' : 'every month') : ''}</span>
+      ${t.note ? `<span class="tnote">${esc(t.note)}</span>` : ''}${c ? `<span>About: ${childLink(c)}</span>` : ''}
+      ${done ? `<span>Done by <strong>${esc(staffName(done.by))}</strong>, ${esc(fmtDate(done.date))}${done.note ? ': ' + esc(done.note) : ''}</span>` : ''}</div>
+    <div class="tact">${taskDueChip(t, done)}${done ? (can ? `<button type="button" class="btn sm" data-tact="reopen" data-id="${esc(t.id)}">Not done</button>` : '') : can ? `<button type="button" class="btn pri" data-tact="done" data-id="${esc(t.id)}">Done</button>` : ''}${!done && !o2.home && (USER.admin || t.by === USER.id) ? `<button type="button" class="btn link sub" data-tact="cancel" data-id="${esc(t.id)}">Cancel the task</button>` : ''}</div></div>`;
+}
+/* Home: the tasks of the person, the ones of the teams included */
+/* with open tasks the box is the first thing on Home; with none it is one line under Start here */
+function taskHome(top) {
+  if (!USER || GUEST) return '';
+  const ends = taskEnds(), mine = taskAll().filter(t => taskMine(t) && !taskDone(t, ends)).sort(taskOrder);
+  if (!mine.length !== !top) return '';
+  if (!mine.length) return `<section class="card soft taskline" id="tasks"><span><b>Your tasks</b> · none open</span><span class="tbtns"><a class="btn sm" href="#/tasks">All tasks</a><a class="btn sm" href="#/tasks/new">Give a task</a></span></section>`;
+  const late = mine.filter(taskLate).length, show = mine.slice(0, 5);
+  return `<section class="card taskcard" id="tasks"><div class="thead"><h2>Your tasks · ${mine.length}${late ? ` <span class="chip c-red">${late} late</span>` : ''}</h2><span class="tbtns"><a class="btn sm" href="#/tasks">All tasks</a><a class="btn sm" href="#/tasks/new">Give a task</a></span></div>
+    ${show.map(t => taskRow(t, ends, { home: true })).join('')}${mine.length > show.length ? `<a class="btn" style="margin-top:8px" href="#/tasks">See all your ${mine.length} tasks</a>` : ''}</section>`;
+}
+function taskLateMine() { return USER && !GUEST ? taskOpenFor(USER).filter(taskLate).length : 0; }
+function taskLine(lines) { const ends = taskEnds(), n = taskAll().filter(t => !taskDone(t, ends) && taskLate(t)).length; if (n) lines.push({ n, text: n === 1 ? 'task late' : 'tasks late', href: '#/tasks?v=all', lvl: 'red' }); return lines; }
+function taskForm(r) {
+  const cid = r.q.get('child'), c = cid ? child(cid) : null, people = activeStaff().slice().sort((a, b) => a.name.localeCompare(b.name));
+  return `<div class="top"><div><h1>Give a task</h1><p class="lead">It shows in the Home of each person you choose.</p></div><a class="btn" href="#/tasks">Back</a></div>
+  <form class="card" data-form="task" style="max-width:760px">
+    <div class="fs">${field('What has to be done', 'title', '', 'text', { req: true, wide: true, attrs: ' maxlength="140"' })}
+      ${field('Details', 'note', '', 'textarea', { wide: true, rows: 2 })}</div>
+    <h3 class="tlab">For whom <span class="req">*</span></h3>
+    <p class="sub" style="margin:0 0 6px">A team: everyone who works there sees the task. One Done closes it for all.</p>
+    <div class="checks tchecks">${TASK_TEAMS.map(([k, l]) => `<label><input type="checkbox" name="teams" value="${k}">${esc(l)}</label>`).join('')}</div>
+    <h3 class="tlab">People</h3>
+    <div class="checks tchecks">${people.map(s => `<label><input type="checkbox" name="staff" value="${esc(s.id)}">${esc(s.name)}</label>`).join('')}</div>
+    <div class="fs two" style="margin-top:14px">${field('To do by', 'due', '', 'date', { attrs: ' min="' + today() + '"' })}
+      ${field('Repeat', 'repeat', '', 'select', { options: opt(TASK_REPEAT.map(([v, l]) => ({ v, l })), '') })}
+      ${childPick('child', c ? c.id : '', 'About a child (not needed)')}</div>
+    <button class="btn pri" style="margin-top:14px">Give the task</button></form>`;
+}
+function vTasks(r) {
+  if (GUEST) return `<div class="top"><div><h1>Tasks</h1><p class="lead">Not available in the guest view.</p></div></div>`;
+  if (r.id === 'new') return taskForm(r);
+  const ends = taskEnds(), all = taskAll().filter(taskSees), v = r.q.get('v') || 'me';
+  const sets = { me: all.filter(t => taskMine(t)), by: all.filter(t => t.by === USER.id), all };
+  const tabs = [['me', 'For me'], ['by', 'Given by me']].concat(USER.admin ? [['all', 'All']] : []);
+  const list = sets[tabs.some(t => t[0] === v) ? v : 'me'], open = list.filter(t => !taskDone(t, ends)).sort(taskOrder);
+  const done = list.filter(t => taskDone(t, ends)).sort((a, b) => (taskDone(b, ends).ts || 0) - (taskDone(a, ends).ts || 0)).slice(0, 40);
+  const n = k => sets[k].filter(t => !taskDone(t, ends)).length;
+  return `<div class="top"><div><h1>Tasks</h1><p class="lead">Given to a person, to several people or to a team.</p></div><a class="btn pri" href="#/tasks/new">Give a task</a></div>
+  <div class="seg tseg" role="group" aria-label="Which tasks">${tabs.map(([k, l]) => `<a href="#" data-q="v=${k}" class="${(v === k) || (k === 'me' && !tabs.some(t => t[0] === v)) ? 'on' : ''}">${l} · ${n(k)}</a>`).join('')}</div>
+  <section class="card taskcard"><h2>Open · ${open.length}</h2>${open.length ? open.map(t => taskRow(t, ends)).join('') : '<p class="empty">No open task.</p>'}</section>
+  ${v === 'all' && USER.admin ? taskByPerson(ends) : ''}
+  <section class="card taskcard"><h2>Done · ${done.length}</h2>${done.length ? done.map(t => taskRow(t, ends)).join('') : '<p class="empty">Nothing yet.</p>'}</section>`;
+}
+/* for the Education office: open, late and done, person by person */
+function taskByPerson(ends) {
+  const all = taskAll(), m = thisMonth(), rows = [];
+  const count = (label, f) => { const mine = all.filter(f); if (!mine.length) return; const open = mine.filter(t => !taskDone(t, ends)); rows.push([label, open.length, open.filter(taskLate).length, mine.filter(t => { const d = taskDone(t, ends); return d && (d.date || '').slice(0, 7) === m; }).length]); };
+  for (const [k, l] of TASK_TEAMS) count('Team: ' + l, t => (t.teams || []).includes(k));
+  for (const s of activeStaff().slice().sort((a, b) => a.name.localeCompare(b.name))) count(s.name, t => (t.staff || []).includes(s.id));
+  if (!rows.length) return '';
+  return `<section class="card"><h2>Person by person</h2><p class="sub" style="margin:2px 0 6px">Tasks given by name or to the team.</p><div class="tw"><table class="ttab"><thead><tr><th>Who</th><th>Open</th><th>Late</th><th>Done in ${esc(fmtMonth(m))}</th></tr></thead><tbody>${rows.map(x => `<tr><td>${esc(x[0])}</td><td>${x[1]}</td><td>${x[2] ? `<b style="color:var(--red)">${x[2]}</b>` : 0}</td><td>${x[3]}</td></tr>`).join('')}</tbody></table></div></section>`;
+}
+function taskNextDue(t) { const from = t.due && t.due > today() ? t.due : (t.due || today()); if (t.repeat === 'week') return addDays(from, 7); const d = new Date(from + 'T12:00:00'); d.setMonth(d.getMonth() + 1); return d.toISOString().slice(0, 10); }
+function taskEventLine(e) {
+  if (TASK_EV.includes(e.type)) return '';
+  const d = taskDone(e); return `<b>Task</b>: ${esc(e.title || '')} ${d ? '<span class="chip c-green">Done</span>' : '<span class="chip c-orange">Open</span>'} <span class="sub">for ${esc(taskWho(e))} · from ${esc(staffName(e.by))}</span>`;
+}
+FORMS.task = function (o) {
+  const title = (o.title || '').trim(), teams = [].concat(o.teams || []), staff = [].concat(o.staff || []);
+  if (!title) return toast('Write what has to be done');
+  if (!teams.length && !staff.length) return toast('Choose at least one person or one team');
+  S.events.push({ id: uid('e'), childId: o.child && child(o.child) ? String(o.child) : '', type: 'Task', date: today(), ts: Date.now(), title, note: (o.note || '').trim(), due: o.due || '', repeat: o.repeat || '', teams, staff, by: USER.id });
+  save(); toast('Task given to ' + (teams.map(taskTeamLabel).concat(staff.map(staffName)).join(', '))); go('#/tasks?v=by');
+};
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-tact]'); if (!b || !USER || GUEST) return;
+  const t = S.events.find(x => x.id === b.dataset.id && x.type === 'Task'); if (!t) return;
+  const act = b.dataset.tact;
+  if (act === 'done') {
+    if (taskDone(t)) return render();
+    S.events.push({ id: uid('e'), childId: t.childId || '', type: 'Task done', ref: t.id, date: today(), ts: Date.now(), note: '', by: USER.id });
+    if (t.repeat) { const due = taskNextDue(t), root = t.root || t.id, id = root + '@' + due; if (!S.events.some(x => x.id === id)) S.events.push({ id, root, childId: t.childId || '', type: 'Task', date: today(), ts: Date.now() + 1, title: t.title, note: t.note || '', due, repeat: t.repeat, teams: (t.teams || []).slice(), staff: (t.staff || []).slice(), by: t.by }); }
+    save(); toast('Done: ' + t.title); render(); return;
+  }
+  if (act === 'reopen') { S.events.push({ id: uid('e'), childId: t.childId || '', type: 'Task reopened', ref: t.id, date: today(), ts: Date.now(), note: '', by: USER.id }); save(); toast('The task is open again'); render(); return; }
+  if (act === 'cancel') {
+    if (!(USER.admin || t.by === USER.id)) return;
+    askBox({ title: 'Cancel this task?', body: t.title + '\nFor: ' + taskWho(t) + '\nIt leaves the Home of everyone.', why: true, ok: 'Cancel the task', keep: 'Keep the task' }).then(why => { if (why == null) return;
+      S.events.push({ id: uid('e'), childId: t.childId || '', type: 'Record cancelled', ref: t.id, kind: 'event', date: today(), ts: Date.now(), note: 'Task: ' + t.title + ' · for ' + taskWho(t) + ' · by ' + staffName(t.by) + '. Why: ' + why, by: USER.id });
+      dropCancelled(); save(); toast('Task cancelled'); render(); });
+  }
+});
 
 /* ====================================================================
    PIN for the staff
