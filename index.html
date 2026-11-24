@@ -1473,7 +1473,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'beta 1.2';
+const VERSION = 'beta 1.3';
 const BUILD_DATE = '2026-11-23'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#3A5EA8', ink: '#14213D' },
@@ -1706,8 +1706,8 @@ function pendingData() {
   for (const k of (S.children.length ? REPORT_KEYS : [])) {
     const def = REPORTS[k]; if (def.quarterly) continue;
     if (def.freq === 'quarterly' && !['03', '06', '09', '12'].includes(lastM.slice(5))) continue;
-    const st = (S.reports[lastM] || {})[k] || {};
-    if (!st.checked) reports.push({ key: k, month: lastM, st });
+    const rs = typeof repState === 'function' ? repState(lastM, k).state : ((S.reports[lastM] || {})[k] || {}).checked ? 'checked' : 'open';
+    if (rs !== 'checked') reports.push({ key: k, month: lastM, st: { prepared: rs === 'sent', back: rs === 'back' } });
   }
   const backupDays = typeof syncOn === 'function' && syncOn() ? 0 : S.meta.lastBackup ? daysBetween(S.meta.lastBackup, t) : null; /* the shared database is copied every day on the server */
   const total = due.length + never.length + missing.length + longAbs.length + actions.length + followEnd.length + withIssues + reports.length;
@@ -2795,6 +2795,7 @@ function vReports(r) {
   } else body = abaScope(aba, () => reportTable(def, p === 'M' ? m : rg.a.slice(0, 7) + '~' + rg.b.slice(0, 7)));
   return `<div class="top"><div><h1>Reports</h1><p class="lead">Choose the section and the month.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${k === 'Table6' ? '' : periodSeg(p)}${monthPicker(m)}</div></div>
   <div class="seg segg" style="align-self:flex-start">${REPORT_KEYS.map(x => `<a href="#" data-q="s=${x}" class="${x === k ? 'on' : ''}">${esc(REPORTS[x].short || REPORTS[x].label)}</a>`).join('')}<a href="#" data-q="s=${HISTORY_TAB}">2026 from the reports</a></div>
+  ${!def.quarterly && p === 'M' && !aba && repState(m, k).state === 'back' ? repCard(k, m) : ''}
   <section class="card">
     <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
       <div><h2>${esc(def.label)}${aba ? ' · ABA children only' : ''} · ${esc(def.quarterly ? quarterOf(m).label : rg.label)}</h2>${canAba ? `<div class="seg" role="group" aria-label="All children or ABA" style="margin:8px 0 2px"><a href="#" data-q="aba=" class="${aba ? '' : 'on'}">All children</a><a href="#" data-q="aba=1" class="${aba ? 'on' : ''}">ABA only (distance adoption) · ${S.children.filter(c => isAba(c) && c.status !== 'Closed').length}</a></div>` : ''}<p class="sub" style="margin:4px 0 0">${def.note ? esc(def.note) + ' ' : ''}</p></div>
@@ -2804,10 +2805,7 @@ function vReports(r) {
     ${k === 'School' && !aba && p === 'M' ? schoolReportLists(m) : ''}
   </section>
   ${historyForMonth(k, m).map(h => `<section class="card"><h2>What the section reported · ${esc(h.label)}</h2><p class="sub" style="margin:4px 0 10px">Copied from ${esc(h.source)}, as written.${h.note ? ' Note: ' + esc(h.note) : ''}</p>${historyTableHtml(h)}</section>`).join('')}
-  ${def.quarterly || p !== 'M' || aba ? '' : `<section class="card soft" style="display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center">
-    <div><b>Status</b><div class="sub">${st.prepared ? 'Prepared by ' + esc(staffName(st.prepared.by)) + ' on ' + esc(fmtDate(st.prepared.date)) : 'Not prepared yet'}${st.checked ? ' · checked by ' + esc(staffName(st.checked.by)) + ' on ' + esc(fmtDate(st.checked.date)) : ''}</div></div>
-    <div style="display:flex;gap:8px">${!st.prepared ? `<button class="btn" data-act="rstatus" data-k="${k}" data-m="${m}" data-v="prepared">Mark as prepared</button>` : ''}${st.prepared && !st.checked ? `<button class="btn pri" data-act="rstatus" data-k="${k}" data-m="${m}" data-v="checked">Mark as checked</button>` : ''}${st.prepared ? `<button class="btn sm" data-act="rstatus" data-k="${k}" data-m="${m}" data-v="reset">Undo</button>` : ''}</div>
-  </section>`}`;
+  ${def.quarterly || p !== 'M' || aba || repState(m, k).state === 'back' ? '' : repCard(k, m)}`;
 }
 
 function vHistory(r) {
@@ -3193,6 +3191,7 @@ document.addEventListener('click', e => {
   else if (act === 'nkzchecked') { const c = child(b.dataset.id); c.toCheck = []; c.updatedAt = today(); save(); render(); }
   else if (act === 'confirmsection') { const c = child(b.dataset.id); c.sectionToCheck = false; save(); render(); }
   else if (act === 'names') { const r = $('#names' + b.dataset.i); if (r) r.classList.toggle('hide'); }
+  else if (act === 'repflow') { repAct(b); }
   else if (act === 'rstatus') { const m = b.dataset.m, k = b.dataset.k; S.reports[m] = S.reports[m] || {}; const st = S.reports[m][k] = S.reports[m][k] || {}; if (b.dataset.v === 'reset') delete S.reports[m][k]; else st[b.dataset.v] = { by: USER.id, date: today() }; save(); render(); }
   else if (act === 'copytable') { const txt = tableToRows().map(r => r.join('\t')).join('\n'); copyText(txt); }
   else if (act === 'xlnames') { reportNamesXlsx(); }
@@ -4291,12 +4290,15 @@ function overviewData() {
     referLine(lines, 'Counseling'); backLine(lines, 'Counseling'); cards.push({ k: 'Counseling', title: 'Counselling', color: '#73726E', lines }); }
   // Education office
   { const lines = [];
-    for (const x of P.reports) lines.push(L('', `${REPORTS[x.key].short || REPORTS[x.key].label} report of ${fmtMonth(x.month)}: ${x.st.prepared ? 'to check' : 'not prepared'}`, `#/reports?s=${x.key}&m=${x.month}`, x.st.prepared ? 'orange' : 'red'));
+    for (const x of P.reports) lines.push(L('', `${REPORTS[x.key].short || REPORTS[x.key].label} report of ${fmtMonth(x.month)}: ${x.st.prepared ? 'sent, to check' : x.st.back ? 'sent back' : 'not sent'}`, `#/reports?s=${x.key}&m=${x.month}`, x.st.prepared ? 'orange' : 'red'));
+    if (typeof repWaiting === 'function') { const seen = new Set(P.reports.map(x => x.month + '|' + x.key)); for (const w of repWaiting()) if (w.state === 'sent' && !seen.has(w.m + '|' + w.k)) lines.push(L('', `${repLabel(w.k)} report of ${fmtMonth(w.m)}: sent, to check`, `#/reports?s=${w.k}&m=${w.m}`, 'orange')); }
     if (P.withIssues) lines.push(L(P.withIssues, 'open files with information missing', '#/children?go=records', 'orange'));
     if (P.review) lines.push(L(P.review, 'open files of children who seem to have left', '#/review', 'orange'));
     if (S.children.length && (P.backupDays == null || P.backupDays > 7)) lines.push(L(P.backupDays == null ? '!' : P.backupDays, P.backupDays == null ? 'No backup made on this ' + (isPhone() ? 'phone' : 'computer') + ' yet' : 'days since the last backup', USER && USER.admin ? '#/staff/data' : '#/help', 'red'));
     { const sl = referLine([], 'Sports'); if (sl.length) cards.push({ k: 'Sports', title: 'Sports', color: '#73726E', lines: sl }); }
     checkLine(lines); taskLine(lines); cards.push({ k: 'Admin', title: 'Education office', color: '#37352F', lines }); }
+  /* a report sent back by the Education office: first line of the card of its section */
+  if (typeof repWaiting === 'function') for (const w of repWaiting()) if (w.state === 'back') { const ck = w.k === 'UCC' || w.k === 'Youth' ? 'Minsundu' : w.k, card = cards.find(c => c.k === ck); if (card) { card.lines = card.lines || []; card.lines.unshift(L('', `${repLabel(w.k)} report of ${fmtMonth(w.m)} sent back: ${w.R.last.note || ''}`, `#/reports?s=${w.k}&m=${w.m}`, 'red')); card.empty = ''; } }
   return cards;
 }
 /* the red number in the menu: supervisors count everything, the others only their own sections */
@@ -5175,7 +5177,7 @@ function vLogframe(r) {
   const src = t => `<span class="sub">${t}</span>`, EAT = src('In CYP EAT'), FIN = src('In CYP FIN'), FILE = src('Tracking file of the M&E focal point'), NY = src('Not recorded yet'), PS = src('Public statistics');
   const Y12 = Number(b.slice(0, 4)), PR = promotedIn(Y12);
   /* Component 3 (v0.6): what CYP EDU can say about its own use */
-  const SEC7 = ['Luigi', 'Nkwazi', 'UCC', 'Youth', 'Family', 'School', 'Counseling'], rm = S.reports[m] || {}, repDone = SEC7.filter(k => rm[k] && rm[k].prepared && rm[k].checked).length;
+  const SEC7 = ['Luigi', 'Nkwazi', 'UCC', 'Youth', 'Family', 'School', 'Counseling'], rm = S.reports[m] || {}, repDone = SEC7.filter(k => typeof repState === 'function' ? repState(m, k).state === 'checked' : rm[k] && rm[k].prepared && rm[k].checked).length;
   const act = S.children.filter(isCurrent), full = act.filter(c => c.sex && c.dob && centreOf(c) && dayType(c));
   const G = [
     ['Programme reach', [
@@ -5199,7 +5201,7 @@ function vLogframe(r) {
       ['SO3.1', 'Logframe indicators produced from the apps on time (%)', 'Quarter', FILE],
       ['SO3.2', 'Approved spending linked to a budget line (%)', 'Month', FIN],
       ['OP3.1.1', 'Monitoring and management tools set up or strengthened and in use', 'Quarter', FILE],
-      ['OP3.2.1', 'Section reports produced from CYP EDU', fmtMonth(m), `<b>${repDone}</b> <span class="sub">of 7 sections with the report of the month marked as prepared and checked</span>`],
+      ['OP3.2.1', 'Section reports produced from CYP EDU', fmtMonth(m), `<b>${repDone}</b> <span class="sub">of 7 sections with the report of the month sent and checked</span>`],
       ['OP3.2.2', 'Children\'s records complete (%)', 'Today', act.length ? `<b>${Math.round(100 * full.length / act.length)}%</b> <span class="sub">${full.length} of ${act.length} active and semi-active children with sex, date of birth, centre and education written</span>` : NY],
       ['OP3.3.1', 'Spending recorded in CYP FIN (% of value paid)', 'Month', FIN], ['OP3.3.2', 'Paid requests with a receipt (%)', 'Month', FIN],
       ['OP3.4.1', 'Lunch services counted (% of service days)', 'Month', EAT], ['OP3.4.2', 'Weekly stock counts done (% of weeks)', 'Month', EAT]]],
@@ -5847,7 +5849,7 @@ function askBox(o) {
   return new Promise(res => {
     const old = document.getElementById('dlg'); if (old) old.remove();
     const d = document.createElement('div'); d.id = 'dlg'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true'); d.setAttribute('aria-labelledby', 'dlgt');
-    d.innerHTML = `<div class="dlgin"><h2 id="dlgt">${esc(o.title)}</h2>${o.body ? `<p>${esc(o.body).replace(/\n/g, '<br>')}</p>` : ''}${o.why ? '<label class="f">Why<textarea class="in" rows="2"></textarea></label>' : ''}<div class="dlgb"><button type="button" class="btn keep">${esc(o.keep || 'No')}</button><button type="button" class="btn danger ok">${esc(o.ok || 'Yes')}</button></div></div>`;
+    d.innerHTML = `<div class="dlgin"><h2 id="dlgt">${esc(o.title)}</h2>${o.body ? `<p>${esc(o.body).replace(/\n/g, '<br>')}</p>` : ''}${o.why ? '<label class="f">Why<textarea class="in" rows="2"></textarea></label>' : ''}<div class="dlgb"><button type="button" class="btn keep">${esc(o.keep || 'No')}</button><button type="button" class="btn ${o.okCls || 'danger'} ok">${esc(o.ok || 'Yes')}</button></div></div>`;
     const back = document.activeElement, ta = () => d.querySelector('textarea');
     const end = v => { d.remove(); document.removeEventListener('keydown', key, true); if (back && back.focus && back.isConnected) back.focus(); res(v); };
     const key = e => { if (e.key === 'Escape') { e.preventDefault(); end(null); } else if (e.key === 'Tab') { const f = [...d.querySelectorAll('textarea, button')], i = f.indexOf(document.activeElement); e.preventDefault(); f[(i + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); } };
@@ -5996,6 +5998,91 @@ document.addEventListener('click', e => {
       dropCancelled(); save(); toast('Task cancelled'); render(); });
   }
 });
+
+/* ---------- the report of a section, sent to the Education office (beta 1.3, 24/11/2026) ----------
+   Mauro, 24/11: the section sends the report of the month; after that the records of the month are closed
+   and only the Education office can open them again, with Send back and a note.
+   Stored as events, so they travel with the shared database as it is: "Report sent", "Report checked",
+   "Report sent back", ref = month|key. The last one decides the state. Marks made before (S.reports) still count. */
+const REP_EV = ['Report sent', 'Report checked', 'Report sent back'];
+const REP_SEC = ['Luigi', 'Nkwazi', 'UCC', 'Youth', 'Family', 'School', 'Counseling'];
+function repLabel(k) { return (REPORTS[k] && (REPORTS[k].short || REPORTS[k].label)) || k; }
+function repEvents(m, k) { const ref = m + '|' + k; return (S.events || []).filter(e => e.ref === ref && REP_EV.includes(e.type)).sort((a, b) => (a.ts || 0) - (b.ts || 0)); }
+function repState(m, k) {
+  const ev = repEvents(m, k), last = ev[ev.length - 1], sent = ev.filter(e => e.type === 'Report sent').pop() || null;
+  if (last) return { state: last.type === 'Report sent' ? 'sent' : last.type === 'Report checked' ? 'checked' : 'back', sent, last, ev };
+  const old = ((S.reports || {})[m] || {})[k] || {};
+  if (old.checked) return { state: 'checked', sent: old.prepared ? { by: old.prepared.by, date: old.prepared.date } : null, last: { type: 'Report checked', by: old.checked.by, date: old.checked.date }, ev: [] };
+  if (old.prepared) return { state: 'sent', sent: { by: old.prepared.by, date: old.prepared.date }, last: { type: 'Report sent', by: old.prepared.by, date: old.prepared.date }, ev: [] };
+  return { state: 'open', sent: null, last: null, ev: [] };
+}
+function repLocked(m, k) { if (!m || !REP_SEC.includes(k)) return false; const s = repState(m, k).state; return s === 'sent' || s === 'checked'; }
+function repLockMsg(m, k) { return `The ${repLabel(k)} report of ${fmtMonth(m)} was sent to the Education office. To change it, the Education office sends it back first.`; }
+function repKeyOfChild(c) { return c && REP_SEC.includes(c.section) ? c.section : ''; }
+/* the first locked report among the children, for a day; '' when nothing is locked */
+function repLockKids(d, kids) { const m = String(d || '').slice(0, 7); for (const c of kids) { const k = repKeyOfChild(c); if (k && repLocked(m, k)) return m + '|' + k; } return ''; }
+function repStop(mk) { const [m, k] = mk.split('|'); toast(repLockMsg(m, k)); }
+function repCard(k, m) {
+  if (!REP_SEC.includes(k) || GUEST) return '';
+  const R = repState(m, k), who = x => x ? esc(staffName(x.by)) + ', ' + esc(fmtDate(x.date)) : '', adm = USER && USER.admin;
+  const btn = (v, l, pri) => `<button class="btn${pri ? ' pri' : ''}" data-act="repflow" data-k="${k}" data-m="${m}" data-v="${v}">${l}</button>`;
+  let tag, line, acts = '';
+  if (R.state === 'open') { tag = '<span class="cyp-tag">Not sent</span>'; line = 'When the report is ready, send it. After that the records of the month cannot be changed.'; acts = btn('send', 'Send to the Education office', true); }
+  else if (R.state === 'sent') { tag = '<span class="cyp-tag cyp-tag--warn">Sent</span>'; line = 'Sent by ' + who(R.sent) + '. The records of the month are closed.' + (adm ? '' : ' Waiting for the Education office.'); if (adm) acts = btn('check', 'Checked', true) + btn('back', 'Send back'); }
+  else if (R.state === 'checked') { tag = `<span class="cyp-tag cyp-tag--ok">${dsIcon('check')}Checked</span>`; line = (R.sent ? 'Sent by ' + who(R.sent) + '. ' : '') + 'Checked by ' + who(R.last) + '. The records of the month are closed.'; if (adm) acts = btn('back', 'Send back'); }
+  else { tag = `<span class="cyp-tag cyp-tag--danger">${dsIcon('alert')}Sent back</span>`; line = 'Sent back by ' + who(R.last) + ': <b>' + esc(R.last.note || '') + '</b><br>The records of the month can be changed. Then send the report again.'; acts = btn('send', 'Send again to the Education office', true); }
+  return `<section class="card soft repflow" id="repflow"><h2>The report of ${esc(fmtMonth(m))} ${tag}</h2><p style="margin:6px 0 0">${line}</p>${acts ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${acts}</div>` : ''}${R.ev.length > 1 ? `<details style="margin-top:10px"><summary>What happened</summary><ul class="sub">${R.ev.map(e => `<li>${esc(fmtDate(e.date))} · ${esc(e.type.replace('Report ', ''))} by ${esc(staffName(e.by))}${e.note ? ': ' + esc(e.note) : ''}</li>`).join('')}</ul></details>` : ''}</section>`;
+}
+async function repAct(b) {
+  const k = b.dataset.k, m = b.dataset.m, v = b.dataset.v, R = repState(m, k);
+  const push = (type, note) => { S.events.push({ id: uid('e'), childId: '', type, ref: m + '|' + k, date: today(), ts: Date.now(), note: note || '', by: USER.id }); save(); render(); };
+  if (v === 'send') {
+    if (R.state === 'sent' || R.state === 'checked') return render();
+    const ok = await askBox({ title: 'Send the ' + repLabel(k) + ' report of ' + fmtMonth(m) + '?', body: 'After this the records of ' + fmtMonth(m) + ' for ' + repLabel(k) + ' cannot be changed. If something must be changed, the Education office sends the report back.', keep: 'Not now', ok: 'Send the report', okCls: 'pri' });
+    if (ok === null) return; push('Report sent'); toast('Sent to the Education office');
+  } else if (v === 'check') { if (!USER.admin || R.state !== 'sent') return render(); push('Report checked'); toast('Checked'); }
+  else if (v === 'back') {
+    if (!USER.admin || (R.state !== 'sent' && R.state !== 'checked')) return render();
+    const note = await askBox({ title: 'Send back the ' + repLabel(k) + ' report of ' + fmtMonth(m) + '?', body: 'Write what must be changed. The section reads it at the top of the report.', why: true, keep: 'Keep it', ok: 'Send back', okCls: 'pri' });
+    if (note === null) return; push('Report sent back', note); toast('Sent back');
+  }
+}
+/* the reports waiting: for the Education office the ones sent, for a section the ones sent back */
+function repWaiting() { const out = []; const ms = new Set((S.events || []).filter(e => REP_EV.includes(e.type)).map(e => e.ref.split('|')[0])); for (const r of Object.keys(S.reports || {})) ms.add(r);
+  for (const m of ms) for (const k of REP_SEC) { const s = repState(m, k).state; if (s === 'sent' || s === 'back') out.push({ m, k, state: s, R: repState(m, k) }); } return out.sort((a, b) => a.m.localeCompare(b.m)); }
+
+/* the lock: a capture listener stops a write to a closed month before any other handler runs */
+(function () {
+  const stop = (e, mk) => { e.preventDefault(); e.stopImmediatePropagation(); repStop(mk); };
+  document.addEventListener('click', e => {
+    if (!e.target.closest || GUEST || !USER) return;
+    const b = e.target.closest('[data-act],[data-lact]'); if (!b) return;
+    const act = b.dataset.act, la = b.dataset.lact, q = route().q, centre = q.get('c') || (typeof defCentre === 'function' ? defCentre() : '');
+    const kidOf = id => child(String(id || '').split('@')[0]);
+    let mk = '';
+    if (act === 'att' || act === 'qatt') { const c = kidOf(b.dataset.id); if (c) mk = repLockKids(b.dataset.d, [c]); }
+    else if (act === 'qundo') { const L = UI.lastMark; const c = L && kidOf(L.id); if (c) mk = repLockKids(L.d, [c]); }
+    else if (act === 'mcell') { const c = child(b.dataset.c); if (c) mk = repLockKids(b.dataset.d, [c]); }
+    else if (act === 'qrest') { const d = b.dataset.d, day = S.attendance[d] || {}; mk = repLockKids(d, attQuickBase(q).filter(c => day[attKey(c, centre)] == null)); }
+    else if (act === 'allpresent') { const ce = b.dataset.c || 'Minsundu', d = b.dataset.d; mk = repLockKids(d, S.children.filter(c => isCurrent(c) && attIn(c, ce, b.dataset.g))); }
+    else if (la === 'cell' || la === 'day') { const d = b.dataset.d; if (repLocked(String(d).slice(0, 7), 'Luigi')) mk = d.slice(0, 7) + '|Luigi'; }
+    else if (la === 'mark') { const d = q.get('ld') || today(); if (repLocked(d.slice(0, 7), 'Luigi')) mk = d.slice(0, 7) + '|Luigi'; }
+    if (mk) stop(e, mk);
+  }, true);
+  document.addEventListener('change', e => {
+    const el = e.target; if (!el || !el.dataset || GUEST || !USER) return;
+    if (el.dataset.lstaff || el.dataset.lstaffadd || el.dataset.lnote) { const d = el.dataset.d || ''; if (repLocked(d.slice(0, 7), 'Luigi')) { e.stopImmediatePropagation(); repStop(d.slice(0, 7) + '|Luigi'); render(); } }
+  }, true);
+  document.addEventListener('submit', e => {
+    const f = e.target; if (!f || !f.dataset || GUEST || !USER) return;
+    const v = n => f.elements[n] ? f.elements[n].value : '', d = v('date'), m = d.slice(0, 7);
+    let k = '';
+    if (f.dataset.form === 'visit') { const t = v('team'); k = t === 'Family' || t === 'School' ? t : ''; const ed = v('edit'), old = ed && S.visits.find(x => x.id === ed); if (!k && old) k = visitTeam(old); if (old && repLocked(old.date.slice(0, 7), k)) { e.preventDefault(); e.stopImmediatePropagation(); return repStop(old.date.slice(0, 7) + '|' + k); } }
+    else if (f.dataset.form === 'session') k = 'Counseling';
+    else if (f.dataset.form === 'outreach') k = 'Luigi';
+    if (k && repLocked(m, k)) { e.preventDefault(); e.stopImmediatePropagation(); repStop(m + '|' + k); }
+  }, true);
+})();
 /* icons of the sections and of the tools, classes of the places: from the CYP design system (generated by mkds.py) */
 const SEC_ICON = {"Education office": "<path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\"/> <path d=\"M22 10v6\"/> <path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\"/>", "Family Section": "<path d=\"m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/> <polyline points=\"9 22 9 12 15 12 15 22\"/>", "School Section": "<path d=\"M14 22v-4a2 2 0 1 0-4 0v4\"/> <path d=\"m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2\"/> <path d=\"M18 5v17\"/> <path d=\"m4 6 8-4 8 4\"/> <path d=\"M6 5v17\"/> <circle cx=\"12\" cy=\"9\" r=\"2\"/>", "UCC Children Section": "<path d=\"M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z\"/>", "Youth": "<path d=\"M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z\"/> <path d=\"M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2\"/> <path d=\"M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5\"/> <path d=\"M8 10h8\"/> <path d=\"M8 18h8\"/>", "Literacy class": "<path d=\"M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z\"/> <path d=\"M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z\"/>", "Counselling": "<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/> <path d=\"M15.8 9.2a2.5 2.5 0 0 0-3.5 0l-.3.4-.35-.3a2.42 2.42 0 1 0-3.2 3.6l3.6 3.5 3.6-3.5c1.2-1.2 1.1-2.7.2-3.7\"/>", "Sports": "<path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\"/> <path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\"/> <path d=\"M4 22h16\"/> <path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\"/> <path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\"/> <path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\"/>", "VET training": "<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\"/>", "Canteen": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/> <path d=\"M7 2v20\"/> <path d=\"M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/>", "Disability programme": "<path d=\"M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16\"/> <path d=\"m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9\"/> <path d=\"m2 15 6 6\"/> <path d=\"M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z\"/>", "Social enterprises": "<path d=\"M7 20h10\"/> <path d=\"M10 20c5.5-2.5.8-6.4 3-10\"/> <path d=\"M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z\"/> <path d=\"M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z\"/>", "Administration": "<path d=\"M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/> <rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\"/>", "Human Resources": "<path d=\"M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2\"/> <rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/> <circle cx=\"12\" cy=\"10\" r=\"2\"/> <line x1=\"8\" x2=\"8\" y1=\"2\" y2=\"4\"/> <line x1=\"16\" x2=\"16\" y1=\"2\" y2=\"4\"/>", "Security guards": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/>", "Transport": "<path d=\"M8 6v6\"/> <path d=\"M15 6v6\"/> <path d=\"M2 12h19.6\"/> <path d=\"M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3\"/> <circle cx=\"7\" cy=\"18\" r=\"2\"/> <path d=\"M9 18h5\"/> <circle cx=\"16\" cy=\"18\" r=\"2\"/>", "Mechanics workshop": "<path d=\"M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z\"/> <path d=\"M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z\"/> <path d=\"M12 2v2\"/> <path d=\"M12 22v-2\"/> <path d=\"m17 20.66-1-1.73\"/> <path d=\"M11 10.27 7 3.34\"/> <path d=\"m20.66 17-1.73-1\"/> <path d=\"m3.34 7 1.73 1\"/> <path d=\"M14 12h8\"/> <path d=\"M2 12h2\"/> <path d=\"m20.66 7-1.73 1\"/> <path d=\"m3.34 17 1.73-1\"/> <path d=\"m17 3.34-1 1.73\"/> <path d=\"m11 13.73-4 6.93\"/>", "Maintenance": "<path d=\"m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9\"/> <path d=\"m18 15 4-4\"/> <path d=\"m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5\"/>"};
 const DS_ICON = {"check": "<path d=\"M20 6 9 17l-5-5\"/>", "alert": "<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/> <path d=\"M12 9v4\"/> <path d=\"M12 17h.01\"/>", "down": "<path d=\"m6 9 6 6 6-6\"/>", "left": "<path d=\"m15 18-6-6 6-6\"/>", "right": "<path d=\"m9 18 6-6-6-6\"/>", "x": "<path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>", "pin": "<path d=\"M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z\"/> <circle cx=\"12\" cy=\"10\" r=\"3\"/>", "more": "<circle cx=\"12\" cy=\"12\" r=\"1\"/> <circle cx=\"19\" cy=\"12\" r=\"1\"/> <circle cx=\"5\" cy=\"12\" r=\"1\"/>", "comment": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>", "signout": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/> <polyline points=\"16 17 21 12 16 7\"/> <line x1=\"21\" x2=\"9\" y1=\"12\" y2=\"12\"/>", "print": "<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\"/> <path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\"/> <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\"/>", "excel": "<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/> <polyline points=\"7 10 12 15 17 10\"/> <line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\"/>"};
@@ -6593,6 +6680,7 @@ function counselPeriod(r, cv) {
   const stat = counselByCentre(P.a, P.b).map((x, i) => i && !see ? x.slice(0, 6).concat([x[6] ? HIDDEN_TXT : '']) : x);
   return `<div class="top"><div><h1>Counselling</h1><p class="lead">${esc(P.kind)} · ${esc(P.label)}.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(P.m)}<button class="btn pri" data-cact="periodword" data-cv="${cv}">Download the report in Word</button></div></div>
   ${counselTabs(cv)}
+  ${cv === 'month' && typeof repCard === 'function' ? repCard('Counseling', P.m) : ''}
   <section class="card"><h2>Statistics · ${esc(P.label)}</h2><div class="tw"><table class="rt rstack" id="rtable"><thead><tr><th>Code</th><th>Indicator</th><th class="n">Female</th><th class="n">Male</th><th class="n">N/A</th><th class="n">Total</th></tr></thead><tbody>${rows.map(x => x[0] === '' && x[2][3] == null ? `<tr class="rhead"><td colspan="6"><b>${esc(x[1])}</b></td></tr>` : `<tr><td class="sub rcode">${esc(x[0])}</td><td class="rind">${esc(x[1])}</td>${x[2].map((v, j) => `<td class="n" data-l="${['Female', 'Male', 'N/A', 'Total'][j]}">${v == null ? '' : esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
     <p class="sub" style="margin:8px 0 0">${esc(REPORTS.Counseling.note)}</p></section>
   <section class="card"><h2>Double counting</h2><p style="margin:6px 0 0">${T.all.all.length + T.all.others} children were worked with in ${esc(P.label)}. Added centre by centre they would be ${T.sum + T.all.others}: ${T.moreCentres} ${T.moreCentres === 1 ? 'child was' : 'children were'} seen in more than one centre. Added by kind of session (individual, group, family) they would be ${T.all.added + T.all.others}: ${T.moreKinds} ${T.moreKinds === 1 ? 'child was' : 'children were'} in more than one kind.${T.all.others ? ' ' + T.all.others + ' group participants have no name written and cannot be checked.' : ''}</p></section>
