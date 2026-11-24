@@ -1098,6 +1098,59 @@ img, svg { display: block; max-width: 100%; }
 .cyp-sheet--card .cyp-sheet__head { padding-top: var(--space-3); }
 .cyp-sheet--card .cyp-sheet__foot { padding-bottom: var(--space-4); }
 
+/* rows, bands and table rows that open a record */
+.cyp-go { width: 24px; height: 24px; flex: none; color: var(--ink-muted); }
+.cyp-row--link, .cyp-prow--link, .cyp-result--link { color: inherit; text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cyp-row--link { width: 100%; border-left: 0; border-right: 0; border-top: 0; font: inherit; text-align: left; }
+.cyp-row--link .cyp-row__text > b, .cyp-row--link .cyp-row__text > span:not(.cyp-tag):not(.cyp-row__tags) { display: block; }
+.cyp-row--link:active, .cyp-prow--link:active, .cyp-result--link:active { background: var(--surface-soft); }
+.cyp-row--link:focus-visible, .cyp-prow--link:focus-visible, .cyp-result--link:focus-visible, .cyp-row__open:focus-visible, .cyp-tr--link:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.cyp-prow--link { display: grid; }
+.cyp-result--link .cyp-result__action { justify-content: flex-end; }
+.cyp-row__open { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--touch-min); margin: calc(-1 * var(--space-2)) 0 0; padding: 0; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.cyp-row__open b { font: var(--type-body-strong) var(--font-text); }
+.cyp-row__open .cyp-go { width: 20px; height: 20px; }
+.cyp-row--mark .cyp-row__text { margin-right: var(--space-2); }
+.cyp-tr--link { cursor: pointer; }
+.cyp-tr--link td { vertical-align: middle; }
+.cyp-tr--link:active td, .cyp-tr--link:active td:not(.cyp-table__cat) { background: var(--surface-soft); }
+@media (hover: hover) { .cyp-tr--link:hover td:not(.cyp-table__cat) { background: var(--surface-soft); } }
+.cyp-table__go { width: 32px; padding-left: 0 !important; padding-right: var(--space-2) !important; vertical-align: middle !important; }
+.cyp-cell-name { display: flex; align-items: center; gap: var(--space-2); white-space: nowrap; }
+.cyp-cell-name .cyp-avatar { width: 32px; height: 32px; font: var(--type-small-strong) var(--font-display); }
+.cyp-table--dense th, .cyp-table--dense td { padding: var(--space-1) var(--space-2); }
+
+/* month grid and the note in the corner of a cell */
+.cyp-grid { width: auto; }
+.cyp-grid th.num { text-align: center; }
+.cyp-grid td.cyp-gcell { width: 44px; position: relative; min-width: 40px; height: 40px; padding: var(--space-3) var(--space-2) var(--space-1); text-align: center; font: var(--type-small-strong) var(--font-text); }
+.cyp-gcell--ok { color: var(--ok); }
+.cyp-gcell--warn { color: var(--warn); }
+.cyp-gcell--danger { color: var(--danger); }
+.cyp-cellnote { position: absolute; top: 1px; right: 3px; font: var(--type-caption) var(--font-text); color: var(--ink-muted); letter-spacing: 0; }
+
+/* referral */
+.cyp-referral { display: grid; gap: var(--space-3); }
+.cyp-referral__route { display: flex; align-items: center; gap: var(--space-1); margin: 0; color: var(--blue); letter-spacing: var(--track-caps); }
+.cyp-referral__route .cyp-icon { width: 16px; height: 16px; }
+.cyp-referral__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.cyp-referral__head h3 { margin: 0; }
+.cyp-referral__meta { margin: 0; color: var(--ink-muted); }
+.cyp-referral .cyp-note q { font-style: italic; }
+
+/* child picker */
+.cyp-picker { display: grid; gap: var(--space-4); }
+.cyp-picker__bar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.cyp-picker__bar > span { flex: 1; min-width: 80px; font: var(--type-small-strong) var(--font-text); }
+.cyp-picker__bar .cyp-btn { padding: 0 var(--space-3); }
+.cyp-picker__list label { min-height: 56px; }
+.cyp-picker__list .cyp-avatar { width: 40px; height: 40px; font: var(--type-small-strong) var(--font-display); }
+.cyp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* sign-in grouped by access level */
+.cyp-signin__group { display: grid; gap: var(--space-2); }
+.cyp-signin__group > p { margin: 0; color: var(--ink-muted); letter-spacing: var(--track-caps); }
+
 /* photo or initials at the start of a row */
 .cyp-avatar { width: var(--avatar-size); height: var(--avatar-size); flex: none; display: grid; place-items: center; overflow: hidden; border: 1.5px solid var(--line-strong); border-radius: var(--radius-disc); background: var(--surface); color: var(--blue); font: var(--type-heading-3) var(--font-display); }
 .cyp-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -1134,6 +1187,8 @@ img, svg { display: block; max-width: 100%; }
   .cyp-result--app .cyp-result__name { order: -2; }
   .cyp-result--app .cyp-result__block { order: -1; }
   .cyp-result--app .cyp-result__action .cyp-btn { width: 100%; }
+  .cyp-result--link { position: relative; }
+  .cyp-result--link .cyp-result__action { position: absolute; top: var(--space-6); right: 0; }
   .cyp-nav--chapters .cyp-nav__name { display: none; }
   .cyp-donut:not(.cyp-doc *, .cyp-page *) { grid-template-columns: 1fr; justify-items: center; }
   .cyp-donut:not(.cyp-doc *, .cyp-page *) > div { width: 100%; }
@@ -1506,8 +1561,8 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'beta 1.5';
-const BUILD_DATE = '2026-11-23'; /* the day this version was made: a device with an earlier date has a wrong clock */
+const VERSION = 'beta 1.6';
+const BUILD_DATE = '2026-11-24'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#3A5EA8', ink: '#14213D' },
   UCC:    { phase: 2, centre: 'Minsundu', label: 'Minsundu · UCC',            color: '#ECC000', ink: '#14213D' },
@@ -2439,9 +2494,9 @@ function childSorter(cs) {
 function childRows(list) {
   const q = route().q, cs = q.get('cs') || 'name', th = (k, l, cls) => `<th class="${cls || ''}"${cs.replace(/-desc$/, '') === k ? ` aria-sort="${/-desc$/.test(cs) ? 'descending' : 'ascending'}"` : ''}><a href="#" class="sortth" data-q="cs=${cs === k ? k + '-desc' : k}" title="Sort by this column">${l}<span class="sarr">${cs === k ? ' ▲' : cs === k + '-desc' ? ' ▼' : ' ↕'}</span></a></th>`;
   const fs = (name, options, label) => `<select class="in fsel" data-filter="${name}" aria-label="Filter: ${label}">${options}</select>`, secs = secList(q.get('section'));
-  const frow = `<tr class="frow"><td class="mh"></td><td class="ph"></td><td></td><td class="mh">${fs('sex', opt([{ v: 'M', l: 'M' }, { v: 'F', l: 'F' }], q.get('sex'), 'All'), 'sex')}</td><td class="mh">${fs('age', opt(AGE_BANDS.map(x => ({ v: x[0], l: x[1] })), q.get('age'), 'All'), 'age')}</td><td class="mh">${fs('edu', opt(uniq(S.children.map(c => dayType(c)).filter(Boolean)).sort((x, y) => dayLabel(x).localeCompare(dayLabel(y))).map(x => ({ v: x, l: dayLabel(x) })).concat([{ v: 'none', l: 'Not written' }]), q.get('edu'), 'All'), 'education')}</td><td>${fs('section', opt([{ v: 'Luigi', l: 'Luigi' }, { v: 'Minsundu', l: 'Minsundu' }, { v: 'UCC', l: 'Minsundu · UCC' }, { v: 'Youth', l: 'Minsundu · Youth' }, { v: 'Nkwazi', l: 'Nkwazi Centre' }], secs.length === 1 ? secs[0] : secs.join(',') === 'UCC,Youth' ? 'Minsundu' : '', secs.length > 1 && secs.join(',') !== 'UCC,Youth' ? 'Several' : 'All'), 'centre')}</td><td class="mh">${fs('res', opt(RES3, q.get('res'), 'All'), 'resident or not')}</td><td>${fs('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All' }]), q.get('status') || 'open'), 'status')}</td><td class="mh">${fs('hv', opt([{ v: 'none', l: 'Never' }, { v: 'old', l: 'More than 3 months ago' }, { v: 'new', l: 'In the last 3 months' }], q.get('hv'), 'All'), 'last home visit')}</td></tr>`;
-  return `${childFiltersOn(q) ? '<p class="sub chint"><a class="btn sm" href="#" data-q="age=&edu=&hv=&sex=&res=&section=&cs=&status=">Clear filters and order</a></p>' : ''}<div class="tw"><table class="ctable"><thead><tr>${th('id', 'ID', 'mh')}<th class="ph"><span class="vh">Photo</span></th>${th('name', 'Name')}${th('sex', 'Sex', 'mh')}${th('age', 'Age', 'n mh')}${th('edu', 'Education', 'mh')}${th('centre', 'Centre')}${th('res', 'Resident', 'mh')}${th('status', 'Status')}${th('hv', 'Last home visit', 'mh')}</tr>${frow}</thead><tbody>${list.length ? '' : '<tr><td colspan="10"><p class="empty">No child matches.</p></td></tr>'}
-  ${(isPhone() && q.get('call') !== '1' ? list.slice(0, 40) : list).map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td class="ph">${dsAvatar(c)}</td><td><a class="cname" href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh edu">${eduCell(c)}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td></tr>`; }).join('')}
+  const frow = `<tr class="frow"><td class="mh"></td><td class="ph"></td><td></td><td class="mh">${fs('sex', opt([{ v: 'M', l: 'M' }, { v: 'F', l: 'F' }], q.get('sex'), 'All'), 'sex')}</td><td class="mh">${fs('age', opt(AGE_BANDS.map(x => ({ v: x[0], l: x[1] })), q.get('age'), 'All'), 'age')}</td><td class="mh">${fs('edu', opt(uniq(S.children.map(c => dayType(c)).filter(Boolean)).sort((x, y) => dayLabel(x).localeCompare(dayLabel(y))).map(x => ({ v: x, l: dayLabel(x) })).concat([{ v: 'none', l: 'Not written' }]), q.get('edu'), 'All'), 'education')}</td><td>${fs('section', opt([{ v: 'Luigi', l: 'Luigi' }, { v: 'Minsundu', l: 'Minsundu' }, { v: 'UCC', l: 'Minsundu · UCC' }, { v: 'Youth', l: 'Minsundu · Youth' }, { v: 'Nkwazi', l: 'Nkwazi Centre' }], secs.length === 1 ? secs[0] : secs.join(',') === 'UCC,Youth' ? 'Minsundu' : '', secs.length > 1 && secs.join(',') !== 'UCC,Youth' ? 'Several' : 'All'), 'centre')}</td><td class="mh">${fs('res', opt(RES3, q.get('res'), 'All'), 'resident or not')}</td><td>${fs('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All' }]), q.get('status') || 'open'), 'status')}</td><td class="mh">${fs('hv', opt([{ v: 'none', l: 'Never' }, { v: 'old', l: 'More than 3 months ago' }, { v: 'new', l: 'In the last 3 months' }], q.get('hv'), 'All'), 'last home visit')}</td><td class="cyp-table__go"></td></tr>`;
+  return `${childFiltersOn(q) ? '<p class="sub chint"><a class="btn sm" href="#" data-q="age=&edu=&hv=&sex=&res=&section=&cs=&status=">Clear filters and order</a></p>' : ''}<div class="tw"><table class="ctable"><thead><tr>${th('id', 'ID', 'mh')}<th class="ph"><span class="vh">Photo</span></th>${th('name', 'Name')}${th('sex', 'Sex', 'mh')}${th('age', 'Age', 'n mh')}${th('edu', 'Education', 'mh')}${th('centre', 'Centre')}${th('res', 'Resident', 'mh')}${th('status', 'Status')}${th('hv', 'Last home visit', 'mh')}<th class="cyp-table__go"><span class="vh">Open</span></th></tr>${frow}</thead><tbody>${list.length ? '' : '<tr><td colspan="11"><p class="empty">No child matches.</p></td></tr>'}
+  ${(isPhone() && q.get('call') !== '1' ? list.slice(0, 40) : list).map(c => { const vi = visitInfo(c); return `<tr class="click cyp-tr--link" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td class="ph">${dsAvatar(c)}</td><td><a class="cname" href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh edu">${eduCell(c)}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td><td class="cyp-table__go">${dsIcon('go').replace('cyp-icon', 'cyp-icon cyp-go')}</td></tr>`; }).join('')}
   </tbody></table></div>${isPhone() && q.get('call') !== '1' && list.length > 40 ? `<p style="margin:12px 4px 6px"><a class="btn" href="#" data-q="call=1" style="width:100%">Show all ${list.length} children</a></p><p class="sub" style="margin:0 6px 8px">The first 40 are shown. Type a name above to find a child.</p>` : ''}`;
 }
 function vChildren(r) {
@@ -3629,14 +3684,14 @@ const L_SHEET_OF = { centre: 'dropin', day: 'day', night: 'night' };
 function luigiGrid(m, mode) {
   mode = lMode(mode); const T = L_MODE[mode], { kids, map } = luigiKids(m, mode), n = Number(monthEnd(m).slice(8)), days = [];
   const others = L_OTHER[mode].map(([k, l, t]) => ({ map: luigiMonthMap(m, k), l, t }));
-  const oth = (id, d) => { const o = others.filter(x => (x.map[id] || {})[d]); return o.length ? ` data-o="${o.map(x => x.l).join('')}" title="Also: ${esc(o.map(x => x.t).join(', '))}"` : ''; };
+  const oth = (id, d) => { const o = others.filter(x => (x.map[id] || {})[d]); return o.length ? `<span class="cyp-cellnote" aria-label="Also: ${esc(o.map(x => x.t).join(', '))}">${o.map(x => x.l).join(' ')}</span>` : ''; };
   for (let i = 1; i <= n; i++) days.push(m + '-' + String(i).padStart(2, '0'));
   if (!kids.length) return '<p class="empty">No child matches.</p>';
   const wd = d => new Date(d + 'T00:00:00').getDay();
   const head = `<tr><th class="lname">Name</th>${days.map(d => `<th class="${[0, 6].includes(wd(d)) ? 'we' : ''}${d === today() ? ' td' : ''}">${d > today() ? `${'SMTWTFS'[wd(d)]}<br>${Number(d.slice(8))}` : `<a href="#" data-q="lt=today&ld=${d}&ls=${L_SHEET_OF[mode]}" title="Open the sheet of this day: staff, notes, findings">${'SMTWTFS'[wd(d)]}<br>${Number(d.slice(8))}</a>`}</th>`).join('')}<th>${mode === 'night' ? 'Nights' : 'Days'}</th></tr>`;
   const nMet = kids.filter(c => map[c.id]).length, sep = (t, k) => `<tr class="gsep"><th class="lname">${t} · ${k}</th><td colspan="${days.length + 1}"></td></tr>`;
   const body = kids.map((c, i) => { const r = map[c.id] || {}; const vals = days.map(d => r[d] || '');
-    return `${nMet && i === 0 ? sep(T.met, nMet) : ''}${nMet && i === nMet && nMet < kids.length ? sep('Everyone else, A to Z', kids.length - nMet) : ''}<tr data-id="${esc(c.id)}"><th class="lname" scope="row"><span class="lnm">${avatar(c, 28)}<span><a href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''} <span class="lcat ${c.streetCat || ''}" title="${esc(STREET_CATS[c.streetCat] || 'Street situation not recorded')}">${esc(c.streetCat || '?')}</span></span></span></th>${days.map((d, i) => `<td class="lc ${vals[i]}${[0, 6].includes(wd(d)) ? ' we' : ''}${d === today() ? ' td' : ''}${d > today() ? ' fut' : ''}" data-lact="cell" data-d="${d}"${oth(c.id, d)}>${vals[i]}</td>`).join('')}<td class="ln" data-t="T">${vals.filter(v => v).length}</td></tr>`; }).join('');
+    return `${nMet && i === 0 ? sep(T.met, nMet) : ''}${nMet && i === nMet && nMet < kids.length ? sep('Everyone else, A to Z', kids.length - nMet) : ''}<tr data-id="${esc(c.id)}"><th class="lname" scope="row"><span class="lnm">${avatar(c, 28)}<span><a href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''} <span class="lcat ${c.streetCat || ''}" title="${esc(STREET_CATS[c.streetCat] || 'Street situation not recorded')}">${esc(c.streetCat || '?')}</span></span></span></th>${days.map((d, i) => `<td class="lc ${vals[i]}${[0, 6].includes(wd(d)) ? ' we' : ''}${d === today() ? ' td' : ''}${d > today() ? ' fut' : ''}" data-lact="cell" data-d="${d}" data-v="${vals[i]}">${oth(c.id, d)}<b class="gm">${vals[i]}</b></td>`).join('')}<td class="ln" data-t="T">${vals.filter(v => v).length}</td></tr>`; }).join('');
   const foot = `<tr class="lfoot"><th class="lname">Children marked</th>${days.map(d => `<td data-fd="${d}">${kids.filter(c => (map[c.id] || {})[d]).length || ''}</td>`).join('')}<td></td></tr>`;
   return `<div class="tw lwrap"><table class="lgrid" data-mode="${mode}"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;
 }
@@ -3791,11 +3846,11 @@ document.addEventListener('click', e => {
   if (act === 'cell') {
     const table = b.closest('table'), T = L_MODE[lMode(table.dataset.mode)], tr = b.closest('tr'), id = tr.dataset.id, d = b.dataset.d;
     if (d > today()) { toast('This day is in the future'); return; }
-    const next = b.textContent ? '' : T.mark;
+    const next = b.dataset.v ? '' : T.mark, gm = $('.gm', b);
     luigiToggle(id, d, T.type, !!next); save();
-    b.classList.remove('C', 'S'); if (next) b.classList.add(next); b.textContent = next;
-    const tt = $('[data-t=T]', tr); if (tt) tt.textContent = $$('td.lc', tr).filter(x => x.textContent).length;
-    const f = $(`[data-fd="${d}"]`, table); if (f) f.textContent = $$(`td.lc[data-d="${d}"]`, table).filter(x => x.textContent).length || '';
+    b.classList.remove('C', 'S'); if (next) b.classList.add(next); b.dataset.v = next; if (gm) gm.textContent = next;
+    const tt = $('[data-t=T]', tr); if (tt) tt.textContent = $$('td.lc', tr).filter(x => x.dataset.v).length;
+    const f = $(`[data-fd="${d}"]`, table); if (f) f.textContent = $$(`td.lc[data-d="${d}"]`, table).filter(x => x.dataset.v).length || '';
   } else if (act === 'day') {
     const c = child(b.dataset.id), sh = lSheet(b.dataset.sheet);
     luigiToggle(c.id, b.dataset.d, sh.type, !b.classList.contains('on')); save(); render();
@@ -4208,12 +4263,16 @@ function pickHtml(key, o) {
   if (term.length >= 2) L = S.children.filter(c => c.status !== 'Closed').filter(c => (!F.sex || c.sex === F.sex) && (fullName(c) + ' ' + (c.nickname || '') + ' ' + c.id).toLowerCase().includes(term));
   const byName = (x, y) => fullName(x).localeCompare(fullName(y));
   const ticked = Array.from(sel).map(id => child(id)).filter(Boolean).sort(byName), rest = L.filter(c => !sel.has(String(c.id))).sort(byName), shown = rest.slice(0, PICK_MAX);
-  const row = c => `<label><input type="checkbox" data-pick="${key}" data-pkid="${esc(c.id)}"${sel.has(String(c.id)) ? ' checked' : ''}> ${esc(fullName(c))} <span class="sub">${esc(SECTIONS[c.section] ? SECTIONS[c.section].label : c.section || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) : ''}</span></label>`;
-  const sopt = (v, l) => `<option value="${v}"${F.sex === v ? ' selected' : ''}>${l}</option>`;
-  return `<span>${esc(o.label || 'Who took part')} · ${sel.size} ticked</span>
-    <div class="pickf"><select class="in" data-pick="${key}" data-pf="reg" aria-label="Children of">${regs.map(([v, l]) => `<option value="${v}"${F.reg === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select><select class="in" data-pick="${key}" data-pf="sex" aria-label="Girls or boys">${sopt('', 'Girls and boys')}${sopt('F', 'Girls')}${sopt('M', 'Boys')}</select><input class="in" type="search" autocomplete="off" data-pick="${key}" data-pf="q" id="pickq-${key}" placeholder="Type a name" aria-label="Find a child by name" value="${esc(F.q)}"></div>
-    ${ticked.length ? `<p class="sec" style="margin:8px 0 2px">Ticked · ${ticked.length}</p><div class="sesslist">${ticked.map(row).join('')}</div>` : ''}
-    ${rest.length ? `<div class="pickbar"><span class="sub">${rest.length} not ticked${rest.length > PICK_MAX ? ', the first ' + PICK_MAX + ' shown' : ''}</span><button type="button" class="btn sm" data-pick="${key}" data-pact="all">Tick all ${shown.length}</button>${sel.size ? `<button type="button" class="btn sm" data-pick="${key}" data-pact="none">Untick all</button>` : ''}</div><div class="sesslist">${shown.map(row).join('')}</div>` : `<p class="sub" style="margin:6px 0 0">${esc(o.empty || 'No child matches. Change the filter or type a name.')}</p>`}`;
+  const row = c => `<label><input type="checkbox" data-pick="${key}" data-pkid="${esc(c.id)}"${sel.has(String(c.id)) ? ' checked' : ''}>${dsAvatar(c)}<span>${esc(fullName(c))} <span class="sub">${esc(SECTIONS[c.section] ? SECTIONS[c.section].label : c.section || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) : ''}</span></span></label>`;
+  const rad = (v, l) => `<label><input type="radio" name="pk-sex-${key}" value="${v}" data-pick="${key}" data-pf="sex"${F.sex === v ? ' checked' : ''}><span>${l}</span></label>`;
+  /* ChildPicker of the design system (24/11): register, girls or boys, name, the bar with the count, then the list with the ticked children on top */
+  return `<div class="cyp-picker"><p class="pickhead">${esc(o.label || 'Who took part')}</p>
+    <div class="cyp-field"><label for="pkreg-${key}">Register</label><select class="cyp-input" id="pkreg-${key}" data-pick="${key}" data-pf="reg">${regs.map(([v, l]) => `<option value="${v}"${F.reg === v ? ' selected' : ''}>${esc(l)}</option>`).join('')}</select></div>
+    <fieldset class="cyp-choice"><legend>Show</legend><div class="cyp-choice__row">${rad('', 'All')}${rad('F', 'Girls')}${rad('M', 'Boys')}</div></fieldset>
+    <div class="cyp-field"><label for="pickq-${key}">Name</label><input class="cyp-input" type="search" autocomplete="off" data-pick="${key}" data-pf="q" id="pickq-${key}" value="${esc(F.q)}"></div>
+    <div class="cyp-picker__bar"><span>${sel.size} ticked</span>${shown.length ? `<button type="button" class="cyp-btn" data-pick="${key}" data-pact="all">Tick all ${shown.length}</button>` : ''}${sel.size ? `<button type="button" class="cyp-btn" data-pick="${key}" data-pact="none">Untick all</button>` : ''}</div>
+    ${ticked.length || shown.length ? `<fieldset class="cyp-checklist cyp-picker__list"><legend class="cyp-sr">Children</legend><div class="cyp-checklist__rows">${ticked.concat(shown).map(row).join('')}</div></fieldset>` : ''}
+    ${rest.length > PICK_MAX ? `<p class="sub" style="margin:0">${rest.length} not ticked: the first ${PICK_MAX} are shown. Type a name to find the others.</p>` : !rest.length && !ticked.length ? `<p class="sub" style="margin:0">${esc(o.empty || 'No child matches. Change the register or type a name.')}</p>` : ''}</div>`;
 }
 /* PICK_ON[key] = { sel: () => Set, draw: keepFocus => redraw } */
 function pickDraw(key, focus) { const P = PICK_ON[key]; if (!P) return; P.draw(); if (focus) { const i = document.getElementById('pickq-' + key); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } } }
@@ -4227,7 +4286,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest ? e.target.closest('button[data-pact]') : null; if (!b || !PICK_ON[b.dataset.pick]) return;
   e.preventDefault(); const key = b.dataset.pick, s = PICK_ON[key].sel();
   if (b.dataset.pact === 'none') s.clear();
-  else for (const i of b.closest('[id]').querySelectorAll('input[data-pkid]')) s.add(String(i.dataset.pkid));
+  else for (const i of b.closest('.cyp-picker').querySelectorAll('input[data-pkid]')) s.add(String(i.dataset.pkid));
   pickDraw(key);
 });
 
@@ -5046,9 +5105,9 @@ function attQuickRow(c, centre, d, day) {
     const sub = [teacherReg(centre) ? (CENTRE_LABEL[centreOf(c)] || '') + (c.residence === 'Resident' ? ', resident' : '') : centre !== centreOf(c) || (centre === 'Nkwazi' && c.residence === 'Resident') ? 'Sleeps at ' + (c.residence === 'Resident' ? 'Minsundu' : 'home') : '', centre === 'Minsundu' || (!teacherReg(centre) && centre !== centreOf(c)) ? c.section : '', c.residence === 'In transit' ? 'In transit' : '', c.grade ? (/^\d+$/.test(String(c.grade)) ? 'Grade ' + c.grade : c.grade) : '', 'ID ' + c.id].filter(Boolean).join(' · ');
     const TG = { P: ['ok', 'check'], A: ['danger', 'x'], T: ['danger', 'pin'], S: ['warn', 'alert'] }, tg = TG[v], at = `data-act="qatt" data-d="${d}" data-id="${esc(key)}"`;
     const tag = `<button class="cyp-tag cyp-tag--button qtag${tg ? ' cyp-tag--' + tg[0] : ''}" data-act="qopen" data-id="${esc(key)}" aria-expanded="${open}" aria-label="${v ? ATT_L[v] + ': change' : 'Not marked: other marks'}">${tg ? dsIcon(tg[1]) : ''}${v ? ATT_L[v] : 'Not marked'}${dsIcon('down')}</button>`;
-    return `<div class="qrow cyp-row cyp-row--mark${v ? ' done ' + v : ''}">${dsAvatar(c)}<div class="qn cyp-row__text"><b>${esc(fullName(c))}</b><span>${c.nickname ? '"' + esc(c.nickname) + '" · ' : ''}${esc(sub)}</span><div class="cyp-row__tags">${tag}</div></div>
+    return `<div class="qrow cyp-row cyp-row--mark${v ? ' done ' + v : ''}">${dsAvatar(c)}<div class="qn cyp-row__text"><a class="cyp-row__open" href="#/child/${esc(c.id)}"><b>${esc(fullName(c))}</b>${dsIcon('go').replace('cyp-icon', 'cyp-icon cyp-go')}</a><span>${c.nickname ? '"' + esc(c.nickname) + '" · ' : ''}${esc(sub)}</span><div class="cyp-row__tags">${tag}</div></div>
       ${v ? '' : `<button class="cyp-btn cyp-btn--mark" ${at} data-v="P">${dsIcon('check')}Present</button>`}
-      ${open ? `<div class="qopts"><fieldset class="cyp-choice cyp-choice--two"><legend>${v ? 'Change the mark' : 'Other marks'}</legend><div class="cyp-choice__row">${attOpts(c, centre).filter(([k]) => k !== v && (v || k !== 'P')).map(([k, l]) => `<label><input type="radio" name="qo" ${at} data-v="${k}"><span>${l}</span></label>`).join('')}</div></fieldset><div class="qmore">${v ? `<button class="btn" ${at} data-v="">Remove the mark</button>` : ''}<a class="btn" href="#/child/${esc(c.id)}">Open the file</a></div></div>` : ''}</div>`;
+      ${open ? `<div class="qopts"><fieldset class="cyp-choice cyp-choice--two"><legend>${v ? 'Change the mark' : 'Other marks'}</legend><div class="cyp-choice__row">${attOpts(c, centre).filter(([k]) => k !== v && (v || k !== 'P')).map(([k, l]) => `<label><input type="radio" name="qo" ${at} data-v="${k}"><span>${l}</span></label>`).join('')}</div></fieldset><div class="qmore">${v ? `<button class="btn" ${at} data-v="">Remove the mark</button>` : ''}</div></div>` : ''}</div>`;
 }
 function attQuickAct(act, b) {
   if (!['qatt', 'qopen', 'qundo', 'qrest'].includes(act)) return false;
@@ -5438,24 +5497,29 @@ function eventLine(e) {
 }
 /* what the colleague who referred wrote about the child: the visit of the referral, or his or her last record before it (beta 1.5, comment of 24/11) */
 function referSource(e) {
-  const v = e.visitId ? S.visits.find(x => x.id === e.visitId || visitKey(x) === e.visitId) : null;
-  if (v) return { href: '#/visitrep/' + v.id, what: 'Open the visit report', line: (v.purpose || 'Visit') + ' of ' + fmtDate(v.date) + (v.findings ? ': ' + v.findings : '') };
-  const from = d => d && d <= (e.date || today()) && d >= addDays(e.date || today(), -60), cid = String(e.childId);
-  const vs = S.visits.filter(x => String(x.childId) === cid && (x.by === e.by || x.recordedBy === e.by) && from(x.date)).sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
-  const ss = S.sessions.filter(x => (x.children || []).map(String).includes(cid) && x.by === e.by && from(x.date)).sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
-  const ev = S.events.filter(x => String(x.childId) === cid && x.by === e.by && x.id !== e.id && x.type !== 'Referral' && x.note && from(x.date)).sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
-  const best = [vs && { d: vs.date, href: '#/visitrep/' + vs.id, what: 'Open the visit report', line: (vs.purpose || 'Visit') + ' of ' + fmtDate(vs.date) + (vs.findings ? ': ' + vs.findings : '') },
-    ss && { d: ss.date, href: '#/session/' + ss.id, what: 'Open the session', line: 'Counselling session of ' + fmtDate(ss.date) + (ss.topic && sessSees(ss) ? ': ' + ss.topic : '') },
-    ev && { d: ev.date, href: '#/child/' + cid, what: 'Open the file', line: ev.type + ' · ' + fmtDate(ev.date) + ': ' + ev.note }].filter(Boolean).sort((a, b) => (b.d || '').localeCompare(a.d || ''))[0];
-  return best || null;
+  const vis = v => ({ d: v.date, href: '#/visitrep/' + v.id, sec: TEAM_KEYS.includes(v.team) ? v.team : '', title: (v.purpose || 'Visit') + ' visit, ' + fmtDate(v.date), detail: v.findings || '' });
+  const v0 = e.visitId ? S.visits.find(x => x.id === e.visitId || visitKey(x) === e.visitId) : null; if (v0) return vis(v0);
+  const from = d => d && d <= (e.date || today()) && d >= addDays(e.date || today(), -60), cid = String(e.childId), late = (a, b) => (b.date || '').localeCompare(a.date || '');
+  const vs = S.visits.filter(x => String(x.childId) === cid && (x.by === e.by || x.recordedBy === e.by) && from(x.date)).sort(late)[0];
+  const ss = S.sessions.filter(x => (x.children || []).map(String).includes(cid) && x.by === e.by && from(x.date)).sort(late)[0];
+  const ev = S.events.filter(x => String(x.childId) === cid && x.by === e.by && x.id !== e.id && x.type !== 'Referral' && x.note && from(x.date)).sort(late)[0];
+  return [vs && vis(vs), ss && { d: ss.date, href: '#/session/' + ss.id, sec: 'Counseling', title: 'Counselling session, ' + fmtDate(ss.date), detail: ss.topic && sessSees(ss) ? ss.topic : '' },
+    ev && { d: ev.date, href: '#/child/' + cid, sec: '', title: ev.type + ', ' + fmtDate(ev.date), detail: ev.note }].filter(Boolean).sort((a, b) => (b.d || '').localeCompare(a.d || ''))[0] || null;
 }
+/* the icon of a section or a place, inline, for the route line of a referral */
+function refIcon(k) { const p = (typeof PLACE_ICON !== 'undefined' && PLACE_ICON[k]) || SEC_ICON[SEC_KEY[k] || k]; return p ? `<svg class="cyp-icon" viewBox="0 0 24 24" aria-hidden="true">${p}</svg>` : ''; }
+/* a referral as the Referral of the design system (24/11): route, reason with its state, the note as written, who and when, the record behind it, then the actions */
 function referItem(e) {
-  const c = child(e.childId), src = referSource(e), cut = t => t.length > 220 ? t.slice(0, 220) + '…' : t;
-  return `<div class="refit"><div class="w"><b>${childLink(c)}</b> ${centreChip(c)}
-    <div class="refwhy"><span class="label-caps">${esc(referLabel(e.from) || 'A section')} asks ${esc(referLabel(e.to))}</span><b>${esc(e.reason || 'No reason written')}</b>${e.note ? `<p>"${esc(e.note)}"</p>` : ''}<span class="sub">${esc(staffName(e.by))} · ${esc(fmtDate(e.date))}</span>
-      ${src ? `<div class="refsrc"><span>${esc(cut(src.line))}</span><a class="btn sm pri" href="${src.href}">${esc(src.what)}</a></div>` : `<div class="refsrc"><span class="sub">No report of ${esc(staffName(e.by))} on this child in the 60 days before.</span><a class="btn sm" href="#/child/${esc(c.id)}">Open the file</a></div>`}</div>
-    ${TEAM_KEYS.includes(e.to) ? `<div class="refact"><a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${esc(e.to)}">Record a visit</a><span class="sub">Plan for</span>${[0, 1, 2].map(i => { const m = addMonths(thisMonth(), i), inp = plans().some(p => String(p.childId) === String(c.id) && p.month === m && planTeam(p) === e.to); return inp ? `<span class="chip c-green">${esc(fmtMonth(m))} ✓</span>` : `<button type="button" class="btn sm" data-pact="plan" data-id="${esc(c.id)}" data-m="${m}" data-team="${esc(e.to)}">${esc(fmtMonth(m))}</button>`; }).join('')}</div>` : ''}</div>
-    <form data-form="referdone" class="refdone"><input type="hidden" name="id" value="${esc(e.id)}"><input class="in" name="note" placeholder="What was done" aria-label="What was done" required><button class="btn sm pri">Done</button></form></div>`;
+  const c = child(e.childId), src = referSource(e), cut = t => t.length > 160 ? t.slice(0, 160) + '…' : t, go = dsIcon('go').replace('cyp-icon', 'cyp-icon cyp-go');
+  return `<article class="cyp-card cyp-referral refit">
+    <p class="cyp-referral__route label-caps">${refIcon(e.from)}${esc(referLabel(e.from) || 'A section')} ${dsIcon('arrow')} ${refIcon(e.to)}${esc(referLabel(e.to))}</p>
+    <div class="cyp-referral__head"><h3 class="heading-3">${esc(e.reason || 'No reason written')}</h3><span class="cyp-tag cyp-tag--warn">${dsIcon('clock')}Waiting</span></div>
+    <p class="cyp-referral__child">${childLink(c)} ${centreChip(c)}</p>
+    ${e.note ? `<div class="cyp-note"><p><q>${esc(e.note)}</q></p></div>` : ''}
+    <p class="small cyp-referral__meta">${esc(staffName(e.by))}, ${esc(fmtDate(e.date))}</p>
+    ${src ? `<div class="cyp-rows"><a class="cyp-row cyp-row--link" href="${src.href}">${src.sec ? secDisc(src.sec) : ''}<span class="cyp-row__text"><b>${esc(src.title)}</b>${src.detail ? `<span>${esc(cut(src.detail))}</span>` : ''}</span>${go}</a></div>` : ''}
+    ${TEAM_KEYS.includes(e.to) ? `<div class="refact"><a class="btn sm" href="#/visit/new?child=${esc(c.id)}&t=${esc(e.to)}">Record a visit</a><span class="sub">Plan for</span>${[0, 1, 2].map(i => { const m = addMonths(thisMonth(), i), inp = plans().some(p => String(p.childId) === String(c.id) && p.month === m && planTeam(p) === e.to); return inp ? `<span class="chip c-green">${esc(fmtMonth(m))} ✓</span>` : `<button type="button" class="btn sm" data-pact="plan" data-id="${esc(c.id)}" data-m="${m}" data-team="${esc(e.to)}">${esc(fmtMonth(m))}</button>`; }).join('')}</div>` : ''}
+    <form data-form="referdone" class="refdone"><input type="hidden" name="id" value="${esc(e.id)}"><input class="in" name="note" placeholder="What was done" aria-label="What was done" required><button class="btn sm pri">Done</button></form></article>`;
 }
 /* what the colleagues asked of a section: shown where that section works (Monitoring, Activities) */
 function referFor(team, centre) { return referOpen().filter(e => (TEAM_KEYS.includes(team) || team === 'Sports' ? e.to === team : team === 'Others' ? e.to !== 'Family' && e.to !== 'School' : true) && (!centre || centre === 'all' || centreOf(child(e.childId)) === centre)); }
@@ -6305,7 +6369,7 @@ function grpReportHtml(k, a, b) {
 }
 /* icons of the sections and of the tools, classes of the places: from the CYP design system (generated by mkds.py) */
 const SEC_ICON = {"Education office": "<path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\"/> <path d=\"M22 10v6\"/> <path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\"/>", "Family Section": "<path d=\"m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/> <polyline points=\"9 22 9 12 15 12 15 22\"/>", "School Section": "<path d=\"M14 22v-4a2 2 0 1 0-4 0v4\"/> <path d=\"m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2\"/> <path d=\"M18 5v17\"/> <path d=\"m4 6 8-4 8 4\"/> <path d=\"M6 5v17\"/> <circle cx=\"12\" cy=\"9\" r=\"2\"/>", "UCC Children Section": "<path d=\"M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z\"/>", "Youth": "<path d=\"M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z\"/> <path d=\"M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2\"/> <path d=\"M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5\"/> <path d=\"M8 10h8\"/> <path d=\"M8 18h8\"/>", "Literacy class": "<path d=\"M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z\"/> <path d=\"M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z\"/>", "Counselling": "<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/> <path d=\"M15.8 9.2a2.5 2.5 0 0 0-3.5 0l-.3.4-.35-.3a2.42 2.42 0 1 0-3.2 3.6l3.6 3.5 3.6-3.5c1.2-1.2 1.1-2.7.2-3.7\"/>", "Sports": "<path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\"/> <path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\"/> <path d=\"M4 22h16\"/> <path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\"/> <path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\"/> <path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\"/>", "VET training": "<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\"/>", "Canteen": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/> <path d=\"M7 2v20\"/> <path d=\"M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/>", "Disability programme": "<path d=\"M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16\"/> <path d=\"m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9\"/> <path d=\"m2 15 6 6\"/> <path d=\"M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z\"/>", "Social enterprises": "<path d=\"M7 20h10\"/> <path d=\"M10 20c5.5-2.5.8-6.4 3-10\"/> <path d=\"M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z\"/> <path d=\"M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z\"/>", "Administration": "<path d=\"M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/> <rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\"/>", "Human Resources": "<path d=\"M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2\"/> <rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/> <circle cx=\"12\" cy=\"10\" r=\"2\"/> <line x1=\"8\" x2=\"8\" y1=\"2\" y2=\"4\"/> <line x1=\"16\" x2=\"16\" y1=\"2\" y2=\"4\"/>", "Security guards": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/>", "Transport": "<path d=\"M8 6v6\"/> <path d=\"M15 6v6\"/> <path d=\"M2 12h19.6\"/> <path d=\"M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3\"/> <circle cx=\"7\" cy=\"18\" r=\"2\"/> <path d=\"M9 18h5\"/> <circle cx=\"16\" cy=\"18\" r=\"2\"/>", "Mechanics workshop": "<path d=\"M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z\"/> <path d=\"M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z\"/> <path d=\"M12 2v2\"/> <path d=\"M12 22v-2\"/> <path d=\"m17 20.66-1-1.73\"/> <path d=\"M11 10.27 7 3.34\"/> <path d=\"m20.66 17-1.73-1\"/> <path d=\"m3.34 7 1.73 1\"/> <path d=\"M14 12h8\"/> <path d=\"M2 12h2\"/> <path d=\"m20.66 7-1.73 1\"/> <path d=\"m3.34 17 1.73-1\"/> <path d=\"m17 3.34-1 1.73\"/> <path d=\"m11 13.73-4 6.93\"/>", "Maintenance": "<path d=\"m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9\"/> <path d=\"m18 15 4-4\"/> <path d=\"m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5\"/>"};
-const DS_ICON = {"check": "<path d=\"M20 6 9 17l-5-5\"/>", "alert": "<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/> <path d=\"M12 9v4\"/> <path d=\"M12 17h.01\"/>", "down": "<path d=\"m6 9 6 6 6-6\"/>", "left": "<path d=\"m15 18-6-6 6-6\"/>", "right": "<path d=\"m9 18 6-6-6-6\"/>", "x": "<path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>", "pin": "<path d=\"M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z\"/> <circle cx=\"12\" cy=\"10\" r=\"3\"/>", "more": "<circle cx=\"12\" cy=\"12\" r=\"1\"/> <circle cx=\"19\" cy=\"12\" r=\"1\"/> <circle cx=\"5\" cy=\"12\" r=\"1\"/>", "comment": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>", "signout": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/> <polyline points=\"16 17 21 12 16 7\"/> <line x1=\"21\" x2=\"9\" y1=\"12\" y2=\"12\"/>", "print": "<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\"/> <path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\"/> <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\"/>", "excel": "<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/> <polyline points=\"7 10 12 15 17 10\"/> <line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\"/>"};
+const DS_ICON = {"check": "<path d=\"M20 6 9 17l-5-5\"/>", "alert": "<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/> <path d=\"M12 9v4\"/> <path d=\"M12 17h.01\"/>", "down": "<path d=\"m6 9 6 6 6-6\"/>", "left": "<path d=\"m15 18-6-6 6-6\"/>", "right": "<path d=\"m9 18 6-6-6-6\"/>", "x": "<path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>", "pin": "<path d=\"M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z\"/> <circle cx=\"12\" cy=\"10\" r=\"3\"/>", "more": "<circle cx=\"12\" cy=\"12\" r=\"1\"/> <circle cx=\"19\" cy=\"12\" r=\"1\"/> <circle cx=\"5\" cy=\"12\" r=\"1\"/>", "comment": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>", "signout": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/> <polyline points=\"16 17 21 12 16 7\"/> <line x1=\"21\" x2=\"9\" y1=\"12\" y2=\"12\"/>", "print": "<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\"/> <path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\"/> <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\"/>", "excel": "<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/> <polyline points=\"7 10 12 15 17 10\"/> <line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"10\"/> <polyline points=\"12 6 12 12 16 14\"/>", "go": "<path d=\"m9 18 6-6-6-6\"/>", "arrow": "<path d=\"M5 12h14\"/> <path d=\"m12 5 7 7-7 7\"/>"};
 const SEC_KEY = { Admin: 'Education office', 'Education office': 'Education office', Family: 'Family Section', 'Family Section': 'Family Section', School: 'School Section', 'School Section': 'School Section', UCC: 'UCC Children Section', Youth: 'Youth', Literacy: 'Literacy class', Counseling: 'Counselling', Counselling: 'Counselling', Sports: 'Sports', All: 'Family Section' };
 /* a colour stands for a place. UCC, Youth and the Literacy class are sections held at Minsundu: listed as sections they show their icon on the blue disc */
 const PLACE_CLASS = { Luigi: 'luigi', Minsundu: 'minsundu', Nkwazi: 'nkwazi', School: 'community-school' };
@@ -6313,10 +6377,9 @@ function dsIcon(k) { return '<svg class="cyp-icon" viewBox="0 0 24 24" aria-hidd
 function secDisc(k) { const svg = SEC_ICON[SEC_KEY[k] || k]; return svg ? '<span class="cyp-disc cyp-disc--sm cyp-c-blue"><svg viewBox="0 0 24 24" aria-hidden="true">' + svg + '</svg></span>' : ''; }
 function pinDisc(cls, sm) { return '<span class="cyp-disc' + (sm ? ' cyp-disc--sm' : '') + (cls ? ' cyp-c-' + cls : '') + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + DS_ICON.pin + '</svg></span>'; }
 function placeSwatch(k) { return PLACE_CLASS[k] ? '<i class="cyp-swatch cyp-c-' + PLACE_CLASS[k] + '"></i>' : ''; }
-/* beta 1.5 (Mauro, 24/11): Luigi and Nkwazi Centre get an icon on the disc of their colour. Not yet in the design system: to be added to ColourKey.
-   Luigi, phase 1, drop-in: an open door. Nkwazi Centre, phase 3, growing towards school and family: a sprout. Lucide icons, as the rest of the system. */
-const PLACE_ICON = { Luigi: '<path d="M11 20H2"/><path d="M11 4.562v16.157a1 1 0 0 0 1.242.97L19 20V5.562a2 2 0 0 0-1.515-1.94l-4-1A2 2 0 0 0 11 4.561z"/><path d="M11 4H8a2 2 0 0 0-2 2v14"/><path d="M14 12h.01"/><path d="M22 20h-3"/>', Nkwazi: '<path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>' };
-function placeDisc(k) { return PLACE_ICON[k] ? '<span class="cyp-disc cyp-disc--sm cyp-c-' + PLACE_CLASS[k] + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + PLACE_ICON[k] + '</svg></span>' : ''; }
+/* each place shows its icon on a disc in its own colour (ColourKey of 24/11): Luigi door-open, Minsundu bed, Nkwazi Centre bird, Community school pencil-ruler */
+const PLACE_ICON = {"Luigi": "<path d=\"M13 4h3a2 2 0 0 1 2 2v14\"/> <path d=\"M2 20h3\"/> <path d=\"M13 20h9\"/> <path d=\"M10 12v.01\"/> <path d=\"M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z\"/>", "Minsundu": "<path d=\"M2 4v16\"/> <path d=\"M2 8h18a2 2 0 0 1 2 2v10\"/> <path d=\"M2 17h20\"/> <path d=\"M6 8v9\"/>", "Nkwazi": "<path d=\"M16 7h.01\"/> <path d=\"M3.4 18H12a8 8 0 0 0 8-8V7a4 4 0 0 0-7.28-2.3L2 20\"/> <path d=\"m20 7 2 .5-2 .5\"/> <path d=\"M10 18v3\"/> <path d=\"M14 17.75V21\"/> <path d=\"M7 18a6 6 0 0 0 3.84-10.61\"/>", "School": "<path d=\"m15 5 4 4\"/> <path d=\"M13 7 8.7 2.7a2.41 2.41 0 0 0-3.4 0L2.7 5.3a2.41 2.41 0 0 0 0 3.4L7 13\"/> <path d=\"m8 6 2-2\"/> <path d=\"m2 22 5.5-1.5L21.17 6.83a2.82 2.82 0 0 0-4-4L3.5 16.5Z\"/> <path d=\"m18 16 2-2\"/> <path d=\"m17 11 4.3 4.3c.94.94.94 2.46 0 3.4l-2.6 2.6c-.94.94-2.46.94-3.4 0L11 17\"/>"};
+function placeDisc(k) { return PLACE_ICON[k] && PLACE_CLASS[k] ? '<span class="cyp-disc cyp-disc--sm cyp-c-' + PLACE_CLASS[k] + '"><svg viewBox="0 0 24 24" aria-hidden="true">' + PLACE_ICON[k] + '</svg></span>' : ''; }
 function keyMark(k) { return placeDisc(k) || placeSwatch(k) || secDisc(k); }
 /* ---------- after each page is drawn: two rules of the CYP design system applied in one place (alpha 5.30) ----------
    1. One primary button per screen: the first main action keeps the filled blue, the others become plain buttons.
@@ -6433,7 +6496,7 @@ function vOffice(r) {
   const wait = S.visits.filter(v => visitState(v) === 'wait').length, lateTasks = W.open.filter(taskLate).length;
   const dname = new Date(t + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const tile = (label, fig, note, href) => `<a class="cyp-stat otile" href="${href}"><span class="cyp-stat__label label-caps">${esc(label)}</span><span class="cyp-stat__figure figure">${esc(fig)}</span><span class="cyp-stat__note">${esc(note)}</span></a>`;
-  const regRow = x => `<tr><td><span class="oreg"><i class="cyp-swatch cyp-c-${x.cat}"></i>${esc(x.label)}</span></td><td>${x.marked ? officeTag('ok', 'Taken') : officeTag(x.last && x.last >= addDays(t, -1) ? 'warn' : 'danger', 'Not yet')}</td><td class="num" data-l="Present">${x.marked ? x.present : ''}</td><td class="num" data-l="Marked">${x.n == null ? '' : x.marked + ' of ' + x.n}</td><td data-l="Last day taken">${x.last ? (x.last === t ? 'Today' : esc(fmtDate(x.last))) : 'Never'}</td><td class="oact"><a class="btn sm" href="${x.href}">Open</a></td></tr>`;
+  const regRow = x => `<tr class="cyp-tr--link" data-href="${x.href}"><td><span class="oreg"><i class="cyp-swatch cyp-c-${x.cat}"></i>${esc(x.label)}</span></td><td>${x.marked ? officeTag('ok', 'Taken') : officeTag(x.last && x.last >= addDays(t, -1) ? 'warn' : 'danger', 'Not yet')}</td><td class="num" data-l="Present">${x.marked ? x.present : ''}</td><td class="num" data-l="Marked">${x.n == null ? '' : x.marked + ' of ' + x.n}</td><td data-l="Last day taken">${x.last ? (x.last === t ? 'Today' : esc(fmtDate(x.last))) : 'Never'}</td><td class="cyp-table__go"><a href="${x.href}" aria-label="Open the register of ${esc(x.label)}">${dsIcon('go').replace('cyp-icon', 'cyp-icon cyp-go')}</a></td></tr>`;
   const mrow = x => { const pct = x.of ? Math.min(100, Math.round(100 * x.done / x.of)) : 0; return `<a class="omonth cyp-c-${x.cat}" href="${x.href}"><span class="olab">${x.cat === 'blue' ? secDisc(x.label) : '<i class="cyp-swatch"></i>'}<b>${esc(x.label)}</b><small>${esc(x.what)}</small></span>${x.of ? `<span class="cyp-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>` : '<span></span>'}<span class="onum">${x.of ? x.done + ' of ' + x.of : x.done}</span></a>`; };
   const qrow = x => `<a class="cyp-row oq" href="${x.href}"><span class="oqn ${x.lvl}">${x.n === '' || x.n === '!' || x.n == null ? officeIcon('warn') : esc(x.n)}</span><span class="cyp-row__text"><b>${esc(x.text)}</b><span>${esc(x.sec)}</span></span>${officeIcon('go')}</a>`;
   const trow = x => `<li><b>${esc(x.title || x.text || 'Task')}</b><span>${esc(taskWho(x))}</span></li>`;
@@ -6507,13 +6570,16 @@ function stArcs(parts) { /* parts: [[class, value, label]]; slices start at the 
 function stPages(D) {
   const mon = fmtMonth(D.m), pct = (v, of) => of ? Math.round(100 * v / of) : 0, n = v => (Number(v) || 0).toLocaleString('en-GB');
   const open = (href, what) => `<a class="cyp-btn" href="${href}" aria-label="Open ${esc(what)}">Open</a>`;
-  const band = x => `<div class="cyp-result cyp-result--app cyp-c-${x.cls}"><div class="cyp-result__text st-first"><svg class="cyp-ring" viewBox="0 0 240 240" role="img" aria-label="Girls ${x.seen.f}, boys ${x.seen.m}">${stArcs([['navy', x.seen.f], ['sky', x.seen.m]])}</svg><div><b>${stNum(x.seen.n)} of ${n(x.kids.n)} children</b><br>Girls ${x.seen.f}, boys ${x.seen.m}</div></div>
-      <div class="cyp-result__name">${pinDisc('')}<span class="heading-2">${esc(x.label)}</span></div>
+  /* bands and rows that open more detail are the tap target themselves, with chevron-right (ResultBand, ProgressRow, 24/11) */
+  const go = dsIcon('go').replace('cyp-icon', 'cyp-icon cyp-go'), pdisc = k => typeof PLACE_ICON !== 'undefined' && PLACE_ICON[k] ? `<span class="cyp-disc"><svg viewBox="0 0 24 24" aria-hidden="true">${PLACE_ICON[k]}</svg></span>` : pinDisc('');
+  const band = x => `<a class="cyp-result cyp-result--app cyp-result--link cyp-c-${x.cls}" href="${x.href}" aria-label="${esc(x.label)}: open the register"><div class="cyp-result__text st-first"><svg class="cyp-ring" viewBox="0 0 240 240" role="img" aria-label="Girls ${x.seen.f}, boys ${x.seen.m}">${stArcs([['navy', x.seen.f], ['sky', x.seen.m]])}</svg><div><b>${stNum(x.seen.n)} of ${n(x.kids.n)} children</b><br>Girls ${x.seen.f}, boys ${x.seen.m}</div></div>
+      <div class="cyp-result__name">${pdisc(x.k)}<span class="heading-2">${esc(x.label)}</span></div>
       <div class="cyp-result__block"><div><span class="figure">${stNum(pct(x.seen.n, x.kids.n))}%</span><small>${x.k === 'Luigi' ? 'met this month' : 'present at least once'}</small></div></div>
-      <div class="cyp-result__action">${open(x.href, 'the register of ' + x.label)}</div></div>`;
+      <div class="cyp-result__action">${go}</div></a>`;
   /* a row with a target: name, %, Open, bar, figures. Without a target (count): name, value, Open, unit with no target set */
-  const prow = (cls, disc, name, val, of, left, right, href, what, unit) => of ? `<div class="cyp-prow cyp-c-${cls}"><div class="cyp-prow__head">${disc}<span class="cyp-prow__name">${esc(name)}</span><span class="cyp-prow__pct">${pct(val, of)}%</span>${href ? open(href, what) : ''}</div><span class="cyp-bar"><i style="width:${Math.min(100, pct(val, of))}%"></i></span><div class="cyp-prow__figs"><span>${esc(left)}</span><span>${esc(right)}</span></div></div>`
-    : `<div class="cyp-prow cyp-prow--count cyp-c-${cls}"><div class="cyp-prow__head">${disc}<span class="cyp-prow__name">${esc(name)}</span><span class="cyp-prow__pct">${stNum(val)}</span>${href ? open(href, what) : ''}</div><div class="cyp-prow__figs"><span>${esc(unit)}, no target set</span></div></div>`;
+  const pw = (href, cls, inner, what) => href ? `<a class="${cls} cyp-prow--link" href="${href}" aria-label="Open ${esc(what)}">${inner}</a>` : `<div class="${cls}">${inner}</div>`;
+  const prow = (cls, disc, name, val, of, left, right, href, what, unit) => of ? pw(href, `cyp-prow cyp-c-${cls}`, `<span class="cyp-prow__head">${disc}<span class="cyp-prow__name">${esc(name)}</span><span class="cyp-prow__pct">${pct(val, of)}%</span>${href ? go : ''}</span><span class="cyp-bar"><i style="width:${Math.min(100, pct(val, of))}%"></i></span><span class="cyp-prow__figs"><span>${esc(left)}</span><span>${esc(right)}</span></span>`, what)
+    : pw(href, `cyp-prow cyp-prow--count cyp-c-${cls}`, `<span class="cyp-prow__head">${disc}<span class="cyp-prow__name">${esc(name)}</span><span class="cyp-prow__pct">${stNum(val)}</span>${href ? go : ''}</span><span class="cyp-prow__figs"><span>${esc(unit)}, no target set</span></span>`, what);
   const plan = D.sections.filter(x => x.label !== 'Counselling'), cs = D.sections.find(x => x.label === 'Counselling');
   const tile = (label, fig, note) => `<div class="cyp-stat"><span class="cyp-stat__label label-caps">${esc(label)}</span><span class="cyp-stat__figure figure">${stNum(fig)}</span><span class="cyp-stat__note">${esc(note)}</span></div>`;
   return [
