@@ -1561,7 +1561,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'beta 1.6';
+const VERSION = 'beta 1.7';
 const BUILD_DATE = '2026-11-24'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#3A5EA8', ink: '#14213D' },
@@ -2603,6 +2603,7 @@ function vChild(r) {
   if (r.sub === 'status') return vStatus(c);
   if (r.sub === 'refer') return vRefer(c);
   if (r.sub === 'edu') return vEduForm(c);
+  if (r.sub === 'player') return vPlayerForm(c, r.q);
   if (r.sub === 'term') return vTerm(c);
   if (r.sub === 'month') return vMonthly1(c);
   const vi = visitInfo(c), lite = sportsOnly(); /* Sports: a shorter file, without family, documents, visits */
@@ -2630,6 +2631,8 @@ function vChild(r) {
   ${actBoxes(c)}
   ${schoolBox(c)}
   ${lite ? '' : monthlyBox(c)}
+  ${playerBox(c)}
+  ${caseBox(c)}
   ${lite ? '' : docsBox(c)}
   ${c.sameAs && child(c.sameAs) ? `<div class="note">Probably the same child as <a href="#/child/${esc(c.sameAs)}">${esc(fullName(child(c.sameAs)))}, ID ${esc(c.sameAs)}</a> in ${esc(SECTIONS[child(c.sameAs).section].label)}: same name and a similar age. Check with the section before using two files.</div>` : ''}
   ${backAskHtml(c)}
@@ -2647,7 +2650,7 @@ function vChild(r) {
         <p class="sec" style="margin-top:12px">In the programme</p>${dl([['Centre', SECTIONS[c.section] ? SECTIONS[c.section].label : ''], ['Date of entry', entryText(c)], ['Came from', c.referredBy], ['Note at admission', c.admissionNote], ['No in the Nkwazi Data Tool', c.toolNo], ['Followed by', staffName(c.responsible)], ['Programmes', c.programmes], ['Support received', c.support], ['Street situation', STREET_CATS[c.streetCat] || ''], ['Relatives on the street', c.relStreet ? c.relStreet + (c.relStreetWho ? ' · ' + c.relStreetWho : '') : ''], ['Back on the street', c.backStreet ? backLabel(c.backStreet) + (c.backStreetDate ? ' · found again on ' + fmtDate(c.backStreetDate) : '') : ''], ['Where now', [c.whereNow && c.whereNow !== 'InCity' ? c.whereNow : '', c.streetPlace].filter(Boolean).join(', ')], ['Taken to another place on', fmtDate(c.transferDate)], ['Connected (A to B) on', fmtDate(c.connectionDate)], ['Reintegrated on', fmtDate(c.reintegrationDate)], ['File closed', c.closeDate ? fmtDate(c.closeDate) + ' · ' + (c.closeReason || '') : '']])}
         ${lite ? '' : '<p class="sec" style="margin-top:14px">Family</p>' + dl([['Compound', c.compound], ['Family address', c.familyAddress], ['Contact', c.contact], ['Guardian', [c.guardianName, c.guardianRelation].filter(Boolean).join(', ')], ['Father', c.father], ['Mother', c.mother], ['Other relatives', c.otherRelatives], ['Family background', c.familyBackground], ['Languages', c.languages]])}
         <p class="sec" style="margin-top:14px">School ${lite ? '' : `<a class="btn sm" href="#/child/${esc(c.id)}/edu" style="margin-left:8px">Change</a>`}</p>${dl([['School type', c.schoolType ? c.schoolType + (c.schoolTypeToCheck ? ' (from the Nkwazi file: GRZ or private to confirm)' : '') : ''], ['School', c.schoolName], ['Grade', c.grade], ['Class (stream)', c.stream], ['Skill', c.skill], ['Education at entry', c.educationAtEntry]])}
-        <p class="sec" style="margin-top:14px">Health and notes</p>${seesHealth(c) ? dl([['Medical', c.medical], ['Disabilities', c.disabilities], ['Objectives', c.objectives], ['Notes', c.notes]]) : dl([['Objectives', c.objectives]]) + (c.medical || c.disabilities || c.notes ? `<p style="margin:6px 0 0">${hiddenChip()}</p>` : '')}
+        <p class="sec" style="margin-top:14px">Health and notes</p>${seesHealth(c) ? dl([['Medical', c.medical], ['Disabilities', c.disabilities], ['Objectives', c.objectives], ['Notes', c.notes]]) : seesConditions(c) ? dl([['Medical', c.medical || 'Nothing written'], ['Disabilities', c.disabilities || 'Nothing written'], ['Objectives', c.objectives]]) + (c.notes ? `<p style="margin:6px 0 0">Notes: ${hiddenChip()}</p>` : '') : dl([['Objectives', c.objectives]]) + (c.medical || c.disabilities || c.notes ? `<p style="margin:6px 0 0">${hiddenChip()}</p>` : '')}
         ${c.importedFrom ? `<p class="sub" style="margin:12px 0 0">Imported from the ${esc(c.importedFrom)}.</p>` : ''}
       </section>
     </div>
@@ -3131,6 +3134,8 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'referrals': body = r.id === 'new' ? vReferNew(r) : vReferrals(r); active = 'visits'; break;
       case 'tasks': body = vTasks(r); active = 'tasks'; break;
       case 'groups': body = r.id === 'new' ? vGroupNew(r) : vGroups(r); active = 'reports'; break;
+      case 'case': body = r.id === 'new' || r.sub === 'edit' ? vCaseForm(r) : vCase(r); active = 'children'; break;
+      case 'cases': body = vCases(r); active = 'children'; break;
       case 'story': body = vStory(r); active = 'reports'; break;
       case 'monthly': body = vMonthly(r); active = 'children'; break;
       case 'review': body = vReview(); active = 'pending'; break;
@@ -4594,6 +4599,7 @@ function vMore() {
     ${out('reports') ? item('#/reports', 'Reports', 'Tables of each section') : ''}
     ${out('activities') && (seesOverview() || staffAreas(USER).includes('Sports')) ? item('#/activities', 'Activities', 'Sports and VET training · draft') : ''}
     ${out('school') ? item('#/school', 'Pupils by school', 'School visits and results per term') : ''}
+    ${item('#/cases', 'Case studies', 'Background, change and outcome of a child, in six parts')}
     ${item('#/groups', 'Group activities', 'Workshops, parents meetings, Girl Child Program, school materials')}
     ${item('#/referrals', 'Referrals', 'Between sections')}
     ${item('#/monthly', 'Monthly reports', 'Minsundu key child form')}
@@ -5286,7 +5292,9 @@ function actNow(q) { return q.get('a') || actAll()[0]; }
 function actOf(c) { return Array.isArray(c.activities) ? c.activities : []; }
 function actIds(a, from, to) { const suf = '@act:' + a, ids = new Set(); for (const day of Object.keys(S.attendance)) if (day >= from && day <= to) for (const k of Object.keys(S.attendance[day])) if (k.endsWith(suf)) ids.add(k.slice(0, -suf.length)); return Array.from(ids); }
 function actFind(term) { return S.children.filter(c => c.status !== 'Closed' && (fullName(c) + ' ' + (c.nickname || '')).toLowerCase().includes(term)).slice(0, 30); }
-function actRowHead(c) { return `${avatar(c, 44)}<span class="qn"><b>${esc(fullName(c))}</b><small>${esc(c.section + ' · ID ' + c.id)}</small></span>`; }
+/* the coach sees the health conditions of the child under the name (Pippen, 24/11) */
+function healthLine(c) { const t = [c.medical, c.disabilities].map(x => String(x || '').trim()).filter(Boolean).join(' · '); return t && seesConditions(c) ? `<small class="hline">${dsIcon('alert')}Health: ${esc(t.length > 90 ? t.slice(0, 90) + '…' : t)}</small>` : ''; }
+function actRowHead(c) { return `${avatar(c, 44)}<span class="qn"><b>${esc(fullName(c))}</b><small>${esc(c.section + ' · ID ' + c.id)}</small>${healthLine(c)}</span>`; }
 function actList(q) {
   const a = actNow(q), d = q.get('d') || today(), day = S.attendance[d] || {}, term = (UI.actq || '').trim().toLowerCase();
   let kids = term.length >= 2 ? actFind(term) : S.children.filter(c => c.status !== 'Closed' && actOf(c).includes(a));
@@ -5306,7 +5314,7 @@ function vActivities(r) {
   const open = S.children.filter(c => c.status !== 'Closed'), enr = x => open.filter(c => actOf(c).includes(x)).length;
   const head = `<div class="top"><div><h1>Activities <span class="chip c-orange">Draft</span></h1><p class="lead">Sports and VET training.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><div class="seg" role="group" aria-label="Attendance or enrolment"><a href="#" data-q="t=" class="${tab === 'att' ? 'on' : ''}">Attendance</a><a href="#" data-q="t=enrol" class="${tab === 'enrol' ? 'on' : ''}">Enrolment</a></div>${tab === 'att' ? `<input class="in" type="date" id="actdate" value="${d}" max="${today()}" style="width:auto" aria-label="Day">` : ''}<button class="btn sm" data-act="actxl">Export in Excel</button></div></div>`;
   const search = `<input class="in qsearch" id="actsearch" type="search" autocomplete="off" placeholder="${tab === 'att' ? 'Type a name, tap it' : 'Type a name'}" aria-label="Find a name" value="${esc(UI.actq || '')}">`;
-  const refs = referTeamBox('Sports');
+  const refs = referTeamBox('Sports') + `<p style="margin:0 0 12px"><a class="btn" href="#/cases?s=Sports">Case studies</a></p>`;
   if (tab === 'enrol') return head + refs + `<div class="qtop">${search}<div class="qcount"><span>Tap a discipline to enrol. Tap again to remove.</span><span><b>${open.filter(c => actOf(c).length).length}</b> children enrolled</span></div></div>
   <div class="card" style="padding:0 8px"><div id="actlist">${actEnrolList()}</div></div>`;
   const n = Object.keys(day).filter(k => k.endsWith(suf)).length;
@@ -5491,6 +5499,9 @@ function eventLine(e) {
   if (VISIT_EV.includes(e.type) || e.type === 'Visit corrected') return '';
   if (e.type === 'Record cancelled' || e.type === 'Visit cancelled') return `<b>Cancelled</b> <span class="sub">by ${esc(staffName(e.by))}</span>${e.note ? `<div class="sub">${esc(e.note)}</div>` : ''}`;
   if (e.type === 'Referral') { const cl = referClosed(e.id); return `<b>Referred to ${esc(referLabel(e.to))}</b>${e.from ? ' by ' + esc(referLabel(e.from)) : ''}: ${esc(e.reason || '')} ${cl ? '<span class="chip c-green">Done</span>' : '<span class="chip c-orange">Open</span>'} <span class="sub">${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`; }
+  if (e.type === 'Case study') return caseSees(e) ? `<b>Case study</b> <span class="sub">${esc(caseSecLabel(e.section))} · by ${esc(staffName(e.by))}</span> <a class="btn sm" href="#/case/${esc(e.id)}">Open the case study</a>` : '<b>Case study</b> <span class="sub">' + HIDDEN_TXT + '</span>';
+  if (e.type === 'Case study changed') return '';
+  if (e.type === 'Player profile') return `<b>Player profile · ${esc(e.sport)}</b> <span class="sub">by ${esc(staffName(e.by))}</span>`;
   if (e.type === 'Referral closed') return `<b>Referral closed</b> <span class="sub">${esc(staffName(e.by))}</span>${e.note ? `<div>${esc(e.note)}</div>` : ''}`;
   const kid = child(e.childId), open = CONF_EVENTS.includes(e.type) ? seesProtection(kid, e) : HEALTH_EVENTS.includes(e.type) ? (seesHealth(kid) || e.by === USER.id) : true;
   return `<b>${esc(e.type)}</b> <span class="sub">recorded by ${esc(staffName(e.by))}</span>${e.note ? `<div>${open ? esc(e.note) : hiddenChip()}</div>` : ''}`;
@@ -6075,6 +6086,8 @@ function inMyCentre(c) { return !!USER && !!c && staffAreas(USER).includes(centr
 /* sees everything: Education admins, the counsellors, the people ticked "Confidential" in Admin */
 function seesAll() { return !!USER && !GUEST && (!!USER.admin || isSite() || isMgmt() || !!USER.conf || hasFlag('Counseling')); }
 /* health and notes: also the staff of the child's centre and the person who follows the child */
+/* health conditions (medical, disabilities): also the Sports coaches, who must know them to train the child safely (Pippen, 24/11). Notes stay with seesHealth. */
+function seesConditions(c) { return seesHealth(c) || (!!USER && !GUEST && hasFlag('Sports')); }
 function seesHealth(c) { return seesAll() || (!!USER && !GUEST && (!c || !c.id || c.responsible === USER.id || inMyCentre(c))); }
 /* child protection and counselling: also who wrote the record, who follows the child, the head of the child's centre */
 function seesProtection(c, rec) { return seesAll() || (!!USER && !GUEST && ((rec && (rec.by === USER.id || rec.recordedBy === USER.id)) || (!!c && (c.responsible === USER.id || (isHead(USER) && inMyCentre(c)))))); }
@@ -6367,6 +6380,119 @@ function grpReportHtml(k, a, b) {
     <div class="tw"><table class="rt"><thead><tr><th>Kind</th><th class="n">Activities</th><th class="n">Girls</th><th class="n">Boys</th><th class="n">Children named</th><th class="n">Not named</th><th class="n">Adults</th></tr></thead><tbody>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? 'n' : ''}">${esc(String(v))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn sm" href="#/groups?s=${k}&m=${a.slice(0, 7)}">Open the list</a>${add}</div></section>`;
 }
+/* ---------- Case studies (beta 1.7, 24/11/2026; Draft until Pippen sends his reports and case studies, Mauro 24/11) ----------
+   Pippen (Sports), 24/11: the coaches write a case study of a child, in six parts, the lines of reporting of the Sports Section.
+   Stored as an event: type "Case study", childId, section, activity, date, parts. A change is a "Case study changed" event (ref = id): the last one counts.
+   Who reads it: the staff who see the health notes of the child, the staff of the section that wrote it, the writer, the Education office. */
+const CASE_PARTS = [['background', 'Background of the child', 'Where the child comes from, the family, the situation before CYP.'],
+  ['came', 'How the child came to CYP', 'Who brought the child, when, and to which centre.'],
+  ['activities', 'Activities that brought the change', 'The sport, the training, the people and the moments that made the difference.'],
+  ['achieved', 'What the child achieved', 'Teams, competitions, school, skills, responsibilities.'],
+  ['change', 'The change in the child', 'Behaviour, confidence, relations, school, health.'],
+  ['outcome', 'Conclusion: the outcome', 'Where the child is now, compared with how the child came.']];
+const CASE_SECS = [['Sports', 'Sports'], ['Luigi', 'Luigi'], ['UCC', 'Minsundu · UCC'], ['Youth', 'Minsundu · Youth'], ['Nkwazi', 'Nkwazi Centre'], ['Family', 'Family Section'], ['School', 'School Section'], ['Counseling', 'Counselling']];
+function caseAll() { return (S.events || []).filter(e => e.type === 'Case study'); }
+function caseMerged(e) { const ch = (S.events || []).filter(x => x.type === 'Case study changed' && x.ref === e.id).sort((a, b) => (a.ts || 0) - (b.ts || 0)).pop(); return ch ? Object.assign({}, e, { parts: ch.parts, activity: ch.activity, date: ch.date || e.date, changedBy: ch.by, changedOn: ch.on }) : e; }
+function caseGet(id) { const e = caseAll().find(x => x.id === id); return e ? caseMerged(e) : null; }
+function caseSees(e) { const c = child(e.childId); return !!USER && !GUEST && (seesHealth(c) || e.by === USER.id || hasFlag(GRP_AREA_OF[e.section] || e.section)); }
+const GRP_AREA_OF = { UCC: 'Minsundu', Youth: 'Minsundu' };
+function caseCanChange(e) { return !!USER && !GUEST && (e.by === USER.id || !!USER.admin); }
+function caseDefSec() { if (!USER) return 'Sports'; const a = staffAreas(USER); if (a.includes('Sports')) return 'Sports'; for (const k of ['Luigi', 'Nkwazi', 'Family', 'School', 'Counseling']) if (a.includes(k)) return k; return a.includes('Minsundu') ? 'UCC' : 'Sports'; }
+const caseSecLabel = k => (CASE_SECS.find(x => x[0] === k) || [k, k])[1];
+
+/* in the file of the child: the case studies, each a row that opens it, and the button to write one */
+function caseBox(c) {
+  const L = caseAll().filter(e => String(e.childId) === String(c.id) && caseSees(e)).map(caseMerged).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const go = dsIcon('go').replace('cyp-icon', 'cyp-icon cyp-go');
+  return `<section class="card" id="casebox"><div class="cardhead"><h2>Case studies <span class="chip c-orange">Draft</span></h2><a class="btn sm" href="#/case/new?child=${esc(c.id)}">Write a case study</a></div>
+    ${L.length ? `<div class="cyp-rows" style="margin-top:8px">${L.map(e => `<a class="cyp-row cyp-row--link" href="#/case/${esc(e.id)}">${secDisc(e.section === 'UCC' || e.section === 'Youth' ? (e.section === 'UCC' ? 'UCC Children Section' : 'Youth') : e.section)}<span class="cyp-row__text"><b>${esc(caseSecLabel(e.section))}${e.activity ? ' · ' + esc(e.activity) : ''}</b><span>${esc(fmtDate(e.date))} · by ${esc(staffName(e.by))}</span></span>${go}</a>`).join('')}</div>` : '<p class="sub" style="margin:6px 0 0">No case study yet.</p>'}</section>`;
+}
+
+/* the form: six parts, one under the other */
+function vCaseForm(r) {
+  const edit = r.id && r.id !== 'new' ? caseGet(r.id) : null, cid = edit ? edit.childId : r.q.get('child'), c = child(cid);
+  if (!c) return `<h1>Case study</h1><p>Open the file of the child first, then "Write a case study".</p>`;
+  if (edit && !caseCanChange(edit)) return `<h1>Case study</h1><p>Only who wrote it, or the Education office, can change it.</p>`;
+  const P = edit ? edit.parts || {} : {}, sec = edit ? edit.section : caseDefSec(), acts = typeof actAll === 'function' ? actAll() : [];
+  return `<div class="top"><div><h1>${edit ? 'Change the case study' : 'Write a case study'} <span class="chip c-orange">Draft</span></h1><p class="lead">${esc(fullName(c))} · ID ${esc(c.id)}</p></div><a class="btn" href="${edit ? '#/case/' + esc(edit.id) : '#/child/' + esc(c.id)}">Back</a></div>
+  <form class="card" data-form="casestudy" style="max-width:720px"><input type="hidden" name="childId" value="${esc(c.id)}"><input type="hidden" name="id" value="${edit ? esc(edit.id) : ''}"><div class="fs two">
+    ${edit ? `<input type="hidden" name="section" value="${esc(sec)}">` : field('Section', 'section', sec, 'select', { req: true, options: opt(CASE_SECS.map(([v, l]) => ({ v, l })), sec) })}
+    ${field('Activity or sport', 'activity', edit ? edit.activity : (actOf(c)[0] || ''), 'text', { attrs: acts.length ? ' list="caseacts"' : '' })}${acts.length ? `<datalist id="caseacts">${acts.map(a => `<option value="${esc(a)}"></option>`).join('')}</datalist>` : ''}
+    ${field('Date', 'date', edit ? edit.date : today(), 'date', { req: true })}</div>
+    ${CASE_PARTS.map(([k, l, h], i) => field(`${i + 1}. ${l}`, 'p_' + k, P[k] || '', 'textarea', { wide: true, rows: 5, hint: h })).join('')}
+    <button class="btn pri" style="margin-top:12px">Save the case study</button></form>`;
+}
+FORMS.casestudy = function (o) {
+  const parts = {}; for (const [k] of CASE_PARTS) parts[k] = String(o['p_' + k] || '').trim();
+  if (!Object.values(parts).some(Boolean)) return toast('Write at least one part');
+  if (o.id) { const e = caseGet(o.id); if (!e || !caseCanChange(e)) return toast('Not allowed'); S.events.push({ id: uid('e'), childId: '', type: 'Case study changed', ref: o.id, date: o.date, activity: String(o.activity || '').trim(), parts, ts: Date.now(), by: USER.id, on: today() }); save(); toast('Case study changed'); return go('#/case/' + o.id); }
+  const e = { id: uid('e'), childId: String(o.childId), type: 'Case study', section: o.section || 'Sports', activity: String(o.activity || '').trim(), date: o.date, parts, ts: Date.now(), by: USER.id };
+  S.events.push(e); save(); toast('Case study saved'); go('#/case/' + e.id);
+};
+
+/* one case study, to read, change or download in Word */
+function vCase(r) {
+  const e = caseGet(r.id); if (!e) return `<h1>Case study</h1><p>Not found. It may have been cancelled.</p>`;
+  if (!caseSees(e)) return `<h1>Case study</h1><p>${HIDDEN_TXT}</p>`;
+  const c = child(e.childId), P = e.parts || {};
+  return `<div class="top"><div><h1>Case study <span class="chip c-orange">Draft</span></h1><p class="lead">${c ? childLink(c) : ''} · ${esc(caseSecLabel(e.section))}${e.activity ? ' · ' + esc(e.activity) : ''} · ${esc(fmtDate(e.date))} · by ${esc(staffName(e.by))}${e.changedBy ? ' · changed by ' + esc(staffName(e.changedBy)) : ''}</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" data-cs="word" data-id="${esc(e.id)}">Download in Word</button>${caseCanChange(e) ? `<a class="btn" href="#/case/${esc(e.id)}/edit">Change</a>` : ''}${c ? `<a class="btn" href="#/child/${esc(c.id)}">The file of the child</a>` : ''}</div></div>
+    <section class="card" style="max-width:720px">${CASE_PARTS.map(([k, l], i) => `<h2 style="margin-top:${i ? 18 : 0}px">${i + 1}. ${esc(l)}</h2><p style="white-space:pre-wrap;margin:4px 0 0">${P[k] ? esc(P[k]) : '<span class="sub">Not written</span>'}</p>`).join('')}</section>
+    ${typeof cancelBtn === 'function' && caseCanChange(e) ? `<p>${cancelBtn('event', e)}</p>` : ''}`;
+}
+function caseDocx(e) {
+  const c = child(e.childId), P = e.parts || {};
+  const blocks = [{ doc: { title: 'Case study', facts: [['Section', caseSecLabel(e.section)], ['Date', dxDate(e.date)], ['Made by', 'CYP EDU']] } },
+    { kv: [['Name of the child', c ? fullName(c) : ''], ['ID', c ? c.id : ''], ['Sex', c ? (c.sex === 'F' ? 'Female' : c.sex === 'M' ? 'Male' : '') : ''], ['Age', c ? ageText(c) : ''], ['Centre', c ? (SECTIONS[c.section] ? SECTIONS[c.section].label : c.section) : ''], ['Activity or sport', e.activity || ''], ['Written by', staffName(e.by)], ['Date', dxDate(e.date)]] }];
+  CASE_PARTS.forEach(([k, l], i) => blocks.push({ box: { label: (i + 1) + '. ' + l, t: P[k] || '', lines: 4 } }));
+  blocks.push({ sign: [['Written by', staffName(e.by)], ['Head of section', ''], ['Date', '']] });
+  docxDownload('Case-study-' + (c ? c.id : 'child') + '-' + e.date, blocks);
+}
+document.addEventListener('click', ev => { const b = ev.target.closest ? ev.target.closest('[data-cs="word"]') : null; if (!b) return; const e = caseGet(b.dataset.id); if (e && caseSees(e)) caseDocx(e); });
+
+/* all the case studies of a month, by section */
+function vCases(r) {
+  const q = r.q, m = q.get('m') || thisMonth(), sec = q.get('s') || '', { a, b } = monthCtx(m);
+  const L = caseAll().map(caseMerged).filter(e => inRange(e.date, a, b) && (!sec || e.section === sec) && caseSees(e)).sort((x, y) => (y.date || '').localeCompare(x.date || ''));
+  const go = dsIcon('go').replace('cyp-icon', 'cyp-icon cyp-go');
+  return `<div class="top"><div><h1>Case studies <span class="chip c-orange">Draft</span></h1><p class="lead">Six parts each: background, how the child came, activities, achievements, change, outcome.</p></div>${monthPicker(m)}</div>
+  <div class="seg segg" role="group" aria-label="Section"><a href="#" data-q="s=" class="${sec ? '' : 'on'}">All sections</a>${CASE_SECS.map(([k, l]) => `<a href="#" data-q="s=${k}" class="${sec === k ? 'on' : ''}">${esc(l)}</a>`).join('')}</div>
+  <section class="card"><h2>${esc(fmtMonth(m))} · ${L.length} ${L.length === 1 ? 'case study' : 'case studies'}</h2>${L.length ? `<div class="cyp-rows">${L.map(e => { const c = child(e.childId); return `<a class="cyp-row cyp-row--link" href="#/case/${esc(e.id)}">${c ? dsAvatar(c) : ''}<span class="cyp-row__text"><b>${c ? esc(fullName(c)) : 'Child'}</b><span>${esc(caseSecLabel(e.section))}${e.activity ? ' · ' + esc(e.activity) : ''} · ${esc(fmtDate(e.date))} · by ${esc(staffName(e.by))}</span></span>${go}</a>`; }).join('')}</div>` : '<p class="empty">No case study in this month. Write one from the file of the child.</p>'}</section>`;
+}
+
+/* ---------- Player profile (beta 1.7, Pippen 24/11) ----------
+   An openable box in the file of the child: for each sport the child plays, the role, the team or class, the level, strengths, weaknesses, goals.
+   Stored as an event "Player profile" (childId, sport, fields): the latest for each sport counts. The fields will follow what Pippen reports. */
+const PLAYER_FIELDS = [['role', 'Role or position', 'text'], ['team', 'Team or class', 'text'], ['level', 'Level', 'select'], ['strengths', 'Strengths', 'textarea'], ['weaknesses', 'Weaknesses', 'textarea'], ['goals', 'Goals for the next months', 'textarea'], ['note', 'Notes of the coach', 'textarea']];
+const PLAYER_LEVELS = ['Beginner', 'Improving', 'Good', 'Plays in competitions'];
+function sportsList() { const g = typeof actGroups === 'function' ? actGroups() : {}; return (g.Sports || ['Football', 'Basketball', 'Golf', 'Tennis']).slice(); }
+function playerProfiles(c) { const by = {}; for (const e of (S.events || []).filter(e => e.type === 'Player profile' && String(e.childId) === String(c.id)).sort((a, b) => (a.ts || 0) - (b.ts || 0))) by[e.sport] = e; return by; }
+const pdl = rows => `<dl class="dl">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd style="white-space:pre-wrap">${esc(v)}</dd>`).join('')}</dl>`;
+function playerBox(c) {
+  const P = playerProfiles(c), sports = sportsList().filter(s => actOf(c).includes(s) || P[s]);
+  if (!sports.length && !hasFlag('Sports') && !(USER && USER.admin)) return '';
+  const can = !!USER && !GUEST && (hasFlag('Sports') || !!USER.admin);
+  const one = s => { const e = P[s]; return `<div class="pprof"><div class="cardhead"><h3 class="heading-3" style="margin:0">${refIcon('Sports')} ${esc(s)}</h3>${can ? `<a class="btn sm" href="#/child/${esc(c.id)}/player?sport=${encodeURIComponent(s)}">${e ? 'Change' : 'Write the profile'}</a>` : ''}</div>
+    ${e ? pdl(PLAYER_FIELDS.map(([k, l]) => [l, e[k]]).filter(x => x[1])) + `<p class="sub" style="margin:4px 0 0">By ${esc(staffName(e.by))}, ${esc(fmtDate(e.date))}</p>` : '<p class="sub" style="margin:4px 0 0">No profile yet.</p>'}</div>`; };
+  return `<details class="card more" id="playerbox"><summary>Player profile <span class="chip c-orange">Draft</span>${sports.length ? ': ' + esc(sports.join(', ')) : ''}</summary><div style="margin-top:8px">
+    ${sports.length ? sports.map(one).join('') : '<p class="sub">The child is not enrolled in a sport. Enrol in "Sports and VET training", or choose a sport below.</p>'}
+    ${can ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${sportsList().filter(s => !sports.includes(s)).map(s => `<a class="btn sm" href="#/child/${esc(c.id)}/player?sport=${encodeURIComponent(s)}">Add ${esc(s)}</a>`).join('')}</div>` : ''}</div></details>`;
+}
+function vPlayerForm(c, q) {
+  const s = q.get('sport') || sportsList()[0], e = playerProfiles(c)[s] || {};
+  if (!(hasFlag('Sports') || (USER && USER.admin))) return `<h1>Player profile</h1><p>Only the Sports Section and the Education office write it.</p>`;
+  return `<div class="top"><div><h1>Player profile · ${esc(s)} <span class="chip c-orange">Draft</span></h1><p class="lead">${esc(fullName(c))} · ID ${esc(c.id)}</p></div><a class="btn" href="#/child/${esc(c.id)}">Back</a></div>
+  <form class="card" data-form="player" style="max-width:720px"><input type="hidden" name="childId" value="${esc(c.id)}"><input type="hidden" name="sport" value="${esc(s)}"><div class="fs two">
+    ${PLAYER_FIELDS.map(([k, l, t]) => t === 'select' ? field(l, k, e[k] || '', 'select', { options: opt(PLAYER_LEVELS, e[k] || '', 'Choose') }) : t === 'textarea' ? field(l, k, e[k] || '', 'textarea', { wide: true, rows: 3 }) : field(l, k, e[k] || '')).join('')}</div>
+    <button class="btn pri" style="margin-top:12px">Save the profile</button></form>`;
+}
+FORMS.player = function (o) {
+  const e = { id: uid('e'), childId: String(o.childId), type: 'Player profile', sport: o.sport, date: today(), ts: Date.now(), by: USER.id };
+  for (const [k] of PLAYER_FIELDS) e[k] = String(o[k] || '').trim();
+  if (!PLAYER_FIELDS.some(([k]) => e[k])) return toast('Write at least one field');
+  const c = child(o.childId); if (c && !actOf(c).includes(o.sport)) { c.activities = actOf(c).concat(o.sport); c.updatedAt = today(); }
+  S.events.push(e); save(); toast('Profile saved'); go('#/child/' + o.childId);
+};
 /* icons of the sections and of the tools, classes of the places: from the CYP design system (generated by mkds.py) */
 const SEC_ICON = {"Education office": "<path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\"/> <path d=\"M22 10v6\"/> <path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\"/>", "Family Section": "<path d=\"m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/> <polyline points=\"9 22 9 12 15 12 15 22\"/>", "School Section": "<path d=\"M14 22v-4a2 2 0 1 0-4 0v4\"/> <path d=\"m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2\"/> <path d=\"M18 5v17\"/> <path d=\"m4 6 8-4 8 4\"/> <path d=\"M6 5v17\"/> <circle cx=\"12\" cy=\"9\" r=\"2\"/>", "UCC Children Section": "<path d=\"M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z\"/>", "Youth": "<path d=\"M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z\"/> <path d=\"M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2\"/> <path d=\"M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5\"/> <path d=\"M8 10h8\"/> <path d=\"M8 18h8\"/>", "Literacy class": "<path d=\"M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z\"/> <path d=\"M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z\"/>", "Counselling": "<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/> <path d=\"M15.8 9.2a2.5 2.5 0 0 0-3.5 0l-.3.4-.35-.3a2.42 2.42 0 1 0-3.2 3.6l3.6 3.5 3.6-3.5c1.2-1.2 1.1-2.7.2-3.7\"/>", "Sports": "<path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\"/> <path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\"/> <path d=\"M4 22h16\"/> <path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\"/> <path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\"/> <path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\"/>", "VET training": "<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\"/>", "Canteen": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/> <path d=\"M7 2v20\"/> <path d=\"M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/>", "Disability programme": "<path d=\"M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16\"/> <path d=\"m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9\"/> <path d=\"m2 15 6 6\"/> <path d=\"M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z\"/>", "Social enterprises": "<path d=\"M7 20h10\"/> <path d=\"M10 20c5.5-2.5.8-6.4 3-10\"/> <path d=\"M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z\"/> <path d=\"M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z\"/>", "Administration": "<path d=\"M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/> <rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\"/>", "Human Resources": "<path d=\"M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2\"/> <rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/> <circle cx=\"12\" cy=\"10\" r=\"2\"/> <line x1=\"8\" x2=\"8\" y1=\"2\" y2=\"4\"/> <line x1=\"16\" x2=\"16\" y1=\"2\" y2=\"4\"/>", "Security guards": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/>", "Transport": "<path d=\"M8 6v6\"/> <path d=\"M15 6v6\"/> <path d=\"M2 12h19.6\"/> <path d=\"M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3\"/> <circle cx=\"7\" cy=\"18\" r=\"2\"/> <path d=\"M9 18h5\"/> <circle cx=\"16\" cy=\"18\" r=\"2\"/>", "Mechanics workshop": "<path d=\"M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z\"/> <path d=\"M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z\"/> <path d=\"M12 2v2\"/> <path d=\"M12 22v-2\"/> <path d=\"m17 20.66-1-1.73\"/> <path d=\"M11 10.27 7 3.34\"/> <path d=\"m20.66 17-1.73-1\"/> <path d=\"m3.34 7 1.73 1\"/> <path d=\"M14 12h8\"/> <path d=\"M2 12h2\"/> <path d=\"m20.66 7-1.73 1\"/> <path d=\"m3.34 17 1.73-1\"/> <path d=\"m17 3.34-1 1.73\"/> <path d=\"m11 13.73-4 6.93\"/>", "Maintenance": "<path d=\"m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9\"/> <path d=\"m18 15 4-4\"/> <path d=\"m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5\"/>"};
 const DS_ICON = {"check": "<path d=\"M20 6 9 17l-5-5\"/>", "alert": "<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/> <path d=\"M12 9v4\"/> <path d=\"M12 17h.01\"/>", "down": "<path d=\"m6 9 6 6 6-6\"/>", "left": "<path d=\"m15 18-6-6 6-6\"/>", "right": "<path d=\"m9 18 6-6-6-6\"/>", "x": "<path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>", "pin": "<path d=\"M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z\"/> <circle cx=\"12\" cy=\"10\" r=\"3\"/>", "more": "<circle cx=\"12\" cy=\"12\" r=\"1\"/> <circle cx=\"19\" cy=\"12\" r=\"1\"/> <circle cx=\"5\" cy=\"12\" r=\"1\"/>", "comment": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>", "signout": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/> <polyline points=\"16 17 21 12 16 7\"/> <line x1=\"21\" x2=\"9\" y1=\"12\" y2=\"12\"/>", "print": "<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\"/> <path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\"/> <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\"/>", "excel": "<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/> <polyline points=\"7 10 12 15 17 10\"/> <line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"10\"/> <polyline points=\"12 6 12 12 16 14\"/>", "go": "<path d=\"m9 18 6-6-6-6\"/>", "arrow": "<path d=\"M5 12h14\"/> <path d=\"m12 5 7 7-7 7\"/>"};
