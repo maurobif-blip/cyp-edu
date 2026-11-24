@@ -1416,12 +1416,22 @@ label.f.choice-under{position:absolute;width:1px;height:1px;overflow:hidden;opac
 .homeprog{margin:var(--space-8) 0 var(--space-4);padding:var(--space-4)}
 .homeprog .cyp-progress__label{gap:var(--space-2)}.homeprog .cyp-progress__label small{display:block;color:var(--ink-muted)}
 
-/* Children on a phone: the row of the system with the photo at the start and the button at the end */
+/* Children (Mauro, 24/11): the photo before the name, a tap on the child opens the file; no Open button */
 @media (max-width:899.98px){
-  #childTable tr{position:relative;min-height:72px;padding:var(--space-3) 112px var(--space-3) 68px;border-bottom:1px solid var(--line)}
+  #childTable tr{position:relative;min-height:72px;padding:var(--space-3) var(--space-3) var(--space-3) 68px;border-bottom:1px solid var(--line);cursor:pointer}
   #childTable td.ph{left:var(--space-2);right:auto}
-  #childTable td.op{position:absolute;right:var(--space-2);top:50%;transform:translateY(-50%);width:auto;padding:0}
-  #childTable td.op .btn{width:96px;padding:0 var(--space-2)}
+}
+#childTable tr.click{cursor:pointer}#childTable tr.click:hover td{background:var(--surface-band)}
+@media (min-width:900px){
+  #childTable th,#childTable td{padding-left:var(--space-2);padding-right:var(--space-2)}
+  #childTable .fsel{width:100%;min-width:0;padding-left:var(--space-2);padding-right:var(--space-6)}
+  #childTable a.cname{white-space:nowrap}
+  #childTable td .chip,#childTable thead .sortth{white-space:normal}
+  #childTable th.ph{width:56px}
+  #childTable thead tr:first-child th:nth-child(4),#childTable thead tr:first-child th:nth-child(5){width:84px}
+  #childTable .fsel{padding-right:var(--space-6);background-position:right 4px center}
+  #childTable td .placechip{white-space:nowrap}
+  #childTable thead tr:first-child th:nth-child(10){width:112px}
 }
 .tbtn.keyh{justify-content:center}.tbtn.on .cyp-disc{background:var(--surface);color:var(--blue)}
 
@@ -1473,7 +1483,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'beta 1.3';
+const VERSION = 'beta 1.4';
 const BUILD_DATE = '2026-11-23'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#3A5EA8', ink: '#14213D' },
@@ -2406,9 +2416,9 @@ function childSorter(cs) {
 function childRows(list) {
   const q = route().q, cs = q.get('cs') || 'name', th = (k, l, cls) => `<th class="${cls || ''}"${cs.replace(/-desc$/, '') === k ? ` aria-sort="${/-desc$/.test(cs) ? 'descending' : 'ascending'}"` : ''}><a href="#" class="sortth" data-q="cs=${cs === k ? k + '-desc' : k}" title="Sort by this column">${l}<span class="sarr">${cs === k ? ' ▲' : cs === k + '-desc' ? ' ▼' : ' ↕'}</span></a></th>`;
   const fs = (name, options, label) => `<select class="in fsel" data-filter="${name}" aria-label="Filter: ${label}">${options}</select>`, secs = secList(q.get('section'));
-  const frow = `<tr class="frow"><td class="mh"></td><td></td><td class="mh">${fs('sex', opt([{ v: 'M', l: 'M' }, { v: 'F', l: 'F' }], q.get('sex'), 'All'), 'sex')}</td><td class="mh">${fs('age', opt(AGE_BANDS.map(x => ({ v: x[0], l: x[1] })), q.get('age'), 'All'), 'age')}</td><td class="mh">${fs('edu', opt(uniq(S.children.map(c => dayType(c)).filter(Boolean)).sort((x, y) => dayLabel(x).localeCompare(dayLabel(y))).map(x => ({ v: x, l: dayLabel(x) })).concat([{ v: 'none', l: 'Not written' }]), q.get('edu'), 'All'), 'education')}</td><td>${fs('section', opt([{ v: 'Luigi', l: 'Luigi' }, { v: 'Minsundu', l: 'Minsundu' }, { v: 'UCC', l: 'Minsundu · UCC' }, { v: 'Youth', l: 'Minsundu · Youth' }, { v: 'Nkwazi', l: 'Nkwazi Centre' }], secs.length === 1 ? secs[0] : secs.join(',') === 'UCC,Youth' ? 'Minsundu' : '', secs.length > 1 && secs.join(',') !== 'UCC,Youth' ? 'Several' : 'All'), 'centre')}</td><td class="mh">${fs('res', opt(RES3, q.get('res'), 'All'), 'resident or not')}</td><td>${fs('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All' }]), q.get('status') || 'open'), 'status')}</td><td class="mh">${fs('hv', opt([{ v: 'none', l: 'Never' }, { v: 'old', l: 'More than 3 months ago' }, { v: 'new', l: 'In the last 3 months' }], q.get('hv'), 'All'), 'last home visit')}</td><td></td><td></td></tr>`;
-  return `<p class="sub chint">Tap a title to sort. Choose under a title to filter.${childFiltersOn(q) ? ' <a class="btn sm" href="#" data-q="age=&edu=&hv=&sex=&res=&section=&cs=&status=">Clear filters and order</a>' : ''}</p><div class="tw"><table class="ctable"><thead><tr>${th('id', 'ID', 'mh')}${th('name', 'Name')}${th('sex', 'Sex', 'mh')}${th('age', 'Age', 'n mh')}${th('edu', 'Education', 'mh')}${th('centre', 'Centre')}${th('res', 'Resident or not', 'mh')}${th('status', 'Status')}${th('hv', 'Last home visit', 'mh')}<th><span class="vh">Open</span></th><th><span class="vh">Photo</span></th></tr>${frow}</thead><tbody>${list.length ? '' : '<tr><td colspan="11"><p class="empty">No child matches.</p></td></tr>'}
-  ${(isPhone() && q.get('call') !== '1' ? list.slice(0, 40) : list).map(c => { const vi = visitInfo(c); return `<tr><td class="mh">${esc(c.id)}</td><td><b class="cname">${esc(fullName(c))}</b>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td><td class="op"><a class="btn sm" href="#/child/${esc(c.id)}">Open the file</a></td><td class="ph">${dsAvatar(c)}</td></tr>`; }).join('')}
+  const frow = `<tr class="frow"><td class="mh"></td><td class="ph"></td><td></td><td class="mh">${fs('sex', opt([{ v: 'M', l: 'M' }, { v: 'F', l: 'F' }], q.get('sex'), 'All'), 'sex')}</td><td class="mh">${fs('age', opt(AGE_BANDS.map(x => ({ v: x[0], l: x[1] })), q.get('age'), 'All'), 'age')}</td><td class="mh">${fs('edu', opt(uniq(S.children.map(c => dayType(c)).filter(Boolean)).sort((x, y) => dayLabel(x).localeCompare(dayLabel(y))).map(x => ({ v: x, l: dayLabel(x) })).concat([{ v: 'none', l: 'Not written' }]), q.get('edu'), 'All'), 'education')}</td><td>${fs('section', opt([{ v: 'Luigi', l: 'Luigi' }, { v: 'Minsundu', l: 'Minsundu' }, { v: 'UCC', l: 'Minsundu · UCC' }, { v: 'Youth', l: 'Minsundu · Youth' }, { v: 'Nkwazi', l: 'Nkwazi Centre' }], secs.length === 1 ? secs[0] : secs.join(',') === 'UCC,Youth' ? 'Minsundu' : '', secs.length > 1 && secs.join(',') !== 'UCC,Youth' ? 'Several' : 'All'), 'centre')}</td><td class="mh">${fs('res', opt(RES3, q.get('res'), 'All'), 'resident or not')}</td><td>${fs('status', opt([{ v: 'open', l: 'Open files' }, { v: 'current', l: 'Active and semi-active' }].concat(STATUSES.map(s => ({ v: s, l: STATUS_LABEL[s] }))).concat([{ v: 'all', l: 'All' }]), q.get('status') || 'open'), 'status')}</td><td class="mh">${fs('hv', opt([{ v: 'none', l: 'Never' }, { v: 'old', l: 'More than 3 months ago' }, { v: 'new', l: 'In the last 3 months' }], q.get('hv'), 'All'), 'last home visit')}</td></tr>`;
+  return `${childFiltersOn(q) ? '<p class="sub chint"><a class="btn sm" href="#" data-q="age=&edu=&hv=&sex=&res=&section=&cs=&status=">Clear filters and order</a></p>' : ''}<div class="tw"><table class="ctable"><thead><tr>${th('id', 'ID', 'mh')}<th class="ph"><span class="vh">Photo</span></th>${th('name', 'Name')}${th('sex', 'Sex', 'mh')}${th('age', 'Age', 'n mh')}${th('edu', 'Education', 'mh')}${th('centre', 'Centre')}${th('res', 'Resident', 'mh')}${th('status', 'Status')}${th('hv', 'Last home visit', 'mh')}</tr>${frow}</thead><tbody>${list.length ? '' : '<tr><td colspan="10"><p class="empty">No child matches.</p></td></tr>'}
+  ${(isPhone() && q.get('call') !== '1' ? list.slice(0, 40) : list).map(c => { const vi = visitInfo(c); return `<tr class="click" data-href="#/child/${esc(c.id)}"><td class="mh">${esc(c.id)}</td><td class="ph">${dsAvatar(c)}</td><td><a class="cname" href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${c.nickname ? ` <span class="sub">"${esc(c.nickname)}"</span>` : ''}<div class="sub mo">ID ${esc(c.id)} · ${esc(c.sex || '')}${curAge(c) !== '' ? ' · ' + esc(curAge(c)) + ' years' : ''}</div></td><td class="mh">${esc(c.sex || '')}</td><td class="n mh">${esc(curAge(c))}</td><td class="mh">${esc(dayLabel(dayType(c)))}</td><td>${secChip(c.section)}${c.sectionToCheck ? ' <span class="sub" title="Proposed from age at import">?</span>' : ''}</td><td class="mh">${esc(c.residence || '')}</td><td>${chip(c.status)}</td><td class="mh">${vi.last ? esc(fmtDate(vi.last)) : '<span class="sub">none</span>'}</td></tr>`; }).join('')}
   </tbody></table></div>${isPhone() && q.get('call') !== '1' && list.length > 40 ? `<p style="margin:12px 4px 6px"><a class="btn" href="#" data-q="call=1" style="width:100%">Show all ${list.length} children</a></p><p class="sub" style="margin:0 6px 8px">The first 40 are shown. Type a name above to find a child.</p>` : ''}`;
 }
 function vChildren(r) {
@@ -2504,6 +2514,7 @@ function vChild(r) {
   const hist = [];
   for (const v of visitsOf(c.id)) hist.push({ d: v.date, t: `<b>${esc(v.purpose)}</b> visit${v.where ? ' · ' + esc(v.where) : ''}${v.successful === 'No' ? ' · <span class="chip c-red">nobody found</span>' : ''}${v.stillHome ? ' · still at home: ' + esc(v.stillHome) : ''} <span class="sub">by ${esc(staffName(v.by))} · ${esc(teamLabel(visitTeam(v)))}</span>${v.findings ? `<div>${esc(v.findings)}</div>` : ''}${v.action ? `<div class="sub">Action: ${esc(v.action)}${v.actionDone ? ' (done)' : ''}</div>` : ''}<div><a class="btn sm" href="#/visitrep/${esc(v.id)}">Open the report</a> ${visitChip(v)}</div>` });
   for (const e of S.events.filter(e => String(e.childId) === String(c.id))) { const t = eventLine(e); if (t) hist.push({ d: e.date, t: t + cancelBtn('event', e) }); }
+  for (const e of S.events.filter(e => e.type === 'Group activity' && (e.children || []).map(String).includes(String(c.id)))) hist.push({ d: e.date, t: esc(e.kind || 'Group activity') + ': ' + esc(e.topic || '') + ' <span class="sub">(' + esc(grpSecLabel(e.section)) + ')</span>' });
   for (const m of movesOf(c.id)) hist.push({ d: m.date, t: `<b>${esc(moveLabel(m))}</b>${m.by ? ` <span class="sub">by ${esc(staffName(m.by))}</span>` : ''}${m.note ? `<div>${esc(m.note)}</div>` : ''}${cancelBtn('move', m)}` });
   for (const s of S.sessions.filter(s => (s.children || []).map(String).includes(String(c.id)))) hist.push({ d: s.date, t: `<b>Counselling, ${esc(s.type.toLowerCase())} session</b> <span class="sub">by ${esc(staffName(s.by))}</span>${s.topic ? `<div>${seesProtection(c, s) ? esc(s.topic) : hiddenChip()}</div>` : ''}<a class="btn sm" href="#/session/${esc(s.id)}">Open the session</a>${cancelBtn('session', s)}` });
   const met = S.outreach.filter(o => (o.children || []).map(String).includes(String(c.id)));
@@ -2804,6 +2815,7 @@ function vReports(r) {
     <div style="margin-top:12px">${body}</div>
     ${k === 'School' && !aba && p === 'M' ? schoolReportLists(m) : ''}
   </section>
+  ${!def.quarterly && !aba && typeof grpReportHtml === 'function' ? grpReportHtml(k, rg.a, rg.b) : ''}
   ${historyForMonth(k, m).map(h => `<section class="card"><h2>What the section reported · ${esc(h.label)}</h2><p class="sub" style="margin:4px 0 10px">Copied from ${esc(h.source)}, as written.${h.note ? ' Note: ' + esc(h.note) : ''}</p>${historyTableHtml(h)}</section>`).join('')}
   ${def.quarterly || p !== 'M' || aba || repState(m, k).state === 'back' ? '' : repCard(k, m)}`;
 }
@@ -3020,6 +3032,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
       case 'pupil': body = vPupil(r); active = 'visits'; break;
       case 'referrals': body = r.id === 'new' ? vReferNew(r) : vReferrals(r); active = 'visits'; break;
       case 'tasks': body = vTasks(r); active = 'tasks'; break;
+      case 'groups': body = r.id === 'new' ? vGroupNew(r) : vGroups(r); active = 'reports'; break;
       case 'story': body = vStory(r); active = 'reports'; break;
       case 'monthly': body = vMonthly(r); active = 'children'; break;
       case 'review': body = vReview(); active = 'pending'; break;
@@ -3031,7 +3044,7 @@ function render() { _SI = null; UI.staleView = false; document.body.classList.to
   app.innerHTML = zm(shell(active, body));
   const s = $('#search'); if (s && UI.focusSearch) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); UI.focusSearch = false; }
   if (IS_DEMO && typeof tourDraw === 'function') setTimeout(tourDraw, 0);
-  fbDraw(); editFill(); draftRestore(); luigiGridToday(); linkKeep(); sessGroupDraw(); if (typeof dsAfter === 'function') dsAfter();
+  fbDraw(); editFill(); draftRestore(); luigiGridToday(); linkKeep(); sessGroupDraw(); if (typeof grpKidsDraw === 'function') grpKidsDraw(); if (typeof dsAfter === 'function') dsAfter();
 }
 
 /* ---------- actions ---------- */
@@ -4404,6 +4417,7 @@ function vMore() {
     ${out('reports') ? item('#/reports', 'Reports', 'Tables of each section') : ''}
     ${out('activities') && (USER.admin || staffAreas(USER).includes('Sports')) ? item('#/activities', 'Activities', 'Sports and VET training · draft') : ''}
     ${out('school') ? item('#/school', 'Pupils by school', 'School visits and results per term') : ''}
+    ${item('#/groups', 'Group activities', 'Workshops, parents meetings, Girl Child Program, school materials')}
     ${item('#/referrals', 'Referrals', 'Between sections')}
     ${item('#/monthly', 'Monthly reports', 'Minsundu key child form')}
     <a class="mitem" href="#/sync"><span><b>Shared database</b><small>${syncOn() ? (SY.state === 'off' ? 'No connection: saved here, sent later' : 'Connected: sent and received by itself') : 'Not connected yet'}</small></span>${syncOn() && pendingCount() ? '<span class="chip c-blue">Sending</span>' : ''}<i aria-hidden="true">›</i></a>
@@ -6056,6 +6070,10 @@ function repWaiting() { const out = []; const ms = new Set((S.events || []).filt
   const stop = (e, mk) => { e.preventDefault(); e.stopImmediatePropagation(); repStop(mk); };
   document.addEventListener('click', e => {
     if (!e.target.closest || GUEST || !USER) return;
+    const dc = e.target.closest('[data-dact="cancelrec"]');
+    if (dc) { const x = typeof recFind === 'function' ? recFind(dc.dataset.kind, dc.dataset.id) : null; let k = '';
+      if (x && dc.dataset.kind === 'event' && x.type === 'Group activity') k = x.section; else if (x && dc.dataset.kind === 'session') k = 'Counseling';
+      if (k && x.date && repLocked(x.date.slice(0, 7), k)) return stop(e, x.date.slice(0, 7) + '|' + k); return; }
     const b = e.target.closest('[data-act],[data-lact]'); if (!b) return;
     const act = b.dataset.act, la = b.dataset.lact, q = route().q, centre = q.get('c') || (typeof defCentre === 'function' ? defCentre() : '');
     const kidOf = id => child(String(id || '').split('@')[0]);
@@ -6080,9 +6098,89 @@ function repWaiting() { const out = []; const ms = new Set((S.events || []).filt
     if (f.dataset.form === 'visit') { const t = v('team'); k = t === 'Family' || t === 'School' ? t : ''; const ed = v('edit'), old = ed && S.visits.find(x => x.id === ed); if (!k && old) k = visitTeam(old); if (old && repLocked(old.date.slice(0, 7), k)) { e.preventDefault(); e.stopImmediatePropagation(); return repStop(old.date.slice(0, 7) + '|' + k); } }
     else if (f.dataset.form === 'session') k = 'Counseling';
     else if (f.dataset.form === 'outreach') k = 'Luigi';
+    else if (f.dataset.form === 'group') k = v('section');
     if (k && repLocked(m, k)) { e.preventDefault(); e.stopImmediatePropagation(); repStop(m + '|' + k); }
   }, true);
 })();
+/* ---------- Group activities (beta 1.4, 24/11/2026) ----------
+   Mauro, 24/11: one simple record for workshops, parents meetings, Girl Child Program and school materials,
+   so the section reports can count them (indicators LUI 6, MIN 5, NKZ 17, FML 13, SCH 20 of the proposal of 24/11).
+   Stored as an event: type "Group activity", childId '', children = the names ticked. Cancelled with "Record cancelled". */
+const GRP_SECS = [['Luigi', 'Luigi Drop-in'], ['UCC', 'Minsundu · UCC'], ['Youth', 'Minsundu · Youth'], ['Nkwazi', 'Nkwazi Centre'], ['Family', 'Family Section'], ['School', 'School Section'], ['Counseling', 'Counselling'], ['Sports', 'Sports']];
+const GRP_KINDS = ['Workshop', 'Parents meeting', 'Girl Child Program', 'Cookery session', 'School materials given', 'Other'];
+const GRP_AREA = { Luigi: 'Luigi', Minsundu: 'UCC', Nkwazi: 'Nkwazi', Family: 'Family', School: 'School', Counseling: 'Counseling', Sports: 'Sports' };
+function grpSecLabel(k) { return (GRP_SECS.find(x => x[0] === k) || [k, k])[1]; }
+function grpAll() { return (S.events || []).filter(e => e.type === 'Group activity'); }
+function grpIn(a, b, sec) { return grpAll().filter(e => inRange(e.date, a, b) && (!sec || e.section === sec)).sort((x, y) => (y.date || '').localeCompare(x.date || '') || (y.ts || 0) - (x.ts || 0)); }
+function grpKids(e) { return distinctChildren((e.children || []).map(String)); }
+function grpDefSec() { if (!USER) return 'Luigi'; const a = staffAreas(USER); for (const k of ['Luigi', 'Minsundu', 'Nkwazi', 'Family', 'School', 'Counseling', 'Sports']) if (a.includes(k)) return GRP_AREA[k]; return 'Luigi'; }
+function grpSexLine(L) { const f = L.filter(c => c.sex === 'F').length, m = L.filter(c => c.sex === 'M').length; return `F ${f} · M ${m}`; }
+
+/* the list of the month */
+function vGroups(r) {
+  const q = r.q, m = q.get('m') || thisMonth(), sec = q.get('s') || '', { a, b } = monthCtx(m), L = grpIn(a, b, sec);
+  const row = e => { const ks = grpKids(e), ad = (Number(e.women) || 0) + (Number(e.men) || 0), ot = Number(e.others) || 0;
+    return `<div class="cyp-row grprow"><div class="cyp-row__text"><b>${esc(e.kind || 'Group activity')} · ${esc(e.topic || '')}</b><span>${esc(fmtDate(e.date))} · ${esc(grpSecLabel(e.section))} · ${ks.length + ot} children${ks.length ? ' (' + grpSexLine(ks) + ')' : ''}${ad ? ' · ' + ad + ' adults (women ' + (Number(e.women) || 0) + ', men ' + (Number(e.men) || 0) + ')' : ''} · by ${esc(staffName(e.by))}</span>${ks.length ? `<details class="grpnames"><summary>Names</summary><p class="sub">${ks.map(c => childLink(c)).join(', ')}</p></details>` : ''}${e.note ? `<p class="sub">${esc(e.note)}</p>` : ''}</div>${typeof cancelBtn === 'function' ? cancelBtn('event', e) : ''}</div>`; };
+  return `<div class="top"><div><h1>Group activities</h1><p class="lead">Workshops, parents meetings, Girl Child Program, cookery, school materials: one line each, with the names.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap">${monthPicker(m)}<a class="btn pri" href="#/groups/new${sec ? '?s=' + sec : ''}">Record a group activity</a></div></div>
+  <div class="seg segg" role="group" aria-label="Section"><a href="#" data-q="s=" class="${sec ? '' : 'on'}">All sections</a>${GRP_SECS.map(([k, l]) => `<a href="#" data-q="s=${k}" class="${sec === k ? 'on' : ''}">${esc(l)}</a>`).join('')}</div>
+  <section class="card"><h2>${esc(fmtMonth(m))} · ${L.length} ${L.length === 1 ? 'activity' : 'activities'}</h2>${L.length ? L.map(row).join('') : '<p class="empty">No group activity recorded in this month.</p>'}</section>`;
+}
+
+/* the form */
+function vGroupNew(r) {
+  const q = r.q, sec = GRP_SECS.some(x => x[0] === q.get('s')) ? q.get('s') : grpDefSec();
+  UI.grpKids = UI.grpKids || new Set();
+  return `<div class="top"><div><h1>Record a group activity</h1><p class="lead">One line for each activity: the day, what it was about, who took part.</p></div><a class="btn" href="#/groups">Back</a></div>
+  <form class="card" data-form="group" style="max-width:860px"><div class="fs two">
+    ${field('Section', 'section', sec, 'select', { req: true, options: opt(GRP_SECS.map(([v, l]) => ({ v, l })), sec) })}
+    ${field('Kind of activity', 'kind', '', 'select', { req: true, options: opt(GRP_KINDS, q.get('k') || '', 'Choose') })}
+    ${field('Date', 'date', today(), 'date', { req: true })}
+    ${field('Topic, or what was given', 'topic', '', 'text', { req: true })}
+    <div class="f" style="grid-column:1/-1" id="grpkids"></div>
+    ${field('Other children, not named', 'others', '', 'number', { attrs: ' min="0"' })}
+    ${field('Adults present: women', 'women', '', 'number', { attrs: ' min="0"' })}${field('Adults present: men', 'men', '', 'number', { attrs: ' min="0"' })}
+    ${field('Note', 'note', '', 'textarea', { wide: true, rows: 3 })}
+  </div><button class="btn pri" style="margin-top:12px">Save the activity</button></form>`;
+}
+/* who took part: the children of the section, or any child found by name */
+function grpKidsHtml() {
+  const f = document.querySelector('form[data-form="group"]'); if (!f) return '';
+  const sec = f.elements.section ? f.elements.section.value : '', term = (UI.grpq || '').trim().toLowerCase();
+  UI.grpKids = UI.grpKids || new Set();
+  let kids = ['Luigi', 'UCC', 'Youth', 'Nkwazi'].includes(sec) ? S.children.filter(c => isCurrent(c) && c.section === sec) : [];
+  if (term.length >= 2) kids = S.children.filter(c => c.status !== 'Closed' && (fullName(c) + ' ' + (c.nickname || '') + ' ' + c.id).toLowerCase().includes(term)).slice(0, 30);
+  const extra = Array.from(UI.grpKids).map(id => child(id)).filter(c => c && !kids.includes(c));
+  kids = kids.concat(extra).sort((x, y) => fullName(x).localeCompare(fullName(y)));
+  return `<span>Who took part: tick the names · ${UI.grpKids.size} ticked</span>
+    <input class="in" id="grpq" type="search" autocomplete="off" placeholder="Type a name to find a child" value="${esc(UI.grpq || '')}" style="margin:4px 0 6px">
+    ${kids.length ? `<div class="sesslist">${kids.map(c => `<label><input type="checkbox" data-grpkid="${esc(c.id)}"${UI.grpKids.has(String(c.id)) ? ' checked' : ''}> ${esc(fullName(c))} <span class="sub">${esc(c.section)}</span></label>`).join('')}</div>` : '<p class="sub">Type a name above.</p>'}`;
+}
+function grpKidsDraw(keepFocus) { const b = document.getElementById('grpkids'); if (!b) return; b.innerHTML = grpKidsHtml(); if (keepFocus) { const i = document.getElementById('grpq'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } } }
+document.addEventListener('change', e => {
+  const el = e.target, f = el.closest ? el.closest('form[data-form="group"]') : null; if (!f) return;
+  if (el.dataset && el.dataset.grpkid != null) { UI.grpKids = UI.grpKids || new Set(); if (el.checked) UI.grpKids.add(String(el.dataset.grpkid)); else UI.grpKids.delete(String(el.dataset.grpkid)); grpKidsDraw(); return; }
+  if (el.name === 'section') grpKidsDraw();
+});
+document.addEventListener('input', e => { if (e.target.id === 'grpq') { UI.grpq = e.target.value; grpKidsDraw(true); } });
+FORMS.group = function (o) {
+  const kids = Array.from(UI.grpKids || []), n = v => Math.max(0, Number(v) || 0);
+  if (!o.kind) return toast('Choose the kind of activity');
+  if (!kids.length && !n(o.others) && !n(o.women) && !n(o.men)) return toast('Tick who took part, or write how many');
+  S.events.push({ id: uid('e'), childId: '', type: 'Group activity', section: o.section, kind: o.kind, date: o.date, topic: (o.topic || '').trim(), children: kids, others: n(o.others), women: n(o.women), men: n(o.men), note: (o.note || '').trim(), ts: Date.now(), by: USER.id });
+  UI.grpKids = null; UI.grpq = ''; save(); toast('Activity saved'); go('#/groups?s=' + o.section + '&m=' + o.date.slice(0, 7));
+};
+
+/* in the report of a section: one table with the activities of the period */
+function grpReportHtml(k, a, b) {
+  if (!GRP_SECS.some(x => x[0] === k)) return '';
+  const L = grpIn(a, b, k), add = `<a class="btn sm" href="#/groups/new?s=${k}">Record a group activity</a>`;
+  if (!L.length) return `<section class="card"><h2>Group activities</h2><p class="sub" style="margin:4px 0 10px">No workshop, parents meeting, Girl Child Program, cookery or school materials recorded in this period.</p>${add}</section>`;
+  const rows = GRP_KINDS.map(kd => { const l = L.filter(e => e.kind === kd); if (!l.length) return null; const ks = distinctChildren([].concat(...l.map(e => (e.children || []).map(String)))), ot = l.reduce((s, e) => s + (Number(e.others) || 0), 0), w = l.reduce((s, e) => s + (Number(e.women) || 0), 0), mm = l.reduce((s, e) => s + (Number(e.men) || 0), 0);
+    return [kd, l.length, ks.filter(c => c.sex === 'F').length, ks.filter(c => c.sex === 'M').length, ks.length, ot, w + mm]; }).filter(Boolean);
+  return `<section class="card"><h2>Group activities</h2><p class="sub" style="margin:4px 0 10px">Each child once per kind of activity. Not named = children counted without a name.</p>
+    <div class="tw"><table class="rt"><thead><tr><th>Kind</th><th class="n">Activities</th><th class="n">Girls</th><th class="n">Boys</th><th class="n">Children named</th><th class="n">Not named</th><th class="n">Adults</th></tr></thead><tbody>${rows.map(r => `<tr>${r.map((v, i) => `<td class="${i ? 'n' : ''}">${esc(String(v))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><a class="btn sm" href="#/groups?s=${k}&m=${a.slice(0, 7)}">Open the list</a>${add}</div></section>`;
+}
 /* icons of the sections and of the tools, classes of the places: from the CYP design system (generated by mkds.py) */
 const SEC_ICON = {"Education office": "<path d=\"M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z\"/> <path d=\"M22 10v6\"/> <path d=\"M6 12.5V16a6 3 0 0 0 12 0v-3.5\"/>", "Family Section": "<path d=\"m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/> <polyline points=\"9 22 9 12 15 12 15 22\"/>", "School Section": "<path d=\"M14 22v-4a2 2 0 1 0-4 0v4\"/> <path d=\"m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2\"/> <path d=\"M18 5v17\"/> <path d=\"m4 6 8-4 8 4\"/> <path d=\"M6 5v17\"/> <circle cx=\"12\" cy=\"9\" r=\"2\"/>", "UCC Children Section": "<path d=\"M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z\"/>", "Youth": "<path d=\"M4 10a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z\"/> <path d=\"M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2\"/> <path d=\"M8 21v-5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v5\"/> <path d=\"M8 10h8\"/> <path d=\"M8 18h8\"/>", "Literacy class": "<path d=\"M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z\"/> <path d=\"M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z\"/>", "Counselling": "<path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/> <path d=\"M15.8 9.2a2.5 2.5 0 0 0-3.5 0l-.3.4-.35-.3a2.42 2.42 0 1 0-3.2 3.6l3.6 3.5 3.6-3.5c1.2-1.2 1.1-2.7.2-3.7\"/>", "Sports": "<path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\"/> <path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\"/> <path d=\"M4 22h16\"/> <path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\"/> <path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\"/> <path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\"/>", "VET training": "<path d=\"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z\"/>", "Canteen": "<path d=\"M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2\"/> <path d=\"M7 2v20\"/> <path d=\"M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7\"/>", "Disability programme": "<path d=\"M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16\"/> <path d=\"m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9\"/> <path d=\"m2 15 6 6\"/> <path d=\"M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z\"/>", "Social enterprises": "<path d=\"M7 20h10\"/> <path d=\"M10 20c5.5-2.5.8-6.4 3-10\"/> <path d=\"M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z\"/> <path d=\"M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z\"/>", "Administration": "<path d=\"M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16\"/> <rect width=\"20\" height=\"14\" x=\"2\" y=\"6\" rx=\"2\"/>", "Human Resources": "<path d=\"M17 18a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2\"/> <rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/> <circle cx=\"12\" cy=\"10\" r=\"2\"/> <line x1=\"8\" x2=\"8\" y1=\"2\" y2=\"4\"/> <line x1=\"16\" x2=\"16\" y1=\"2\" y2=\"4\"/>", "Security guards": "<path d=\"M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z\"/>", "Transport": "<path d=\"M8 6v6\"/> <path d=\"M15 6v6\"/> <path d=\"M2 12h19.6\"/> <path d=\"M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3\"/> <circle cx=\"7\" cy=\"18\" r=\"2\"/> <path d=\"M9 18h5\"/> <circle cx=\"16\" cy=\"18\" r=\"2\"/>", "Mechanics workshop": "<path d=\"M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z\"/> <path d=\"M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z\"/> <path d=\"M12 2v2\"/> <path d=\"M12 22v-2\"/> <path d=\"m17 20.66-1-1.73\"/> <path d=\"M11 10.27 7 3.34\"/> <path d=\"m20.66 17-1.73-1\"/> <path d=\"m3.34 7 1.73 1\"/> <path d=\"M14 12h8\"/> <path d=\"M2 12h2\"/> <path d=\"m20.66 7-1.73 1\"/> <path d=\"m3.34 17 1.73-1\"/> <path d=\"m17 3.34-1 1.73\"/> <path d=\"m11 13.73-4 6.93\"/>", "Maintenance": "<path d=\"m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9\"/> <path d=\"m18 15 4-4\"/> <path d=\"m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5\"/>"};
 const DS_ICON = {"check": "<path d=\"M20 6 9 17l-5-5\"/>", "alert": "<path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/> <path d=\"M12 9v4\"/> <path d=\"M12 17h.01\"/>", "down": "<path d=\"m6 9 6 6 6-6\"/>", "left": "<path d=\"m15 18-6-6 6-6\"/>", "right": "<path d=\"m9 18 6-6-6-6\"/>", "x": "<path d=\"M18 6 6 18\"/> <path d=\"m6 6 12 12\"/>", "pin": "<path d=\"M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z\"/> <circle cx=\"12\" cy=\"10\" r=\"3\"/>", "more": "<circle cx=\"12\" cy=\"12\" r=\"1\"/> <circle cx=\"19\" cy=\"12\" r=\"1\"/> <circle cx=\"5\" cy=\"12\" r=\"1\"/>", "comment": "<path d=\"M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z\"/>", "signout": "<path d=\"M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4\"/> <polyline points=\"16 17 21 12 16 7\"/> <line x1=\"21\" x2=\"9\" y1=\"12\" y2=\"12\"/>", "print": "<path d=\"M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2\"/> <path d=\"M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6\"/> <rect x=\"6\" y=\"14\" width=\"12\" height=\"8\" rx=\"1\"/>", "excel": "<path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/> <polyline points=\"7 10 12 15 17 10\"/> <line x1=\"12\" x2=\"12\" y1=\"15\" y2=\"3\"/>"};
@@ -6684,7 +6782,8 @@ function counselPeriod(r, cv) {
   <section class="card"><h2>Statistics · ${esc(P.label)}</h2><div class="tw"><table class="rt rstack" id="rtable"><thead><tr><th>Code</th><th>Indicator</th><th class="n">Female</th><th class="n">Male</th><th class="n">N/A</th><th class="n">Total</th></tr></thead><tbody>${rows.map(x => x[0] === '' && x[2][3] == null ? `<tr class="rhead"><td colspan="6"><b>${esc(x[1])}</b></td></tr>` : `<tr><td class="sub rcode">${esc(x[0])}</td><td class="rind">${esc(x[1])}</td>${x[2].map((v, j) => `<td class="n" data-l="${['Female', 'Male', 'N/A', 'Total'][j]}">${v == null ? '' : esc(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
     <p class="sub" style="margin:8px 0 0">${esc(REPORTS.Counseling.note)}</p></section>
   <section class="card"><h2>Double counting</h2><p style="margin:6px 0 0">${T.all.all.length + T.all.others} children were worked with in ${esc(P.label)}. Added centre by centre they would be ${T.sum + T.all.others}: ${T.moreCentres} ${T.moreCentres === 1 ? 'child was' : 'children were'} seen in more than one centre. Added by kind of session (individual, group, family) they would be ${T.all.added + T.all.others}: ${T.moreKinds} ${T.moreKinds === 1 ? 'child was' : 'children were'} in more than one kind.${T.all.others ? ' ' + T.all.others + ' group participants have no name written and cannot be checked.' : ''}</p></section>
-  <section class="card"><h2>By centre</h2>${tHtml(stat)}</section>`;
+  <section class="card"><h2>By centre</h2>${tHtml(stat)}</section>
+  ${cv === 'month' && typeof grpReportHtml === 'function' ? grpReportHtml('Counseling', P.a, P.b) : ''}`;
 }
 function counselNarrative(P) {
   const see = seesAll() || hasFlag('Counseling'), T = counselStats(P.a, P.b), out = [], pl = (n, one, many) => n + ' ' + (n === 1 ? one : many), bg = l => { const g = l.filter(c => c.sex === 'F').length, b = l.filter(c => c.sex === 'M').length; return pl(b, 'boy', 'boys') + ' and ' + pl(g, 'girl', 'girls') + (l.length - g - b ? ' and ' + (l.length - g - b) + ' with sex not written' : ''); };
