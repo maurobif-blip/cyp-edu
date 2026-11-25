@@ -1533,20 +1533,41 @@ body.cyp-commenting .hd #fbbtn.cyp-appbar__action{visibility:hidden}
 .pickf{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.6fr);gap:var(--space-2);margin:var(--space-1) 0 var(--space-2)}
 @media (max-width:899.98px){.pickf{grid-template-columns:1fr 1fr}.pickf input{grid-column:1/-1}}
 .pickbar{display:flex;gap:var(--space-2);align-items:center;flex-wrap:wrap;margin:var(--space-2) 0 var(--space-1)}
-/* beta 1.5: a referral shows who asks, why, and what the colleague wrote, with the button to open it */
-.refwhy{margin:var(--space-2) 0;padding:var(--space-3);border-left:4px solid var(--yellow);background:var(--surface-band);border-radius:var(--radius-control);display:flex;flex-direction:column;gap:var(--space-1)}
-.refwhy > b{font:var(--type-heading-3)}
-.refwhy p{margin:0}
-.refsrc{display:flex;gap:var(--space-2);align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:var(--space-1)}
-.refsrc > span{flex:1 1 220px}
+/* beta 1.6: referral as the Referral of the design system; inside the card of a section it keeps a hairline border */
+.refcard .cyp-referral{margin-top:var(--space-3);border:1px solid var(--line)}
+.cyp-referral__child{margin:0}
+.cyp-referral .refact,.cyp-referral .refdone{margin:0}
 /* beta 1.5, Luigi month grid: the photo next to the name; the other two sheets of the day in the corner of the cell (c centre, d day, n night) */
 .lgrid .lnm{display:flex;align-items:center;gap:var(--space-2);min-width:0}
 .lgrid .lnm > span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .lgrid .lnm .av,.lgrid .lnm img{flex:none}
 .lgrid td.lc{position:relative}
-.lgrid td.lc[data-o]::after{content:attr(data-o);position:absolute;top:1px;right:2px;font:var(--type-small);font-size:10px;line-height:1;font-weight:400;color:var(--ink-muted, var(--muted));letter-spacing:1px;pointer-events:none}
 .lgrid thead th a{color:inherit;text-decoration:none;display:block}
 .lgrid thead th a:hover{text-decoration:underline}
+/* beta 1.6 (design system 6174): rows that open a record end with chevron-right; on a phone the chevron sits at the right of the row */
+#childTable td.cyp-table__go{width:32px;text-align:right}
+@media (max-width:899.98px){#childTable tr{padding-right:44px}#childTable td.cyp-table__go{position:absolute;right:var(--space-2);top:50%;transform:translateY(-50%);padding:0;display:block;width:auto}#childTable td.ph{left:var(--space-2);right:auto}}
+.qn .cyp-row__open{text-decoration:none}
+.lgrid td.lc .gm{font:inherit}
+/* beta 1.6: ChildPicker inside a form */
+.cyp-picker .pickhead{margin:0;font:var(--type-body-strong) var(--font-text)}
+.cyp-picker__list label > span{display:flex;flex-direction:column;min-width:0}
+.cyp-picker__list .cyp-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+/* beta 1.7: health conditions under the name in the sports registers, in the warn tone with its icon */
+.hline{display:flex;align-items:center;gap:var(--space-1);color:var(--warn-ink, var(--ink));font:var(--type-small) var(--font-text)}
+.hline .cyp-icon{width:16px;height:16px;flex:none;color:var(--warn)}
+/* beta 1.7: player profile, one block per sport */
+.pprof{padding:var(--space-3) 0;border-top:1px solid var(--line)}
+.pprof:first-child{border-top:0;padding-top:0}
+.pprof h3 .cyp-icon{width:20px;height:20px;vertical-align:-3px}
+.pprof h3{display:flex;align-items:center;gap:var(--space-2)}
+/* interactive report of the year: chapters in two rows, the year and the month, wrapping (25/11) */
+.cyp-nav--chapters.st-nav2{flex-direction:column;gap:0;overflow:visible;padding:var(--space-1) var(--space-4)}
+.st-nav2 .st-navg{display:flex;flex-wrap:wrap;align-items:center;column-gap:var(--space-1)}
+.st-nav2 .st-navg+.st-navg{border-top:1px solid rgba(255,255,255,.3)}
+.st-nav2 .st-navl{color:var(--on-dark);opacity:.85;min-width:10em;padding:0 var(--space-3) 0 0;font-size:12px}
+.st-nav2 a{white-space:nowrap}
+@media (max-width:899.98px){.st-nav2 .st-navl{flex-basis:100%;padding-top:var(--space-2)}}
 
 
 </style>
@@ -1562,7 +1583,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'beta 1.8';
+const VERSION = 'beta 1.8.1';
 const BUILD_DATE = '2026-11-24'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#3A5EA8', ink: '#14213D' },
@@ -6828,17 +6849,21 @@ function vStory(r) {
   const mq = r.q.get('m'), yq = r.q.get('y'), yearMode = !mq || !!yq;
   const y = yearMode ? (yq || (mq || thisMonth()).slice(0, 4)) : mq.slice(0, 4), m = yearMode ? (y === thisMonth().slice(0, 4) ? thisMonth() : y + '-12') : mq;
   const D = stData(m), mp = stPages(D);
-  const P = yearMode ? [stYearCover(y, m)].concat(stYearPages(stYear(y), m), mp.filter(x => !x.cover).map(x => Object.assign({}, x, { nav: x.nav + ' · month' }))) : mp;
+  const P = yearMode ? [stYearCover(y, m)].concat(stYearPages(stYear(y), m), mp.filter(x => !x.cover).map(x => Object.assign({}, x, { month: true }))) : mp;
   const p = Math.max(0, Math.min(P.length - 1, Number(r.q.get('p') || 0))), pg = P[p], base = yearMode ? `y=${y}` : `m=${m}`;
   UI.stDir = UI.stLast != null && UI.stLast > p ? 'prev' : 'next'; UI.stLast = p; UI.stCount = P.length; UI.stMonth = m; UI.stBase = base;
   const go = i => `#/story?${base}&p=${i}`, last = yearMode ? y >= thisMonth().slice(0, 4) : m >= thisMonth();
   if (pg.cover) return `<section id="stchap" class="st-chap">${pg.html}</section>`;
-  const monthPage = yearMode && /· month$/.test(pg.nav);
+  const monthPage = yearMode && !!pg.month;
   const pager = monthPage ? `<p class="st-lead">The month: ${esc(fmtMonth(m))}. <a href="#/story?m=${m}&p=1">Open the report of a month</a></p>`
     : yearMode ? `<div class="cyp-pager st-pager" role="group" aria-label="Year"><a class="cyp-btn" href="#/story?y=${Number(y) - 1}&p=${p}">${dsIcon('left')}Before</a><span class="cyp-pager__now">${esc(y)}</span>${last ? `<button class="cyp-btn" disabled>After${dsIcon('right')}</button>` : `<a class="cyp-btn" href="#/story?y=${Number(y) + 1}&p=${p}">After${dsIcon('right')}</a>`}</div>`
     : `<div class="cyp-pager st-pager" role="group" aria-label="Month"><a class="cyp-btn" href="#/story?m=${addMonths(m, -1)}&p=${p}">${dsIcon('left')}Before</a><span class="cyp-pager__now">${esc(fmtMonth(m))}</span>${last ? `<button class="cyp-btn" disabled>After${dsIcon('right')}</button>` : `<a class="cyp-btn" href="#/story?m=${addMonths(m, 1)}&p=${p}">After${dsIcon('right')}</a>`}</div>`;
   const yearLink = yearMode ? '' : `<p class="st-lead"><a href="#/story?y=${y}&p=1">Open the report of the year ${esc(y)}</a></p>`;
-  return `<nav class="cyp-nav cyp-nav--chapters" aria-label="Chapters of the report">${P.map((x, i) => x.cover ? '' : `<a class="label-caps" href="${go(i)}"${i === p ? ' aria-current="page"' : ''}>${i}<span class="cyp-nav__name">&nbsp;${esc(x.nav)}</span></a>`).join('')}</nav>
+  /* chapters: in the year, two rows, the year and the month, each with its name; they wrap instead of scrolling (Mauro, 25/11) */
+  const link = i => `<a class="label-caps" href="${go(i)}"${i === p ? ' aria-current="page"' : ''}>${i}<span class="cyp-nav__name">&nbsp;${esc(P[i].nav)}</span></a>`, idx = P.map((x, i) => i).filter(i => !P[i].cover);
+  const nav = yearMode ? `<nav class="cyp-nav cyp-nav--chapters st-nav2" aria-label="Chapters of the report"><div class="st-navg"><span class="st-navl label-caps">The year ${esc(y)}</span>${idx.filter(i => !P[i].month).map(link).join('')}</div><div class="st-navg"><span class="st-navl label-caps">${esc(fmtMonth(m))}</span>${idx.filter(i => P[i].month).map(link).join('')}</div></nav>`
+    : `<nav class="cyp-nav cyp-nav--chapters" aria-label="Chapters of the report">${idx.map(link).join('')}</nav>`;
+  return `${nav}
   <section id="stchap" class="st-chap"><div class="st-body"><h2 class="heading-2 st-title">${esc(pg.title)}</h2>${pager}${p === 1 ? yearLink : ''}${pg.html}
     <div class="st-foot"><a class="cyp-btn" href="${go(p - 1)}">${dsIcon('left')}Back</a>${p + 1 < P.length ? `<a class="cyp-btn cyp-btn--primary" href="${go(p + 1)}">Next: ${esc(P[p + 1].nav)}${dsIcon('right')}</a>` : ''}</div></div></section>`;
 }
