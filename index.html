@@ -134,6 +134,7 @@ textarea.in{min-height:70px;resize:vertical}
 .lgrid .we{background:#FAFAF9}.lgrid .td{box-shadow:inset 2px 0 0 var(--pri),inset -2px 0 0 var(--pri)}
 .lgrid .ln{font-variant-numeric:tabular-nums;padding:0 8px;font-weight:600}
 .lgrid tfoot td,.lgrid tfoot th{position:sticky;bottom:0;background:var(--fill);font-weight:600;z-index:2}
+.lgrid tfoot .lname{z-index:4}
 .lcat{display:inline-block;font-size:12px;font-weight:700;border-radius:3px;padding:0 4px;background:var(--fill2);color:var(--soft)}
 .lcat.A{background:var(--redsoft);color:var(--red)}.lcat.B{background:var(--prisoft);color:var(--pri2)}
 .ltmain th{white-space:normal;font-size:12px;min-width:74px}
@@ -1561,7 +1562,7 @@ const WEB_BUILD = true;
 /* Cicetekelo Youth Project records - alpha 0.1
    One file, works offline. Data is kept in this browser (IndexedDB) on this computer. */
 
-const VERSION = 'beta 1.7';
+const VERSION = 'beta 1.8';
 const BUILD_DATE = '2026-11-24'; /* the day this version was made: a device with an earlier date has a wrong clock */
 const SECTIONS = {
   Luigi:  { phase: 1, centre: 'Luigi',    label: 'Luigi',                     color: '#3A5EA8', ink: '#14213D' },
@@ -3612,7 +3613,7 @@ function luigiReportHtml(a, b, label) {
 }
 
 /* ---------- attendance: centre switch and the Luigi monthly sheets ---------- */
-function centreSeg(centre) { return `<div class="seg regbar" role="group" aria-label="Register">${CENTRES.concat(['School', 'Literacy']).map(k => `<a href="#" data-q="c=${k}&g=&only=&sec=&gr=&sg=" class="${centre === k ? 'on' : ''}">${CENTRE_LABEL[k]}</a>`).join('')}</div>`; }
+function centreSeg(centre) { return `<div class="seg regbar" role="group" aria-label="Register">${CENTRES.concat(['School', 'Literacy']).map(k => `<a href="#" data-q="c=${k}&g=&only=&sec=&gr=&sg=" class="${centre === k ? 'on' : ''}">${CENTRE_LABEL[k]}</a>`).join('')}<a href="#/activities?v=month">Sports</a></div>`; }
 /* attIn is in nkwazi.js: a child is on the list of every centre he or she comes to */
 /* the three month grids of Luigi: one sheet each, one tap marks, a second tap clears */
 const L_MODE = { centre: { type: 'Drop-in', mark: 'C', total: 'Days in centre', tap: 'came to the centre', met: 'At the centre this month' }, day: { type: 'Day outreach', mark: 'S', total: 'Days on the street', tap: 'met on the street', met: 'Met on the street this month' }, night: { type: 'Night outreach', mark: 'S', total: 'Nights on the street', tap: 'slept on the street', met: 'Met at night this month' } };
@@ -5285,11 +5286,23 @@ document.addEventListener('change', e => {
 
 /* ---------- Activities: sports and skills training (draft) ----------
    Enrolment is kept in the child's file (c.activities). Attendance is a mark per day, child and discipline. */
-const ACT_DEFAULT = { Sports: ['Football', 'Basketball', 'Golf', 'Tennis', 'Swimming', 'Volleyball'], 'VET training': ['Carpentry', 'Agriculture', 'Mechanics', 'Handicraft'] };
+/* beta 1.8 (comments of 24/11 from the meeting with Pippen): attendance is kept for football, basketball, golf and tennis, plus acrobatics; swimming and volleyball left out */
+const ACT_DEFAULT = { Sports: ['Football', 'Basketball', 'Golf', 'Tennis', 'Acrobatics'], 'VET training': ['Carpentry', 'Agriculture', 'Mechanics', 'Handicraft'] };
 function actGroups() { return (S.settings && S.settings.activities) || ACT_DEFAULT; }
 function actAll() { return [].concat.apply([], Object.values(actGroups())); }
 function actNow(q) { return q.get('a') || actAll()[0]; }
 function actOf(c) { return Array.isArray(c.activities) ? c.activities : []; }
+/* the training groups of a sport (comments of 24/11): basketball by centre, football by age; a child has one group per sport (c.actTeam) */
+const ACT_TEAMS = { Basketball: ['Luigi', 'UCC (U12 and U14)', 'Nkwazi Centre (U12, U14, U16)', 'Youth'], Football: ['Luigi', 'Nkwazi Centre', 'U13', 'U15', 'U19+ (Youth)'] };
+function actTeamOf(c, a) { return (c.actTeam && c.actTeam[a]) || ''; }
+function actTeamGuess(c, a) {
+  const T = ACT_TEAMS[a]; if (!T) return ''; const sec = c.section, age = Number(curAge(c)) || 0;
+  if (sec === 'Luigi') return 'Luigi'; if (sec === 'Nkwazi') return T.find(x => x.startsWith('Nkwazi')) || '';
+  if (sec === 'Youth') return T.find(x => x.includes('Youth')) || '';
+  if (a === 'Basketball') return sec === 'UCC' ? 'UCC (U12 and U14)' : '';
+  return age && age < 13 ? 'U13' : age && age < 15 ? 'U15' : age ? 'U19+ (Youth)' : '';
+}
+function actTeamSet(c, a, t) { c.actTeam = Object.assign({}, c.actTeam || {}); if (t) c.actTeam[a] = t; else delete c.actTeam[a]; c.updatedAt = today(); }
 function actIds(a, from, to) { const suf = '@act:' + a, ids = new Set(); for (const day of Object.keys(S.attendance)) if (day >= from && day <= to) for (const k of Object.keys(S.attendance[day])) if (k.endsWith(suf)) ids.add(k.slice(0, -suf.length)); return Array.from(ids); }
 function actFind(term) { return S.children.filter(c => c.status !== 'Closed' && (fullName(c) + ' ' + (c.nickname || '')).toLowerCase().includes(term)).slice(0, 30); }
 /* the coach sees the health conditions of the child under the name (Pippen, 24/11) */
@@ -5297,7 +5310,8 @@ function healthLine(c) { const t = [c.medical, c.disabilities].map(x => String(x
 function actRowHead(c) { return `${avatar(c, 44)}<span class="qn"><b>${esc(fullName(c))}</b><small>${esc(c.section + ' · ID ' + c.id)}</small>${healthLine(c)}</span>`; }
 function actList(q) {
   const a = actNow(q), d = q.get('d') || today(), day = S.attendance[d] || {}, term = (UI.actq || '').trim().toLowerCase();
-  let kids = term.length >= 2 ? actFind(term) : S.children.filter(c => c.status !== 'Closed' && actOf(c).includes(a));
+  const tm = q.get('g') || '';
+  let kids = term.length >= 2 ? actFind(term) : S.children.filter(c => c.status !== 'Closed' && actOf(c).includes(a) && (!tm || actTeamOf(c, a) === tm));
   kids = kids.slice().sort((x, y) => fullName(x).localeCompare(fullName(y)));
   if (!kids.length) return `<p class="empty">${term.length >= 2 ? 'No child with this name.' : 'Nobody enrolled yet. Type a name above, or use Enrolment.'}</p>`;
   return kids.map(c => { const k = c.id + '@act:' + a, v = day[k]; return `<div class="qrow"><button class="qmain" data-act="actmark" data-d="${d}" data-id="${esc(k)}" data-c="${esc(c.id)}" data-a="${esc(a)}">${actRowHead(c)}${v ? '<span class="qmark P">Present</span>' : '<span class="qtick">Present</span>'}</button></div>`; }).join('');
@@ -5307,7 +5321,7 @@ function actEnrolList() {
   let kids = term.length >= 2 ? actFind(term) : S.children.filter(c => c.status !== 'Closed' && actOf(c).length);
   kids = kids.slice().sort((x, y) => fullName(x).localeCompare(fullName(y)));
   if (!kids.length) return `<p class="empty">${term.length >= 2 ? 'No child with this name.' : 'Nobody enrolled yet. Type a name above.'}</p>`;
-  return kids.map(c => `<div class="qrow enr"><div class="qmain" style="cursor:default">${actRowHead(c)}</div><div class="qopts">${Object.entries(G).map(([g, L]) => L.map(x => `<button class="btn sm${actOf(c).includes(x) ? ' pri' : ''}" data-act="actenrol" data-c="${esc(c.id)}" data-a="${esc(x)}" aria-pressed="${actOf(c).includes(x)}">${actOf(c).includes(x) ? '✓ ' : ''}${esc(x)}</button>`).join('')).join('')}</div></div>`).join('');
+  return kids.map(c => `<div class="qrow enr"><div class="qmain" style="cursor:default">${actRowHead(c)}</div><div class="qopts">${Object.entries(G).map(([g, L]) => L.map(x => `<button class="btn sm${actOf(c).includes(x) ? ' pri' : ''}" data-act="actenrol" data-c="${esc(c.id)}" data-a="${esc(x)}" aria-pressed="${actOf(c).includes(x)}">${actOf(c).includes(x) ? '✓ ' : ''}${esc(x)}</button>`).join('')).join('')}</div>${actOf(c).filter(x => ACT_TEAMS[x]).map(x => `<label class="sub" style="display:flex;gap:8px;align-items:center;margin:4px 0 0">${esc(x)} group <select class="in" style="width:auto" data-actteam="${esc(x)}" data-c="${esc(c.id)}"><option value="">Not set</option>${ACT_TEAMS[x].map(t => `<option${actTeamOf(c, x) === t ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>`).join('')}</div>`).join('');
 }
 function vActivities(r) {
   const q = r.q, G = actGroups(), tab = q.get('t') === 'enrol' ? 'enrol' : 'att', a = actNow(q), d = q.get('d') || today(), day = S.attendance[d] || {}, suf = '@act:' + a, m = d.slice(0, 7);
@@ -5320,11 +5334,38 @@ function vActivities(r) {
   const n = Object.keys(day).filter(k => k.endsWith(suf)).length;
   const days = Object.keys(S.attendance).filter(x => x.slice(0, 7) === m && Object.keys(S.attendance[x]).some(k => k.endsWith(suf))).length;
   const mk = uniq(actIds(a, m + '-01', monthEnd(m)).map(id => child(id)).filter(Boolean));
-  return head + refs + Object.entries(G).map(([g, L]) => `<p class="sec" style="margin:6px 0 4px">${esc(g)}</p><div class="qchips">${L.map(x => `<a href="#" data-q="a=${esc(x)}" class="${x === a ? 'on' : ''}">${esc(x)} · ${enr(x)}</a>`).join('')}</div>`).join('') + `
+  const tm = q.get('g') || '', T = ACT_TEAMS[a], view = q.get('v') === 'month' ? 'month' : 'day';
+  const chips = Object.entries(G).map(([g, L]) => `<p class="sec" style="margin:6px 0 4px">${esc(g)}</p><div class="qchips">${L.map(x => `<a href="#" data-q="a=${esc(x)}&g=" class="${x === a ? 'on' : ''}">${esc(x)} · ${enr(x)}</a>`).join('')}</div>`).join('')
+    + (T ? `<p class="sec" style="margin:6px 0 4px">${esc(a)} groups</p><div class="qchips"><a href="#" data-q="g=" class="${tm ? '' : 'on'}">All groups</a>${T.map(x => `<a href="#" data-q="g=${esc(x)}" class="${tm === x ? 'on' : ''}">${esc(x)} · ${open.filter(c => actOf(c).includes(a) && actTeamOf(c, a) === x).length}</a>`).join('')}</div>` : '')
+    + `<div class="seg" role="group" aria-label="Day or month" style="margin:8px 0;width:fit-content"><a href="#" data-q="v=" class="${view === 'day' ? 'on' : ''}">Day</a><a href="#" data-q="v=month" class="${view === 'month' ? 'on' : ''}">Month view</a></div>`;
+  if (view === 'month') { const mm = q.get('m') || thisMonth(); return head + refs + chips + `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><span class="sub">Tap a cell: P = present. Tap again to clear.</span>${monthPicker(mm)}</div><section class="card" style="padding:6px">${actGrid(a, mm, tm)}</section>`; }
+  return head + refs + chips + `
   <div class="qtop">${search}<div class="qcount"><span><b>${esc(a)}</b> · ${esc(fmtDate(d))} · <b>${n}</b> present of ${enr(a)} enrolled</span><span>${esc(fmtMonth(m))}: ${days} ${days === 1 ? 'day' : 'days'} · ${mk.length} children (F ${mk.filter(c => c.sex === 'F').length}, M ${mk.filter(c => c.sex === 'M').length})</span></div></div>
   <div class="card" style="padding:0 8px"><div id="actlist">${actList(q)}</div></div>`;
 }
-function actEnrolSet(c, a, on) { const L = actOf(c).filter(x => x !== a); if (on) L.push(a); c.activities = L; c.updatedAt = today(); }
+/* the month of a discipline as a grid, as for Luigi (comment of 24/11): one row per child, one column per day, a tap marks present */
+function actGrid(a, m, tm) {
+  const suf = '@act:' + a, n = Number(monthEnd(m).slice(8)), days = []; for (let i = 1; i <= n; i++) days.push(m + '-' + String(i).padStart(2, '0'));
+  const ids = new Set(actIds(a, m + '-01', monthEnd(m))); S.children.forEach(c => { if (c.status !== 'Closed' && actOf(c).includes(a)) ids.add(String(c.id)); });
+  const kids = Array.from(ids).map(id => child(id)).filter(c => c && (!tm || actTeamOf(c, a) === tm)).sort((x, y) => fullName(x).localeCompare(fullName(y)));
+  if (!kids.length) return '<p class="empty">Nobody enrolled in this group. Use Enrolment.</p>';
+  const wd = d => new Date(d + 'T00:00:00').getDay(), T = today();
+  const head = `<tr><th class="lname">Name</th>${days.map(d => `<th class="${[0, 6].includes(wd(d)) ? 'we' : ''}${d === T ? ' td' : ''}">${'SMTWTFS'[wd(d)]}<br>${Number(d.slice(8))}</th>`).join('')}<th>Days</th></tr>`;
+  const body = kids.map(c => { const v = days.map(d => (S.attendance[d] || {})[c.id + suf] ? 'P' : ''); return `<tr data-id="${esc(c.id)}"><th class="lname" scope="row"><span class="lnm">${avatar(c, 28)}<span><a href="#/child/${esc(c.id)}">${esc(fullName(c))}</a>${actTeamOf(c, a) ? ` <small class="sub">${esc(actTeamOf(c, a))}</small>` : ''}</span></span></th>${days.map((d, i) => `<td class="lc${v[i] ? ' C' : ''}${[0, 6].includes(wd(d)) ? ' we' : ''}${d === T ? ' td' : ''}${d > T ? ' fut' : ''}" data-sact="cell" data-d="${d}" data-a="${esc(a)}" data-v="${v[i]}"><b class="gm">${v[i]}</b></td>`).join('')}<td class="n" data-t="T">${v.filter(Boolean).length}</td></tr>`; }).join('');
+  const foot = `<tr><th class="lname">Present</th>${days.map(d => `<td class="n" data-fd="${d}">${kids.filter(c => (S.attendance[d] || {})[c.id + suf]).length || ''}</td>`).join('')}<td></td></tr>`;
+  return `<div class="tw lwrap"><table class="lgrid actgrid"><thead>${head}</thead><tbody>${body}</tbody><tfoot>${foot}</tfoot></table></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest ? e.target.closest('td[data-sact="cell"]') : null; if (!b || GUEST) return;
+  const d = b.dataset.d; if (d > today()) return toast('This day has not come yet');
+  const tr = b.closest('tr'), c = child(tr.dataset.id), a = b.dataset.a, k = tr.dataset.id + '@act:' + a; if (!c) return;
+  S.attendance[d] = S.attendance[d] || {}; touchAtt(d, k);
+  const on = !b.dataset.v; if (on) S.attendance[d][k] = 'P'; else delete S.attendance[d][k]; save();
+  b.dataset.v = on ? 'P' : ''; b.classList.toggle('C', on); const gm = b.querySelector('.gm'); if (gm) gm.textContent = on ? 'P' : '';
+  const tt = tr.querySelector('[data-t=T]'); if (tt) tt.textContent = tr.querySelectorAll('td[data-sact][data-v="P"]').length;
+  const tb = b.closest('table'), f = tb.querySelector(`[data-fd="${d}"]`); if (f) f.textContent = tb.querySelectorAll(`td[data-sact][data-d="${d}"][data-v="P"]`).length || '';
+});
+function actEnrolSet(c, a, on) { const L = actOf(c).filter(x => x !== a); if (on) L.push(a); c.activities = L; if (on && ACT_TEAMS[a] && !actTeamOf(c, a)) actTeamSet(c, a, actTeamGuess(c, a)); c.updatedAt = today(); }
 function actMark(b) {
   if (GUEST) return; const d = b.dataset.d, id = b.dataset.id, c = child(b.dataset.c); S.attendance[d] = S.attendance[d] || {}; touchAtt(d, id);
   if (S.attendance[d][id]) delete S.attendance[d][id]; else { S.attendance[d][id] = 'P'; if (c && !actOf(c).includes(b.dataset.a)) actEnrolSet(c, b.dataset.a, true); }
@@ -5353,6 +5394,7 @@ function actXlsx() {
   downloadXlsx('activity-' + a + '-' + m, [{ name: a.slice(0, 28), rows, filter: true }]);
 }
 document.addEventListener('input', e => { if (e.target.id === 'actsearch') { UI.actq = e.target.value; const t = $('#actlist'); if (t) t.innerHTML = route().q.get('t') === 'enrol' ? actEnrolList() : actList(route().q); } });
+document.addEventListener('change', e => { const t = e.target; if (t.dataset && t.dataset.actteam && !GUEST) { const c = child(t.dataset.c); if (c) { actTeamSet(c, t.dataset.actteam, t.value); save(); toast('Group saved'); } } });
 document.addEventListener('change', e => { if (e.target.id === 'actdate' && e.target.value) location.hash = '#/activities?a=' + encodeURIComponent(actNow(route().q)) + '&d=' + e.target.value; });
 
 /* ---------- Logframe v0.6 of 23 Nov 2026 (Drive: "Cicetekelo - Logframe v0.6"): what the app can already count (draft, supervisors only).
@@ -6223,17 +6265,19 @@ document.addEventListener('click', e => {
    and only the Education office can open them again, with Send back and a note.
    Stored as events, so they travel with the shared database as it is: "Report sent", "Report checked",
    "Report sent back", ref = month|key. The last one decides the state. Marks made before (S.reports) still count. */
-const REP_EV = ['Report sent', 'Report checked', 'Report sent back'];
+const REP_EV = ['Report sent', 'Report checked', 'Report sent back', 'Report undone'];
 const REP_SEC = ['Luigi', 'Nkwazi', 'UCC', 'Youth', 'Family', 'School', 'Counseling'];
 function repLabel(k) { return (REPORTS[k] && (REPORTS[k].short || REPORTS[k].label)) || k; }
 function repEvents(m, k) { const ref = m + '|' + k; return (S.events || []).filter(e => e.ref === ref && REP_EV.includes(e.type)).sort((a, b) => (a.ts || 0) - (b.ts || 0)); }
 function repState(m, k) {
-  const ev = repEvents(m, k), last = ev[ev.length - 1], sent = ev.filter(e => e.type === 'Report sent').pop() || null;
-  if (last) return { state: last.type === 'Report sent' ? 'sent' : last.type === 'Report checked' ? 'checked' : 'back', sent, last, ev };
-  const old = ((S.reports || {})[m] || {})[k] || {};
-  if (old.checked) return { state: 'checked', sent: old.prepared ? { by: old.prepared.by, date: old.prepared.date } : null, last: { type: 'Report checked', by: old.checked.by, date: old.checked.date }, ev: [] };
-  if (old.prepared) return { state: 'sent', sent: { by: old.prepared.by, date: old.prepared.date }, last: { type: 'Report sent', by: old.prepared.by, date: old.prepared.date }, ev: [] };
-  return { state: 'open', sent: null, last: null, ev: [] };
+  /* old marks (S.reports) first, then the events in order; "Report undone" takes back the last step (Clement's comment of 25/11) */
+  const ev = repEvents(m, k), old = ((S.reports || {})[m] || {})[k] || {}, st = [];
+  if (old.prepared) st.push({ type: 'Report sent', by: old.prepared.by, date: old.prepared.date });
+  if (old.checked) st.push({ type: 'Report checked', by: old.checked.by, date: old.checked.date });
+  for (const e of ev) { if (e.type === 'Report undone') st.pop(); else st.push(e); }
+  const last = st[st.length - 1] || null, sent = st.filter(e => e.type === 'Report sent').pop() || null;
+  if (!last) return { state: 'open', sent: null, last: null, ev, prev: null };
+  return { state: last.type === 'Report sent' ? 'sent' : last.type === 'Report checked' ? 'checked' : 'back', sent, last, ev, prev: st[st.length - 2] || null };
 }
 function repLocked(m, k) { if (!m || !REP_SEC.includes(k)) return false; const s = repState(m, k).state; return s === 'sent' || s === 'checked'; }
 function repLockMsg(m, k) { return `The ${repLabel(k)} report of ${fmtMonth(m)} was sent to the Education office. To change it, the Education office sends it back first.`; }
@@ -6246,11 +6290,13 @@ function repCard(k, m) {
   const R = repState(m, k), who = x => x ? esc(staffName(x.by)) + ', ' + esc(fmtDate(x.date)) : '', adm = USER && USER.admin;
   const btn = (v, l, pri) => `<button class="btn${pri ? ' pri' : ''}" data-act="repflow" data-k="${k}" data-m="${m}" data-v="${v}">${l}</button>`;
   let tag, line, acts = '';
-  if (R.state === 'open') { tag = '<span class="cyp-tag">Not sent</span>'; line = 'When the report is ready, send it. After that the records of the month cannot be changed.'; acts = btn('send', 'Send to the Education office', true); }
-  else if (R.state === 'sent') { tag = '<span class="cyp-tag cyp-tag--warn">Sent</span>'; line = 'Sent by ' + who(R.sent) + '. The records of the month are closed.' + (adm ? '' : ' Waiting for the Education office.'); if (adm) acts = btn('check', 'Checked', true) + btn('back', 'Send back'); }
-  else if (R.state === 'checked') { tag = `<span class="cyp-tag cyp-tag--ok">${dsIcon('check')}Checked</span>`; line = (R.sent ? 'Sent by ' + who(R.sent) + '. ' : '') + 'Checked by ' + who(R.last) + '. The records of the month are closed.'; if (adm) acts = btn('back', 'Send back'); }
-  else { tag = `<span class="cyp-tag cyp-tag--danger">${dsIcon('alert')}Sent back</span>`; line = 'Sent back by ' + who(R.last) + ': <b>' + esc(R.last.note || '') + '</b><br>The records of the month can be changed. Then send the report again.'; acts = btn('send', 'Send again to the Education office', true); }
-  return `<section class="card soft repflow" id="repflow"><h2>The report of ${esc(fmtMonth(m))} ${tag}</h2><p style="margin:6px 0 0">${line}</p>${acts ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${acts}</div>` : ''}${R.ev.length > 1 ? `<details style="margin-top:10px"><summary>What happened</summary><ul class="sub">${R.ev.map(e => `<li>${esc(fmtDate(e.date))} · ${esc(e.type.replace('Report ', ''))} by ${esc(staffName(e.by))}${e.note ? ': ' + esc(e.note) : ''}</li>`).join('')}</ul></details>` : ''}</section>`;
+  /* the Education office can approve a report as it is, sent or not, and take back its last step with Undo (Clement, 25/11) */
+  const approve = btn('check', R.state === 'sent' ? 'Approve' : 'Approve as it is', true), undo = adm && R.last && R.last.by && (R.last.type === 'Report checked' || R.last.type === 'Report sent back') ? btn('undo', 'Undo') : '';
+  if (R.state === 'open') { tag = '<span class="cyp-tag">Not sent</span>'; line = adm ? 'The section has not sent it yet. You can approve it as it is: the records of the month close.' : 'When the report is ready, send it. After that the records of the month cannot be changed.'; acts = adm ? approve : btn('send', 'Send to the Education office', true); }
+  else if (R.state === 'sent') { tag = '<span class="cyp-tag cyp-tag--warn">Sent</span>'; line = 'Sent by ' + who(R.sent) + '. The records of the month are closed.' + (adm ? '' : ' Waiting for the Education office.'); if (adm) acts = approve + btn('back', 'Send back'); }
+  else if (R.state === 'checked') { tag = `<span class="cyp-tag cyp-tag--ok">${dsIcon('check')}Approved</span>`; line = (R.sent ? 'Sent by ' + who(R.sent) + '. ' : 'Not sent by the section. ') + 'Approved by ' + who(R.last) + '. The records of the month are closed.'; if (adm) acts = undo + btn('back', 'Send back'); }
+  else { tag = `<span class="cyp-tag cyp-tag--danger">${dsIcon('alert')}Sent back</span>`; line = 'Sent back by ' + who(R.last) + ': <b>' + esc(R.last.note || '') + '</b><br>The records of the month can be changed. Then send the report again.'; acts = adm ? approve + undo : btn('send', 'Send again to the Education office', true); }
+  return `<section class="card soft repflow" id="repflow"><h2>The report of ${esc(fmtMonth(m))} ${tag}</h2><p style="margin:6px 0 0">${line}</p>${acts ? `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${acts}</div>` : ''}${R.ev.length > 1 ? `<details style="margin-top:10px"><summary>What happened</summary><ul class="sub">${R.ev.map(e => `<li>${esc(fmtDate(e.date))} · ${esc(e.type.replace('Report ', '').replace('checked', 'approved'))} by ${esc(staffName(e.by))}${e.note ? ': ' + esc(e.note) : ''}</li>`).join('')}</ul></details>` : ''}</section>`;
 }
 async function repAct(b) {
   const k = b.dataset.k, m = b.dataset.m, v = b.dataset.v, R = repState(m, k);
@@ -6259,7 +6305,8 @@ async function repAct(b) {
     if (R.state === 'sent' || R.state === 'checked') return render();
     const ok = await askBox({ title: 'Send the ' + repLabel(k) + ' report of ' + fmtMonth(m) + '?', body: 'After this the records of ' + fmtMonth(m) + ' for ' + repLabel(k) + ' cannot be changed. If something must be changed, the Education office sends the report back.', keep: 'Not now', ok: 'Send the report', okCls: 'pri' });
     if (ok === null) return; push('Report sent'); toast('Sent to the Education office');
-  } else if (v === 'check') { if (!USER.admin || R.state !== 'sent') return render(); push('Report checked'); toast('Checked'); }
+  } else if (v === 'check') { if (!USER.admin || R.state === 'checked') return render(); push('Report checked', R.state === 'sent' ? '' : 'Approved as it is'); toast('Approved'); }
+  else if (v === 'undo') { if (!USER.admin || !R.last || (R.last.type !== 'Report checked' && R.last.type !== 'Report sent back')) return render(); push('Report undone', R.last.type.replace('Report ', '')); toast('Undone'); }
   else if (v === 'back') {
     if (!USER.admin || (R.state !== 'sent' && R.state !== 'checked')) return render();
     const note = await askBox({ title: 'Send back the ' + repLabel(k) + ' report of ' + fmtMonth(m) + '?', body: 'Write what must be changed. The section reads it at the top of the report.', why: true, keep: 'Keep it', ok: 'Send back', okCls: 'pri' });
@@ -6312,7 +6359,8 @@ function repWaiting() { const out = []; const ms = new Set((S.events || []).filt
    so the section reports can count them (indicators LUI 6, MIN 5, NKZ 17, FML 13, SCH 20 of the proposal of 24/11).
    Stored as an event: type "Group activity", childId '', children = the names ticked. Cancelled with "Record cancelled". */
 const GRP_SECS = [['Luigi', 'Luigi Drop-in'], ['UCC', 'Minsundu · UCC'], ['Youth', 'Minsundu · Youth'], ['Nkwazi', 'Nkwazi Centre'], ['Family', 'Family Section'], ['School', 'School Section'], ['Counseling', 'Counselling'], ['Sports', 'Sports']];
-const GRP_KINDS = ['Workshop', 'Parents meeting', 'Girl Child Program', 'Cookery session', 'School materials given', 'Other'];
+/* beta 1.8 (comment of 24/11): health talks, team outings, tournaments, the youth camp of the ZBF and activities outside the project */
+const GRP_KINDS = ['Workshop', 'Parents meeting', 'Girl Child Program', 'Cookery session', 'School materials given', 'Health talk', 'Team outing', 'Tournament', 'Youth camp (ZBF)', 'Activity outside the project', 'Other'];
 const GRP_AREA = { Luigi: 'Luigi', Minsundu: 'UCC', Nkwazi: 'Nkwazi', Family: 'Family', School: 'School', Counseling: 'Counseling', Sports: 'Sports' };
 function grpSecLabel(k) { return (GRP_SECS.find(x => x[0] === k) || [k, k])[1]; }
 function grpAll() { return (S.events || []).filter(e => e.type === 'Group activity'); }
@@ -6722,18 +6770,83 @@ function stPages(D) {
         <div class="st-acts"><a class="cyp-btn" href="#/tasks?v=all">Open Tasks</a><a class="cyp-btn" href="#/visits?vtab=check">Open the visits to validate</a></div>` }
   ];
 }
+
+/* ---------- the year (Mauro's comment of 25/11): first what CYP reports every year (the annual report of APJ23, 2025),
+   then some indicators of the new logframe, then the chapters of the month read from the records ----------
+   Figures of the annual report 2025 are shown beside, as they were printed. */
+const ST_AR2025 = { luigi: 320, nkwazi: 144, minsundu: 128, family: 145, school: 197 };
+function stOpenIn(c, a, b) { return inCareOn(c, a) || inRange(c.entryDate, a, b) || S.moves.some(x => x.type === 'reopened' && String(x.childId) === String(c.id) && inRange(x.date, a, b)); }
+function stYear(y) {
+  const a = y + '-01-01', yEnd = y + '-12-31', b = yEnd < today() ? yEnd : today(), rng = y + '-01~' + y + '-12', sex = l => ({ f: l.filter(c => c.sex === 'F').length, m: l.filter(c => c.sex === 'M').length, n: l.length });
+  /* Luigi: each child once, in the first group that fits (drop-in, then night outreach, then day outreach, then the rest) */
+  const L = luigiReportData(a, b), st = L.sets, inS = (k, id) => st[k].has(id), allL = [...st.all];
+  const dropin = allL.filter(id => inS('dropin', id)), night = allL.filter(id => !inS('dropin', id) && inS('night', id)), day = allL.filter(id => !inS('dropin', id) && !inS('night', id) && inS('day', id)), rest = allL.filter(id => !inS('dropin', id) && !inS('night', id) && !inS('day', id));
+  const luMonths = uniq(S.outreach.filter(o => inRange(o.date, a, b) && !o.cancelled).map(o => o.date.slice(0, 7))).length;
+  /* Nkwazi community school: children with the community school written as school, with a file open during the year */
+  const cs = S.children.filter(c => dayType(c) === 'Nkwazi community school' && stOpenIn(c, a, b)), csN = cs.filter(c => centreOf(c) !== 'Minsundu'), csM = cs.filter(c => centreOf(c) === 'Minsundu');
+  /* Minsundu: the rows of the UCC and Youth reports, counted on the year, each child once */
+  const rowsOf = sec => { const o = {}; for (const r of REPORTS[sec].rows(rng)) o[r[1]] = r[3]; return o; }, U = rowsOf('UCC'), Yo = rowsOf('Youth'), both = k => uniq((U[k] || []).concat(Yo[k] || []));
+  const mins = S.children.filter(c => centreOf(c) === 'Minsundu'), minsIds = new Set(mins.map(c => String(c.id)));
+  const closed = distinctChildren(movesIn('closed', a, b).map(x => x.childId).filter(id => minsIds.has(String(id))));
+  const worked = both('Total worked with'), res = l => l.filter(c => c.residence === 'Resident');
+  /* Family and School: the first row of their reports, on the year */
+  const first = k => { const r = REPORTS[k].rows(rng)[0]; return r ? r[3] : []; };
+  /* new logframe indicators that the records can already give */
+  const ids = new Set(); for (const d of Object.keys(S.attendance)) if (inRange(d, a, b)) for (const [k, v] of Object.entries(S.attendance[d])) if (v === 'P' || v === 'H' || v === 'B') ids.add(String(k).split('@')[0]);
+  for (const o of S.outreach) if (inRange(o.date, a, b)) for (const id of o.children || []) ids.add(String(id)); for (const v of S.visits) if (inRange(v.date, a, b)) ids.add(String(v.childId)); for (const x of S.sessions) if (inRange(x.date, a, b)) for (const id of x.children || []) ids.add(String(id));
+  const reach = distinctChildren([...ids]), rein = S.children.filter(c => inRange(c.reintegrationDate, a, b)), PR = promotedIn(Number(y));
+  const sports = actGroups().Sports || [], sp = new Set(); for (const d of Object.keys(S.attendance)) if (inRange(d, a, b)) for (const k of Object.keys(S.attendance[d])) { const i = k.indexOf('@act:'); if (i > 0 && sports.includes(k.slice(i + 5))) sp.add(k.slice(0, i)); }
+  S.children.forEach(c => { if (c.status !== 'Closed' && actOf(c).some(x => sports.includes(x))) sp.add(String(c.id)); });
+  return { y, a, b, luigi: { all: allL.length, parts: [dropin.length, night.length, day.length, rest.length], months: luMonths },
+    school: { all: sex(cs), nb: csN.filter(c => c.sex !== 'F').length, ng: csN.filter(c => c.sex === 'F').length, mi: csM.length },
+    mins: { worked: sex(worked), start: res(both('Brought forward from last month')).length, non: worked.filter(c => c.residence !== 'Resident').length, nw: both('New admissions').length, out: closed.length, rein: both('Reintegrated').length, end: res(both('Present at the end of the month')).length },
+    family: sex(first('Family')), schoolSec: sex(first('School')),
+    lf: { reach: sex(reach), rein: sex(rein), pr: PR, sport: sex(distinctChildren([...sp])) } };
+}
+function stYearPages(Y, month) {
+  const n = v => (Number(v) || 0).toLocaleString('en-GB'), pct = (v, of) => of ? Math.round(100 * v / of) : 0;
+  const tile = (label, fig, note) => `<div class="cyp-stat"><span class="cyp-stat__label label-caps">${esc(label)}</span><span class="cyp-stat__figure figure">${stNum(fig)}</span><span class="cyp-stat__note">${esc(note)}</span></div>`;
+  const was = k => `<p class="st-lead">Annual report 2025: <b>${n(ST_AR2025[k])}</b>. Counted from the records in CYP EDU; what was not recorded in the app is missing.</p>`;
+  const donut = (title, parts, cls) => `<div class="cyp-card"><div class="cyp-donut"><svg viewBox="0 0 240 240" role="img" aria-label="${esc(title + ': ' + parts.map(x => x[0] + ' ' + x[1]).join(', '))}">${stArcs(parts.map((x, i) => [cls[i], x[1]]))}</svg><div><h3 class="heading-3 st-h3">${esc(title)}</h3><ul class="cyp-legend">${parts.map((x, i) => `<li class="cyp-c-${cls[i]}"><i class="cyp-swatch"></i><span class="label-caps">${esc(x[0])}</span><b>${n(x[1])}</b></li>`).join('')}</ul></div></div></div>`;
+  const yr = 'in ' + Y.y, C4 = ['navy', 'sky', 'luigi', 'nkwazi'], L = Y.luigi, Sc = Y.school, M = Y.mins, LF = Y.lf;
+  const draft = '<span class="cyp-tag cyp-tag--warn">Draft</span>';
+  return [
+    { k: 'luigi', nav: 'Luigi', title: 'Luigi Drop-in Centre ' + yr, html: `<div class="cyp-tiles st-narrow st-one">${tile('Children worked with', L.all, 'Each child counted once · months with records: ' + L.months)}</div>
+        ${donut('Where the children were met', [['Drop-in centre', L.parts[0]], ['Night outreach only', L.parts[1]], ['Day outreach only', L.parts[2]], ['Other organisations and transfers', L.parts[3]]], C4)}${was('luigi')}<div><a class="cyp-btn" href="#/reports?s=Luigi&p=Y&m=${month}">Open the Luigi report of the year</a></div>` },
+    { k: 'cschool', nav: 'Community school', title: 'Nkwazi community school ' + yr, html: `<div class="cyp-tiles st-narrow st-one">${tile('Pupils', Sc.all.n, 'With a file open during the year')}</div>
+        ${donut('The pupils', [['Boys of Nkwazi Centre', Sc.nb], ['Girls of Nkwazi Centre', Sc.ng], ['Children of Minsundu', Sc.mi]], ['navy', 'sky', 'minsundu'])}${was('nkwazi')}` },
+    { k: 'minsundu', nav: 'Minsundu', title: 'Minsundu Centre ' + yr, html: `<div class="cyp-tiles">${tile('Children worked with', M.worked.n, 'UCC and Youth, each child once')}${tile('Residents on 1 January', M.start, 'In care at the start of the year')}${tile('Non-residents', M.non, 'Worked with during the year')}</div>
+        <div class="cyp-tiles">${tile('New admissions', M.nw, 'During the year')}${tile('Files closed', M.out, 'Discharged, transferred or returned')}${tile('Reintegrated', M.rein, 'Back with the family')}${tile('Residents at the end', M.end, Y.b < Y.y + '-12-31' ? 'On ' + dxDate(Y.b) : 'On 31 December')}</div><p class="st-lead">Residents and non-residents as written in the file today.</p>${was('minsundu')}` },
+    { k: 'famsch', nav: 'Family and School', title: 'Family and School Sections ' + yr, html: `<div class="cyp-tiles">${tile('Family Section', Y.family.n, 'Children worked with (FML 1) · annual report 2025: ' + n(ST_AR2025.family))}${tile('School Section', Y.schoolSec.n, 'Children worked with (SCH 1) · annual report 2025: ' + n(ST_AR2025.school))}</div>
+        <p class="st-lead">The first row of each section report, counted on the whole year. Counted from the records in CYP EDU; what was not recorded in the app is missing.</p>` },
+    { k: 'logframe', nav: 'Logframe', title: 'Indicators of the new logframe ' + yr, html: `<p class="st-lead">Logframe v0.6 ${draft}: the indicators the records can already give.</p><div class="cyp-tiles">${tile('R.1 Children supported', LF.reach.n, 'Girls ' + LF.reach.f + ', boys ' + LF.reach.m + ' · present, met, visited or counselled')}${tile('OP1.3.1 Reintegrated', LF.rein.n, 'Reintegration date in the year')}</div>
+        <div class="cyp-tiles">${tile('SO1.2 Promoted', LF.pr.all.length ? pct(LF.pr.ok.length, LF.pr.all.length) : 0, LF.pr.all.length ? '% of ' + LF.pr.all.length + ' pupils with an end-of-year result' : 'No end-of-year result written yet')}${tile('OP1.6.1 In coached sport', LF.sport.n, 'Enrolled or present in Activities')}</div>${seesOverview() ? '<div><a class="cyp-btn" href="#/logframe">Open the logframe</a></div>' : ''}` },
+  ];
+}
 function vStory(r) {
-  const m = r.q.get('m') || thisMonth(), D = stData(m), P = stPages(D), p = Math.max(0, Math.min(P.length - 1, Number(r.q.get('p') || 0))), pg = P[p];
-  UI.stDir = UI.stLast != null && UI.stLast > p ? 'prev' : 'next'; UI.stLast = p; UI.stCount = P.length; UI.stMonth = m;
-  const go = i => `#/story?m=${m}&p=${i}`, last = m >= thisMonth();
+  /* the year comes first (#/story or #/story?y=2026); a month (#/story?m=2026-11) keeps the report of the month as before */
+  const mq = r.q.get('m'), yq = r.q.get('y'), yearMode = !mq || !!yq;
+  const y = yearMode ? (yq || (mq || thisMonth()).slice(0, 4)) : mq.slice(0, 4), m = yearMode ? (y === thisMonth().slice(0, 4) ? thisMonth() : y + '-12') : mq;
+  const D = stData(m), mp = stPages(D);
+  const P = yearMode ? [stYearCover(y, m)].concat(stYearPages(stYear(y), m), mp.filter(x => !x.cover).map(x => Object.assign({}, x, { nav: x.nav + ' · month' }))) : mp;
+  const p = Math.max(0, Math.min(P.length - 1, Number(r.q.get('p') || 0))), pg = P[p], base = yearMode ? `y=${y}` : `m=${m}`;
+  UI.stDir = UI.stLast != null && UI.stLast > p ? 'prev' : 'next'; UI.stLast = p; UI.stCount = P.length; UI.stMonth = m; UI.stBase = base;
+  const go = i => `#/story?${base}&p=${i}`, last = yearMode ? y >= thisMonth().slice(0, 4) : m >= thisMonth();
   if (pg.cover) return `<section id="stchap" class="st-chap">${pg.html}</section>`;
-  const pager = `<div class="cyp-pager st-pager" role="group" aria-label="Month"><a class="cyp-btn" href="#/story?m=${addMonths(m, -1)}&p=${p}">${dsIcon('left')}Before</a><span class="cyp-pager__now">${esc(fmtMonth(m))}</span>${last ? `<button class="cyp-btn" disabled>After${dsIcon('right')}</button>` : `<a class="cyp-btn" href="#/story?m=${addMonths(m, 1)}&p=${p}">After${dsIcon('right')}</a>`}</div>`;
+  const monthPage = yearMode && /· month$/.test(pg.nav);
+  const pager = monthPage ? `<p class="st-lead">The month: ${esc(fmtMonth(m))}. <a href="#/story?m=${m}&p=1">Open the report of a month</a></p>`
+    : yearMode ? `<div class="cyp-pager st-pager" role="group" aria-label="Year"><a class="cyp-btn" href="#/story?y=${Number(y) - 1}&p=${p}">${dsIcon('left')}Before</a><span class="cyp-pager__now">${esc(y)}</span>${last ? `<button class="cyp-btn" disabled>After${dsIcon('right')}</button>` : `<a class="cyp-btn" href="#/story?y=${Number(y) + 1}&p=${p}">After${dsIcon('right')}</a>`}</div>`
+    : `<div class="cyp-pager st-pager" role="group" aria-label="Month"><a class="cyp-btn" href="#/story?m=${addMonths(m, -1)}&p=${p}">${dsIcon('left')}Before</a><span class="cyp-pager__now">${esc(fmtMonth(m))}</span>${last ? `<button class="cyp-btn" disabled>After${dsIcon('right')}</button>` : `<a class="cyp-btn" href="#/story?m=${addMonths(m, 1)}&p=${p}">After${dsIcon('right')}</a>`}</div>`;
+  const yearLink = yearMode ? '' : `<p class="st-lead"><a href="#/story?y=${y}&p=1">Open the report of the year ${esc(y)}</a></p>`;
   return `<nav class="cyp-nav cyp-nav--chapters" aria-label="Chapters of the report">${P.map((x, i) => x.cover ? '' : `<a class="label-caps" href="${go(i)}"${i === p ? ' aria-current="page"' : ''}>${i}<span class="cyp-nav__name">&nbsp;${esc(x.nav)}</span></a>`).join('')}</nav>
-  <section id="stchap" class="st-chap"><div class="st-body"><h2 class="heading-2 st-title">${esc(pg.title)}</h2>${pager}${pg.html}
+  <section id="stchap" class="st-chap"><div class="st-body"><h2 class="heading-2 st-title">${esc(pg.title)}</h2>${pager}${p === 1 ? yearLink : ''}${pg.html}
     <div class="st-foot"><a class="cyp-btn" href="${go(p - 1)}">${dsIcon('left')}Back</a>${p + 1 < P.length ? `<a class="cyp-btn cyp-btn--primary" href="${go(p + 1)}">Next: ${esc(P[p + 1].nav)}${dsIcon('right')}</a>` : ''}</div></div></section>`;
 }
+function stYearCover(y, m) {
+  return { k: 'cover', cover: true, html: `<div class="cyp-ground st-cover"><div class="cyp-plate st-seal"><img src="${LOGO}" alt="Seal of the Cicetekelo Youth Project"></div><p class="label-caps">Cicetekelo Youth Project</p><h1 class="cover-title">Education Department</h1><p class="st-sub">The year ${esc(y)}</p><p class="small">First what CYP reports every year, then the new logframe, then the month of ${esc(fmtMonth(m))}. Read from the records of CYP EDU on ${dxDate(today())}</p><a class="cyp-btn st-start" href="#/story?y=${y}&p=1">Open the report${dsIcon('right')}</a></div>` };
+}
 /* keyboard arrows, swipe, and the numbers that count up when their page arrives */
-function stGo(d) { if (!/^#\/story/.test(location.hash)) return; const q = new URLSearchParams(location.hash.split('?')[1] || ''), p = Number(q.get('p') || 0), n = p + d; if (n < 0 || n >= (UI.stCount || 1)) return; location.hash = `#/story?m=${q.get('m') || UI.stMonth || thisMonth()}&p=${n}`; }
+function stGo(d) { if (!/^#\/story/.test(location.hash)) return; const q = new URLSearchParams(location.hash.split('?')[1] || ''), p = Number(q.get('p') || 0), n = p + d; if (n < 0 || n >= (UI.stCount || 1)) return; location.hash = `#/story?${UI.stBase || 'm=' + (q.get('m') || UI.stMonth || thisMonth())}&p=${n}`; }
 document.addEventListener('keydown', e => { if (/^(INPUT|TEXTAREA|SELECT)$/.test((e.target || {}).tagName || '')) return; if (e.key === 'ArrowRight') stGo(1); else if (e.key === 'ArrowLeft') stGo(-1); });
 (() => { let x0 = null, y0 = 0; document.addEventListener('touchstart', e => { const s = e.target.closest && e.target.closest('#stchap'); x0 = s ? e.touches[0].clientX : null; y0 = s ? e.touches[0].clientY : 0; }, { passive: true });
   document.addEventListener('touchend', e => { if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null; if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) stGo(dx < 0 ? 1 : -1); }, { passive: true }); })();
